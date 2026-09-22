@@ -21,6 +21,7 @@ import {
   type PubChemCompound,
 } from '../services/pubchem';
 import type { Substance } from '../data/types';
+import { formatNumber } from '../chem/format';
 
 type Resolution = {
   name: string;
@@ -258,7 +259,7 @@ export function SubstancePage() {
                   <h1 style={{ marginBottom: 2 }}>{displayName}</h1>
                   <div className="subtle">
                     {displayFormula && <span className="mono">{displayFormula}</span>}
-                    {mass !== undefined && <> · M = {mass.toFixed(2)} g/mol</>}
+                    {mass !== undefined && <> · M = {formatNumber(mass, 2)} g/mol</>}
                   </div>
                 </div>
               </div>
@@ -332,22 +333,22 @@ export function SubstancePage() {
                       {mass !== undefined && (
                         <tr>
                           <td>Molare Masse</td>
-                          <td className="num">{mass.toFixed(2)} g/mol</td>
+                          <td className="num">{formatNumber(mass, 2)} g/mol</td>
                         </tr>
                       )}
                       {molecule && (
                         <>
                           <tr>
                             <td>Exakte Masse</td>
-                            <td className="num">{molecule.exactMass.toFixed(4)} u</td>
+                            <td className="num">{formatNumber(molecule.exactMass, 4)} u</td>
                           </tr>
                           <tr>
                             <td>logP (berechnet)</td>
-                            <td className="num">{molecule.logP.toFixed(2)}</td>
+                            <td className="num">{formatNumber(molecule.logP, 2)}</td>
                           </tr>
                           <tr>
                             <td>Topologische polare Oberfläche</td>
-                            <td className="num">{molecule.tpsa.toFixed(1)} Å²</td>
+                            <td className="num">{formatNumber(molecule.tpsa, 1)} Å²</td>
                           </tr>
                           <tr>
                             <td>H-Brücken-Donoren / -Akzeptoren</td>
@@ -392,7 +393,7 @@ export function SubstancePage() {
                             <tr key={entry.symbol}>
                               <td>{entry.symbol}</td>
                               <td className="num">{entry.count}</td>
-                              <td className="num">{entry.massPercent.toFixed(2)} %</td>
+                              <td className="num">{formatNumber(entry.massPercent, 2)} %</td>
                             </tr>
                           ))}
                         </tbody>

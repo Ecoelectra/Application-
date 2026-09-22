@@ -1185,7 +1185,7 @@ export const CARBONYL_REACTIONS: ReactionRule[] = [
     reactionType: 'C–C-Verknüpfung (nucleophile Addition)',
     summary:
       'Organomagnesiumverbindungen übertragen einen Kohlenstoffrest auf Aldehyde und Ketone. Nach wässriger Aufarbeitung entstehen sekundäre bzw. tertiäre Alkohole.',
-    smirks: '[CX3:1]=[OX1:2].[#6:3][Mg][F,Cl,Br,I]>>[CX4:1][#6:3].[OX2H1:2]',
+    smirks: '[CX3:1]=[OX1:2].[#6:3][Mg][F,Cl,Br,I]>>[CX4:1]([OX2H1:2])[#6:3]',
     reactantDefaults: ['CC(C)=O', 'C[Mg]Br'],
     substrateSlots: [0, 1],
     functionalGroups: ['aldehyd', 'keton', 'grignard'],
@@ -1470,7 +1470,7 @@ export const CARBONYL_REACTIONS: ReactionRule[] = [
     summary:
       'Aldehyde und Ketone werden mit Ethylenglycol in das cyclische Acetal überführt. Acetale sind gegen Basen und Nucleophile stabil und lassen sich sauer wieder abspalten.',
     smirks: '[CX3:1]=[OX1:2].[OX2H1:3][CX4:4][CX4:5][OX2H1:6]>>[CX4:1]1[O:3][C:4][C:5][O:6]1',
-    reactantDefaults: ['CC(=O)CCC=O', 'OCCO'],
+    reactantDefaults: ['CC(=O)c1ccccc1', 'OCCO'],
     substrateSlots: [0],
     functionalGroups: ['aldehyd', 'keton'],
     generalEquation: 'R₂C=O + HOCH₂CH₂OH ⇌ R₂C(OCH₂CH₂O) + H₂O',

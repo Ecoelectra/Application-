@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { formatSigned } from '../chem/format';
 import type { MechanismStep } from '../data/types';
 
 interface Props {
@@ -132,7 +133,7 @@ export function EnergyProfile({ steps, productEnergy, onSelectStep, activeStep }
                 textAnchor="middle"
                 fill="var(--text-muted)"
               >
-                {value > 0 ? `+${value}` : value}
+                {formatSigned(value, 0)}
               </text>
             </g>
           );

@@ -568,7 +568,10 @@ export const AROMATIC_REACTIONS: ReactionRule[] = [
     reactionType: 'Elektrophile aromatische Substitution',
     summary:
       'Das Diazoniumion kuppelt als schwaches Elektrophil mit elektronenreichen Aromaten (Phenolen, Anilinen) zum Azofarbstoff. Die ausgedehnte Konjugation erzeugt die kräftigen Farben.',
-    smirks: '[c:1][N+:2]#[N:3].[cH:4]>>[c:1][N:2]=[N:3][c:4]',
+    smirks:
+      // Das zweite Muster verlangt ein aromatisches C–H in para-Stellung zu einer
+      // aktivierenden Gruppe – genau dort kuppelt das Diazoniumion.
+      '[c:1][N+:2]#[N:3].[cH;$(c1ccc([OX2H1,NX3])cc1):4]>>[c:1][N+0:2]=[N+0:3][c:4]',
     reactantDefaults: ['[N+](#N)c1ccccc1', 'Oc1ccccc1'],
     substrateSlots: [0, 1],
     functionalGroups: ['diazonium', 'phenol', 'anilin'],

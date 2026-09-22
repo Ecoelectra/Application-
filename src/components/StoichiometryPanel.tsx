@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { molarMass } from '../chem/formula';
 import { planReagents } from '../chem/stoichiometry';
 import type { ReactionRule } from '../data/types';
+import { formatNumber } from '../chem/format';
 
 interface Props {
   rule: ReactionRule;
@@ -70,7 +71,7 @@ export function StoichiometryPanel({ rule }: Props) {
           />
           <span className="hint">
             {substrateMolarMass
-              ? `M = ${substrateMolarMass.toFixed(2)} g/mol`
+              ? `M = ${formatNumber(substrateMolarMass, 2)} g/mol`
               : 'Formel eingeben, um die molare Masse zu bestimmen'}
           </span>
         </div>
@@ -85,7 +86,7 @@ export function StoichiometryPanel({ rule }: Props) {
             onChange={(event) => setSubstrateMass(event.target.value)}
           />
           <span className="hint">
-            {amount ? `n = ${amount.toFixed(4)} mol` : 'Masse eingeben'}
+            {amount ? `n = ${formatNumber(amount, 4)} mol` : 'Masse eingeben'}
           </span>
         </div>
       </div>
@@ -109,10 +110,10 @@ export function StoichiometryPanel({ rule }: Props) {
                     {entry.name}
                     {entry.formula && <span className="subtle mono"> {entry.formula}</span>}
                   </td>
-                  <td className="num">{entry.equivalents.toFixed(2)}</td>
-                  <td className="num">{entry.amount.toFixed(4)} mol</td>
-                  <td className="num">{entry.molarMass > 0 ? `${entry.mass.toFixed(2)} g` : '–'}</td>
-                  <td className="num">{entry.volume ? `${entry.volume.toFixed(1)} mL` : '–'}</td>
+                  <td className="num">{formatNumber(entry.equivalents, 2)}</td>
+                  <td className="num">{formatNumber(entry.amount, 4)} mol</td>
+                  <td className="num">{entry.molarMass > 0 ? `${formatNumber(entry.mass, 2)} g` : '–'}</td>
+                  <td className="num">{entry.volume ? `${formatNumber(entry.volume, 1)} mL` : '–'}</td>
                 </tr>
               ))}
             </tbody>

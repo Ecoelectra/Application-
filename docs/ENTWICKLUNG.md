@@ -73,6 +73,10 @@ Danach in `src/data/reactions/index.ts` einhängen. Die Tests prüfen automatisc
 - sind Anleitung, Mechanismus, Schutzausrüstung und Quellen gefüllt?
 - ist eine `fixedEquation` stöchiometrisch ausgeglichen?
 
+Zusätzlich hält `products.test.ts` für jede Vorschrift fest, welches Produkt sie
+aus den Vorgabeedukten liefert. Beim Hinzufügen einer Reaktion dort eine Zeile
+ergänzen – so fällt eine später eingeschleppte Änderung sofort auf.
+
 ```bash
 npm test
 ```
@@ -125,6 +129,7 @@ jede Formel lesbar ist und jedes SMILES von RDKit akzeptiert wird.
 | `stoichiometry.test.ts` | Mengenumrechnung, Unterschuss, Ausbeute, Verdünnung |
 | `reactions.test.ts` | Vollständigkeit und Korrektheit der Reaktionsdatenbank |
 | `reactionEngine.test.ts` | Gruppenerkennung, Produktberechnung, Suche, Sicherheitsgate |
+| `products.test.ts` | Regressionstest: welches Produkt jede Vorschrift liefert |
 | `pubchem.test.ts` | PubChem-Client mit simulierten Antworten |
 
 Dazu der Rauchtest `scripts/smoke-test.mjs`, der die gebaute App im Browser

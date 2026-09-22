@@ -268,7 +268,7 @@ export const ALKENE_REACTIONS: ReactionRule[] = [
     reactionType: 'Addition (anti-Markovnikov)',
     summary:
       'Boran addiert syn und anti-Markovnikov an das Alken; die anschließende Oxidation mit Wasserstoffperoxid ersetzt Bor durch eine Hydroxygruppe. So gelingt der Zugang zum „falsch herum" hydratisierten Alkohol.',
-    smirks: '[CX3;H2:1]=[CX3:2]>>[CX4:1][OX2H1].[CX4:2]',
+    smirks: '[CX3;H2:1]=[CX3:2]>>[OX2H1][CX4:1][CX4:2]',
     reactantDefaults: ['CC(C)=C'],
     substrateSlots: [0],
     functionalGroups: ['alken'],

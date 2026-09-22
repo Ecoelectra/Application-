@@ -4,6 +4,7 @@ import { balanceRedox, formatOxidationState, oxidationStates, type Medium } from
 import { elementalComposition, molarMass } from '../chem/formula';
 import { dilutionVolume, limitingReagent, massForSolution, percentYield } from '../chem/stoichiometry';
 import { Callout } from '../components/Callout';
+import { formatNumber } from '../chem/format';
 
 type Tab = 'ausgleichen' | 'redox' | 'molmasse' | 'stoechiometrie';
 
@@ -136,7 +137,7 @@ function EquationBalancer() {
                         <tr key={`${entry.side}-${entry.formula}`}>
                           <td className="mono">{entry.formula}</td>
                           <td className="num">{entry.coefficient}</td>
-                          <td className="num">{mass ? mass.toFixed(2) : '–'}</td>
+                          <td className="num">{mass ? formatNumber(mass, 2) : '–'}</td>
                           <td className="subtle">{entry.side}</td>
                         </tr>
                       );
@@ -328,7 +329,7 @@ function MolarMassTool() {
         ) : (
           <>
             <p style={{ fontSize: '1.2rem' }}>
-              M = <strong>{result.mass.toFixed(3)} g/mol</strong>
+              M = <strong>{formatNumber(result.mass, 3)} g/mol</strong>
             </p>
             <div className="table-wrap">
               <table className="data">
@@ -345,8 +346,8 @@ function MolarMassTool() {
                     <tr key={entry.symbol}>
                       <td>{entry.symbol}</td>
                       <td className="num">{entry.count}</td>
-                      <td className="num">{entry.massContribution.toFixed(3)} g/mol</td>
-                      <td className="num">{entry.massPercent.toFixed(2)} %</td>
+                      <td className="num">{formatNumber(entry.massContribution, 3)} g/mol</td>
+                      <td className="num">{formatNumber(entry.massPercent, 2)} %</td>
                     </tr>
                   ))}
                 </tbody>
@@ -426,9 +427,9 @@ function StoichiometryTools() {
           <Callout variant="warning">{limiting.error}</Callout>
         ) : (
           <Callout variant="info" title={`Unterschuss: ${limiting.value.limiting}`}>
-            Maximal {limiting.value.maxProductAmount.toFixed(3)} mol Produkt. Ausnutzung:{' '}
+            Maximal {formatNumber(limiting.value.maxProductAmount, 3)} mol Produkt. Ausnutzung:{' '}
             {Object.entries(limiting.value.utilisation)
-              .map(([name, value]) => `${name} ${(value * 100).toFixed(0)} %`)
+              .map(([name, value]) => `${name} ${formatNumber((value * 100), 0)} %`)
               .join(', ')}
             .
           </Callout>
@@ -453,7 +454,7 @@ function StoichiometryTools() {
           <p style={{ marginTop: 10, marginBottom: 0 }}>
             Ausbeute:{' '}
             <strong>
-              {num(theoretical) > 0 ? `${percentYield(num(actual), num(theoretical)).toFixed(1)} %` : '–'}
+              {num(theoretical) > 0 ? `${formatNumber(percentYield(num(actual), num(theoretical)), 1)} %` : '–'}
             </strong>
           </p>
         </div>
@@ -483,7 +484,7 @@ function StoichiometryTools() {
                 const volume = dilutionVolume(num(stock), num(target), num(targetVolume));
                 return (
                   <>
-                    <strong>{volume.toFixed(1)} mL</strong> Stammlösung auf {num(targetVolume)} mL
+                    <strong>{formatNumber(volume, 1)} mL</strong> Stammlösung auf {num(targetVolume)} mL
                     auffüllen.
                   </>
                 );
@@ -517,7 +518,7 @@ function StoichiometryTools() {
         <p style={{ marginTop: 10, marginBottom: 0 }}>
           {solutionMass !== null ? (
             <>
-              Einwaage: <strong>{solutionMass.toFixed(3)} g</strong>
+              Einwaage: <strong>{formatNumber(solutionMass, 3)} g</strong>
             </>
           ) : (
             <span className="muted">Formel konnte nicht gelesen werden.</span>

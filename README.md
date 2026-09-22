@@ -90,7 +90,7 @@ Dafür werden [Rust](https://rustup.rs/) und die
 ```bash
 npm install
 npm run dev        # Entwicklungsserver auf http://localhost:5173
-npm test           # 81 Tests (Chemiekern, Reaktionsdatenbank, Rechner)
+npm test           # 131 Tests (Chemiekern, Reaktionsdatenbank, Rechner)
 npm run lint       # Typprüfung
 npm run build      # Produktionsbuild nach dist/
 ```

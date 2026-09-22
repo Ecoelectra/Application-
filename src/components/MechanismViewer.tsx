@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatSigned } from '../chem/format';
 import type { MainModule } from '@rdkit/rdkit';
 import type { Mechanism } from '../data/types';
 import { EnergyProfile } from './EnergyProfile';
@@ -54,10 +55,7 @@ export function MechanismViewer({ rdkit, mechanism }: Props) {
                   <span className="badge badge-elektrochemie">geschwindigkeitsbestimmend</span>
                 )}
                 {step.relativeEnergy !== undefined && (
-                  <span className="badge">
-                    {step.relativeEnergy > 0 ? '+' : ''}
-                    {step.relativeEnergy} kJ/mol
-                  </span>
+                  <span className="badge">{formatSigned(step.relativeEnergy, 0)} kJ/mol</span>
                 )}
               </div>
             </div>

@@ -12,6 +12,7 @@ import { POTENTIALS_BY_STRENGTH, STANDARD_POTENTIALS } from '../data/potentials'
 import { REACTIONS } from '../data/reactions';
 import { ReactionCard } from '../components/ReactionCard';
 import { Callout } from '../components/Callout';
+import { formatExponential, formatNumber, formatSigned } from '../chem/format';
 
 type Tab = 'spannungsreihe' | 'nernst' | 'zelle' | 'faraday' | 'synthesen';
 
@@ -109,8 +110,7 @@ function PotentialTable() {
                   <td className="wrap mono">{entry.halfReaction}</td>
                   <td className="num">{entry.electrons}</td>
                   <td className="num" style={{ color: entry.potential > 0 ? 'var(--organic)' : 'var(--danger)' }}>
-                    {entry.potential > 0 ? '+' : ''}
-                    {entry.potential.toFixed(3)}
+                    {formatSigned(entry.potential, 3)}
                   </td>
                   <td className="subtle">{entry.category}</td>
                 </tr>
@@ -194,15 +194,15 @@ function NernstCalculator() {
               <tbody>
                 <tr>
                   <td>Reaktionsquotient [Ox]/[Red]</td>
-                  <td className="num">{result.quotient.toExponential(3)}</td>
+                  <td className="num">{formatExponential(result.quotient, 3)}</td>
                 </tr>
                 <tr>
                   <td>Nernst-Faktor (R·T/F)·ln10</td>
-                  <td className="num">{result.slope.toFixed(4)} V</td>
+                  <td className="num">{formatNumber(result.slope, 4)} V</td>
                 </tr>
                 <tr>
                   <td><strong>Potential E</strong></td>
-                  <td className="num"><strong>{result.potential.toFixed(4)} V</strong></td>
+                  <td className="num"><strong>{formatNumber(result.potential, 4)} V</strong></td>
                 </tr>
               </tbody>
             </table>
@@ -222,7 +222,7 @@ function NernstCalculator() {
             onChange={(event) => setPH(event.target.value)} />
         </div>
         <p style={{ marginTop: 10, marginBottom: 0 }}>
-          E(H⁺/H₂) = <strong>{hydrogenElectrodePotential(num(pH)).toFixed(4)} V</strong>
+          E(H⁺/H₂) = <strong>{formatNumber(hydrogenElectrodePotential(num(pH)), 4)} V</strong>
         </p>
       </div>
     </div>
@@ -258,7 +258,7 @@ function CellCalculator() {
               onChange={(event) => setCathode(event.target.value)}>
               {POTENTIALS_BY_STRENGTH.map((entry) => (
                 <option key={`k-${entry.halfReaction}`} value={`${entry.oxidized}|${entry.reduced}`}>
-                  {entry.halfReaction} ({entry.potential.toFixed(2)} V)
+                  {entry.halfReaction} ({formatSigned(entry.potential, 2)} V)
                 </option>
               ))}
             </select>
@@ -269,7 +269,7 @@ function CellCalculator() {
               onChange={(event) => setAnode(event.target.value)}>
               {POTENTIALS_BY_STRENGTH.map((entry) => (
                 <option key={`a-${entry.halfReaction}`} value={`${entry.oxidized}|${entry.reduced}`}>
-                  {entry.halfReaction} ({entry.potential.toFixed(2)} V)
+                  {entry.halfReaction} ({formatSigned(entry.potential, 2)} V)
                 </option>
               ))}
             </select>
@@ -284,7 +284,7 @@ function CellCalculator() {
                   <tr>
                     <td>Zellspannung E°</td>
                     <td className="num">
-                      <strong>{result.cellPotential.toFixed(3)} V</strong>
+                      <strong>{formatNumber(result.cellPotential, 3)} V</strong>
                     </td>
                   </tr>
                   <tr>
@@ -293,13 +293,13 @@ function CellCalculator() {
                   </tr>
                   <tr>
                     <td>Freie Reaktionsenthalpie ΔG° = −z·F·E°</td>
-                    <td className="num">{result.gibbsEnergy.toFixed(1)} kJ/mol</td>
+                    <td className="num">{formatNumber(result.gibbsEnergy, 1)} kJ/mol</td>
                   </tr>
                   <tr>
                     <td>Gleichgewichtskonstante K</td>
                     <td className="num">
                       {Number.isFinite(result.equilibriumConstant)
-                        ? result.equilibriumConstant.toExponential(2)
+                        ? formatExponential(result.equilibriumConstant, 2)
                         : 'praktisch vollständig'}
                     </td>
                   </tr>
@@ -399,23 +399,23 @@ function FaradayCalculator() {
               <tbody>
                 <tr>
                   <td>Ladungsmenge Q</td>
-                  <td className="num">{result.charge.toFixed(0)} C</td>
+                  <td className="num">{formatNumber(result.charge, 0)} C</td>
                 </tr>
                 <tr>
                   <td>Stoffmenge n</td>
-                  <td className="num">{result.amount.toFixed(5)} mol</td>
+                  <td className="num">{formatNumber(result.amount, 5)} mol</td>
                 </tr>
                 <tr>
-                  <td>Masse m (M = {result.molar.toFixed(2)} g/mol)</td>
-                  <td className="num"><strong>{result.mass.toFixed(3)} g</strong></td>
+                  <td>Masse m (M = {formatNumber(result.molar, 2)} g/mol)</td>
+                  <td className="num"><strong>{formatNumber(result.mass, 3)} g</strong></td>
                 </tr>
                 <tr>
                   <td>Gasvolumen bei Normbedingungen</td>
-                  <td className="num">{result.gasVolumeSTP.toFixed(3)} L</td>
+                  <td className="num">{formatNumber(result.gasVolumeSTP, 3)} L</td>
                 </tr>
                 <tr>
                   <td>Spezifischer Energiebedarf</td>
-                  <td className="num">{result.specific.toFixed(2)} kWh/kg</td>
+                  <td className="num">{formatNumber(result.specific, 2)} kWh/kg</td>
                 </tr>
               </tbody>
             </table>

@@ -8,6 +8,7 @@ import {
 import { molarMass } from '../chem/formula';
 import type { ElectroSpec, ReactionRule } from '../data/types';
 import { Callout } from './Callout';
+import { formatNumber } from '../chem/format';
 
 interface Props {
   spec: ElectroSpec;
@@ -125,7 +126,7 @@ export function ElectrolysisPanel({ spec, rule }: Props) {
       <div className="card">
         <h3>Faraday-Rechner</h3>
         <p className="muted small">
-          n = (I · t · η) / (z · F) mit F = {FARADAY.toFixed(0)} C/mol. Die Ladungsmenge bestimmt
+          n = (I · t · η) / (z · F) mit F = {formatNumber(FARADAY, 0)} C/mol. Die Ladungsmenge bestimmt
           den Umsatz, die Zellspannung den Energiebedarf.
         </p>
 
@@ -163,30 +164,30 @@ export function ElectrolysisPanel({ spec, rule }: Props) {
               <tbody>
                 <tr>
                   <td>Ladungsmenge Q = I · t</td>
-                  <td className="num">{result.charge.toFixed(0)} C</td>
+                  <td className="num">{formatNumber(result.charge, 0)} C</td>
                 </tr>
                 <tr>
                   <td>Umgesetzte Stoffmenge</td>
-                  <td className="num">{result.amount.toFixed(5)} mol</td>
+                  <td className="num">{formatNumber(result.amount, 5)} mol</td>
                 </tr>
                 {result.molar > 0 && (
                   <tr>
-                    <td>Produktmasse (M = {result.molar.toFixed(2)} g/mol)</td>
-                    <td className="num">{result.mass.toFixed(3)} g</td>
+                    <td>Produktmasse (M = {formatNumber(result.molar, 2)} g/mol)</td>
+                    <td className="num">{formatNumber(result.mass, 3)} g</td>
                   </tr>
                 )}
                 <tr>
                   <td>Gasvolumen bei Normbedingungen</td>
-                  <td className="num">{result.gasVolumeSTP.toFixed(3)} L</td>
+                  <td className="num">{formatNumber(result.gasVolumeSTP, 3)} L</td>
                 </tr>
                 <tr>
                   <td>Ladungsbedarf</td>
-                  <td className="num">{chargePerMole(electrons).toFixed(1)} F/mol</td>
+                  <td className="num">{formatNumber(chargePerMole(electrons), 1)} F/mol</td>
                 </tr>
                 {result.energy !== null && (
                   <tr>
                     <td>Elektrische Arbeit</td>
-                    <td className="num">{result.energy.toFixed(4)} kWh</td>
+                    <td className="num">{formatNumber(result.energy, 4)} kWh</td>
                   </tr>
                 )}
               </tbody>
