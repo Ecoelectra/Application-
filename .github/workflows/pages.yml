@@ -2,7 +2,11 @@ name: Auf GitHub Pages veröffentlichen
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      # Solange es noch keinen main-Branch gibt, wird direkt aus dem
+      # Entwicklungszweig veröffentlicht.
+      - claude/chemical-synthesis-reactions-app-ggxajq
   workflow_dispatch:
 
 permissions:
