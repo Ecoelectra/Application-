@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Syntheseplaner",
+  "version": "1.0.0",
+  "identifier": "de.syntheseplaner.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Syntheseplaner – Chemische Synthesen und Elektrochemie",
+        "width": 1280,
+        "height": 900,
+        "minWidth": 380,
+        "minHeight": 520,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://pubchem.ncbi.nlm.nih.gov; connect-src 'self' https://pubchem.ncbi.nlm.nih.gov"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico", "icons/icon.png"],
+    "copyright": "Syntheseplaner",
+    "category": "Education",
+    "shortDescription": "Chemische Synthesen, Reaktionen und Elektrochemie",
+    "longDescription": "Stoff eingeben und passende Synthesen, Reaktionsgleichungen, Mechanismen und Arbeitsanleitungen erhalten. Mit Elektrochemie-Rechnern, Gleichungsausgleicher und PubChem-Anbindung.",
+    "windows": {
+      "nsis": {
+        "languages": ["German", "English"],
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

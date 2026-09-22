@@ -1,0 +1,24 @@
+{
+  "name": "Syntheseplaner – Chemie, Reaktionen und Elektrochemie",
+  "short_name": "Syntheseplaner",
+  "description": "Chemische Stoffe eingeben und passende Synthesen, Reaktionsgleichungen, Mechanismen und Arbeitsanleitungen erhalten.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f7f9",
+  "theme_color": "#1f6feb",
+  "lang": "de",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Reaktionen durchsuchen", "url": "./index.html#/suche" },
+    { "name": "Elektrochemie", "url": "./index.html#/elektrochemie" },
+    { "name": "Werkzeuge", "url": "./index.html#/werkzeuge" }
+  ]
+}
