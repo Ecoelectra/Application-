@@ -11,6 +11,9 @@ import { ReactionCard } from '../components/ReactionCard';
 import { Callout } from '../components/Callout';
 import { GhsPictograms } from '../components/GhsPictograms';
 import { SubstanceSearch } from '../components/SubstanceSearch';
+import { SynthesisCard } from '../components/SynthesisCard';
+import { useCatalog } from '../hooks/useCatalog';
+import { reactionsFrom, routesTo } from '../data/catalog';
 import { substanceByName, SUBSTANCES } from '../data/substances';
 import {
   compoundByCid,
@@ -46,6 +49,7 @@ export function SubstancePage() {
   const [params, setParams] = useSearchParams();
   const { rdkit, status } = useRDKit();
   const { remember } = useRecentSubstances();
+  const { catalog } = useCatalog();
 
   const name = params.get('name') ?? '';
   const smilesParam = params.get('smiles') ?? undefined;
@@ -187,6 +191,17 @@ export function SubstancePage() {
   const availableCategories = useMemo(
     () => new Set<string>(analysis.suggestions.map((entry) => entry.rule.category)),
     [analysis.suggestions],
+  );
+
+  // Wege zu diesem Stoff und Reaktionen, in denen er eingesetzt wird
+  const substanceId = resolution.local?.id;
+  const routes = useMemo(
+    () => (substanceId ? routesTo(catalog, substanceId).slice(0, 12) : []),
+    [catalog, substanceId],
+  );
+  const usedIn = useMemo(
+    () => (substanceId ? reactionsFrom(catalog, substanceId).slice(0, 8) : []),
+    [catalog, substanceId],
   );
 
   if (!name && !smilesParam) {
@@ -483,6 +498,33 @@ export function SubstancePage() {
                   </div>
                 </div>
               )}
+            </section>
+          )}
+
+          {!analysis.safety.restricted && routes.length > 0 && (
+            <section style={{ marginBottom: 22 }}>
+              <div className="row-between" style={{ marginBottom: 12 }}>
+                <h2 style={{ margin: 0 }}>So wird {displayName} hergestellt</h2>
+                <Link className="button button-secondary button-small" to={`/synthesen?q=${encodeURIComponent(displayName)}`}>
+                  Alle Wege ansehen
+                </Link>
+              </div>
+              <div className="grid grid-2">
+                {routes.map((synthesis) => (
+                  <SynthesisCard key={synthesis.id} synthesis={synthesis} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!analysis.safety.restricted && usedIn.length > 0 && (
+            <section style={{ marginBottom: 22 }}>
+              <h2 style={{ marginBottom: 12 }}>{displayName} als Ausgangsstoff</h2>
+              <div className="grid grid-2">
+                {usedIn.map((synthesis) => (
+                  <SynthesisCard key={synthesis.id} synthesis={synthesis} />
+                ))}
+              </div>
             </section>
           )}
 

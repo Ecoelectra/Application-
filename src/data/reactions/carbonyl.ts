@@ -1185,7 +1185,7 @@ export const CARBONYL_REACTIONS: ReactionRule[] = [
     reactionType: 'C–C-Verknüpfung (nucleophile Addition)',
     summary:
       'Organomagnesiumverbindungen übertragen einen Kohlenstoffrest auf Aldehyde und Ketone. Nach wässriger Aufarbeitung entstehen sekundäre bzw. tertiäre Alkohole.',
-    smirks: '[CX3:1]=[OX1:2].[#6:3][Mg][F,Cl,Br,I]>>[CX4:1]([OX2H1:2])[#6:3]',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1]=[OX1:2].[#6:3][Mg][F,Cl,Br,I]>>[CX4:1]([OX2H1:2])[#6:3]',
     reactantDefaults: ['CC(C)=O', 'C[Mg]Br'],
     substrateSlots: [0, 1],
     functionalGroups: ['aldehyd', 'keton', 'grignard'],
@@ -1283,7 +1283,7 @@ export const CARBONYL_REACTIONS: ReactionRule[] = [
     reactionType: 'Olefinierung',
     summary:
       'Ein Phosphorylid wandelt die Carbonylgruppe in eine C=C-Doppelbindung um. Anders als bei Eliminierungen ist die Lage der neuen Doppelbindung eindeutig festgelegt.',
-    smirks: '[CX3:1]=[OX1:2].[CX3:3]=[PX4:4]>>[CX3:1]=[CX3:3]',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1]=[OX1:2].[CX3:3]=[PX4:4]>>[CX3:1]=[CX3:3]',
     reactantDefaults: ['O=Cc1ccccc1', 'CC=P(c1ccccc1)(c1ccccc1)c1ccccc1'],
     substrateSlots: [0],
     functionalGroups: ['aldehyd', 'keton'],
@@ -1370,7 +1370,7 @@ export const CARBONYL_REACTIONS: ReactionRule[] = [
     reactionType: 'Kondensation mit anschließender Reduktion',
     summary:
       'Aus Carbonylverbindung und Amin entsteht ein Imin, das direkt im Ansatz zum Amin reduziert wird. Das ist der zuverlässigste Weg zu sekundären und tertiären Aminen ohne Mehrfachalkylierung.',
-    smirks: '[CX3:1]=[OX1:2].[NX3;H2,H1;!$(NC=O):3]>>[CX4:1][NX3:3]',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1]=[OX1:2].[NX3;H2,H1;!$(NC=O):3]>>[CX4:1][NX3:3]',
     reactantDefaults: ['CC(C)=O', 'NCc1ccccc1'],
     substrateSlots: [0, 1],
     functionalGroups: ['aldehyd', 'keton', 'amin_prim', 'amin_sek'],
@@ -1469,7 +1469,7 @@ export const CARBONYL_REACTIONS: ReactionRule[] = [
     reactionType: 'Schutzgruppenchemie (Kondensation)',
     summary:
       'Aldehyde und Ketone werden mit Ethylenglycol in das cyclische Acetal überführt. Acetale sind gegen Basen und Nucleophile stabil und lassen sich sauer wieder abspalten.',
-    smirks: '[CX3:1]=[OX1:2].[OX2H1:3][CX4:4][CX4:5][OX2H1:6]>>[CX4:1]1[O:3][C:4][C:5][O:6]1',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1]=[OX1:2].[OX2H1:3][CX4:4][CX4:5][OX2H1:6]>>[CX4:1]1[O:3][C:4][C:5][O:6]1',
     reactantDefaults: ['CC(=O)c1ccccc1', 'OCCO'],
     substrateSlots: [0],
     functionalGroups: ['aldehyd', 'keton'],

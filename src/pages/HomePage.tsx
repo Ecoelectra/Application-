@@ -97,7 +97,29 @@ export function HomePage() {
 
       <div className="grid grid-3">
         <div className="card">
-          <h3>{REACTIONS.length} Reaktionen</h3>
+          <h3>Werkbank</h3>
+          <p className="muted small">
+            Stoffe ins Reaktionsgefäß geben und sehen, was entsteht – mit ausgeglichener Gleichung,
+            Beobachtung und Erklärung, warum es so abläuft.
+          </p>
+          <a className="button button-small" href="#/werkbank">
+            Werkbank öffnen
+          </a>
+        </div>
+
+        <div className="card">
+          <h3>Über 5000 Synthesen</h3>
+          <p className="muted small">
+            Für jeden Stoff nachschlagen, wie er hergestellt wird. Alle Wege sind aus den
+            Reaktionsvorschriften berechnet und die Gleichungen exakt ausgeglichen.
+          </p>
+          <a className="button button-secondary button-small" href="#/synthesen">
+            Synthesen durchsuchen
+          </a>
+        </div>
+
+        <div className="card">
+          <h3>{REACTIONS.length} Reaktionstypen</h3>
           <p className="muted small">
             Organische Synthesen, Namensreaktionen, technische Verfahren und Elektrosynthesen – jede
             mit Mechanismus, Bedingungen und Sicherheitshinweisen.
@@ -108,7 +130,7 @@ export function HomePage() {
         </div>
 
         <div className="card">
-          <h3>{electroCount} elektrochemische Verfahren</h3>
+          <h3>{electroCount} Elektrosynthesen</h3>
           <p className="muted small">
             Von der Kolbe-Elektrolyse bis zur Chloralkali-Elektrolyse, mit Elektrodenmaterial,
             Stromdichte und Ladungsbedarf. Dazu Nernst- und Faraday-Rechner.

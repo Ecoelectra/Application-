@@ -728,7 +728,7 @@ export const ELECTROCHEMISTRY_REACTIONS: ReactionRule[] = [
     reactionType: 'Kathodische Reduktion (reduktive Dimerisierung)',
     summary:
       'Zwei Carbonylverbindungen werden kathodisch zu Ketylradikalen reduziert, die zum 1,2-Diol (Pinakol) kuppeln. Elektrochemisch gelingt das ohne Metallabfall wie bei der klassischen Magnesium-Variante.',
-    smirks: '[CX3:1]=[OX1:2].[CX3:3]=[OX1:4]>>[CX4:1]([OX2H1:2])[CX4:3][OX2H1:4]',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1]=[OX1:2].[CX3;!$([CX3](=[OX1])[!#6;!#1]):3]=[OX1:4]>>[CX4:1]([OX2H1:2])[CX4:3][OX2H1:4]',
     reactantDefaults: ['CC(C)=O', 'CC(C)=O'],
     substrateSlots: [0, 1],
     functionalGroups: ['keton', 'aldehyd'],

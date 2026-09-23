@@ -49,7 +49,28 @@ stehen darf (`substrateSlots`). Die Veresterung greift deshalb sowohl, wenn man
 eine Carbonsäure eingibt, als auch bei einem Alkohol – mit dem jeweils
 passenden Standardpartner.
 
-### 1.3 Anorganische Verfahren
+### 1.3 Das Ionenmodell
+
+Salze lassen sich nicht über SMILES beschreiben. Für sie arbeitet die App mit
+einem Ionenmodell: Eine Formel wie CuSO₄ wird gegen alle Kombinationen bekannter
+Ionen geprüft. Passt die Summenformel einer Kombination zur Eingabe, ist die
+Zerlegung gefunden – Cu²⁺ und SO₄²⁻.
+
+Dieser Umweg ist zuverlässiger, als die Formel zu zergliedern: Er kommt ohne
+Sonderregeln mit Ca(OH)₂, NaHCO₃, (NH₄)₂SO₄ und Kristallwasser zurecht und
+erkennt die Wertigkeit nebenbei mit. FeCl₂ und FeCl₃ liefern automatisch Fe²⁺
+beziehungsweise Fe³⁺, weil nur diese Kombination die Ladungsbilanz erfüllt.
+
+Nicht jeder Stoff passt in dieses Modell, und das ist richtig so: SiO₂ und TiO₂
+sind Netzwerkoxide, P₄O₁₀ ist molekular, Fe₃O₄ enthält zwei Oxidationsstufen
+nebeneinander. Für sie liefert das Modell bewusst kein Ergebnis.
+
+Aus der Zerlegung folgen die **Löslichkeitsregeln** (alle Nitrate löslich, alle
+Alkalisalze löslich, Carbonate und Phosphate nur mit Alkali- und Ammonium-Ionen,
+Ausnahmen für Silber-, Blei- und Bariumsalze) und daraus die Frage, ob bei einer
+Fällungsreaktion ein Niederschlag entsteht und welche Farbe er hat.
+
+### 1.4 Anorganische Verfahren
 
 Salze und Ionenverbindungen lassen sich nicht sinnvoll als SMILES beschreiben.
 Für sie ist die Gleichung fest hinterlegt und wird über die **Summenformel**
@@ -57,7 +78,7 @@ zugeordnet: Wer `NaCl` eingibt, bekommt die Chloralkali-Elektrolyse und das
 Downs-Verfahren vorgeschlagen. Der Vergleich läuft über die Hill-Notation, damit
 `NaCl` und `ClNa` gleich behandelt werden.
 
-### 1.4 Rangfolge der Vorschläge
+### 1.5 Rangfolge der Vorschläge
 
 Die Bewertung berücksichtigt drei Dinge: wie viele passende Gruppen gefunden
 wurden, wie **spezifisch** die Regel ist (eine Reaktion, die nur auf Aldehyde

@@ -735,3 +735,173 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
   text-align: center;
   word-break: break-all;
 }
+
+/* ---------- Werkbank ---------- */
+
+.workbench {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .workbench {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cabinet {
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .cabinet {
+    position: static;
+    max-height: none;
+  }
+}
+
+.bottle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.bottle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: border-color 120ms, transform 120ms;
+  /* Platz für den Daumen auf dem iPad */
+  min-height: 52px;
+}
+
+.bottle:hover,
+.bottle:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.bottle:active {
+  transform: scale(0.97);
+}
+
+.bottle-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.bottle-formula {
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+}
+
+.vessel {
+  min-height: 160px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-sunken);
+  transition: border-color 200ms, background 200ms;
+}
+
+.vessel-running {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-sunken));
+  animation: vessel-pulse 900ms ease-in-out infinite;
+}
+
+@keyframes vessel-pulse {
+  0%, 100% { border-color: var(--border); }
+  50% { border-color: var(--accent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vessel-running {
+    animation: none;
+  }
+}
+
+.vessel-contents {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.vessel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.icon-button.small {
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.reaction-result .equation-text {
+  font-size: 1rem;
+}
+
+.journal {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.journal li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.journal li:last-child {
+  border-bottom: none;
+}
+
+/* ---------- Seitenkopf ---------- */
+
+.page-head {
+  margin-bottom: 18px;
+}
+
+.page-head h1 {
+  margin-bottom: 4px;
+}
+
+.lead {
+  color: var(--text-muted);
+  max-width: 62ch;
+  margin: 0;
+}

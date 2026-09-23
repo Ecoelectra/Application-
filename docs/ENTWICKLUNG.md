@@ -130,6 +130,11 @@ jede Formel lesbar ist und jedes SMILES von RDKit akzeptiert wird.
 | `reactions.test.ts` | Vollständigkeit und Korrektheit der Reaktionsdatenbank |
 | `reactionEngine.test.ts` | Gruppenerkennung, Produktberechnung, Suche, Sicherheitsgate |
 | `products.test.ts` | Regressionstest: welches Produkt jede Vorschrift liefert |
+| `ions.test.ts` | Ionenmodell, Löslichkeitsregeln, Spannungsreihe |
+| `inorganicRules.test.ts` | Anorganische Regeln an bekannten Schulversuchen |
+| `workbench.test.ts` | Werkbank: Mischungen mit feststehendem Ergebnis |
+| `substances.test.ts` | Formel und Struktur jedes Stoffes stimmen überein |
+| `catalog.test.ts` | Vollständigkeit und Suche im Synthesekatalog |
 | `pubchem.test.ts` | PubChem-Client mit simulierten Antworten |
 
 Dazu der Rauchtest `scripts/smoke-test.mjs`, der die gebaute App im Browser
@@ -170,3 +175,55 @@ Lehrbuchbeispiel.
 
 **Exakte Bruchrechnung im Gleichungsausgleicher.** Gleitkommazahlen führen bei
 größeren Systemen zu Koeffizienten wie 2,0000000001.
+
+## Der Synthesekatalog
+
+`scripts/build-catalog.ts` erzeugt `src/data/generated/catalog.json`. Der Ablauf:
+
+1. **Organisch:** Jede Vorlage mit Reaktions-SMARTS wird auf jeden Stoff mit
+   Struktur angewendet. Greift sie, wird das Produkt berechnet, kanonisiert und
+   – wenn es in der Stoffdatenbank steht – benannt.
+2. **Anorganisch:** Alle Paare aus Salzen, Säuren, Basen, Metallen und Oxiden
+   laufen durch die Regeln in `inorganicRules.ts`. Jede Gleichung wird exakt
+   ausgeglichen.
+3. **Technische Verfahren:** Reaktionen mit fester Gleichung kommen unverändert
+   dazu.
+
+Die Datei ist normalisiert: Wiederkehrende Angaben stehen einmal in einer
+Vorlagentabelle, die Einträge verweisen nur darauf. Das drückt die Größe von
+3,4 MB auf 618 kB (88 kB gepackt). Geladen wird sie erst, wenn eine Seite sie
+braucht – über einen dynamischen Import, den Vite als eigenes Bündel ablegt.
+
+```bash
+npm run catalog    # neu berechnen, rund 13 s
+```
+
+Der Katalog ist eingecheckt, damit die App auch ohne diesen Schritt läuft. Nach
+Änderungen an Reaktionsvorlagen oder Stoffdaten muss er neu erzeugt werden – der
+Build tut das automatisch.
+
+## Die Werkbank
+
+`src/chem/workbench.ts` beantwortet die Frage «Was passiert, wenn ich diese
+Stoffe zusammengebe?» in vier Schritten:
+
+1. **Gefahrencheck.** Für Kombinationen aus `NEVER_MIX` wird gar nichts
+   simuliert, sondern nur der Gefahrenhinweis gezeigt.
+2. **Anorganische Regeln** über alle Stoffpaare.
+3. **Organische Vorlagen.** Anders als auf der Stoffseite werden die
+   *tatsächlich eingesetzten* Stoffe verwendet. Ein zweiter Stoff kann dabei
+   zweierlei sein: das zweite Edukt (Säure und Alkohol bei der Veresterung) oder
+   das nötige Reagenz (Alkohol und Permanganat bei der Oxidation). Reagenzien
+   erkennt `providesReagent()` durch Namensvergleich mit den Reagenzangaben der
+   Vorlage.
+4. **Erklärung**, wenn nichts passiert – abgeleitet aus den Stoffkategorien und
+   der Spannungsreihe.
+
+Greift eine Vorlage nur unter Bedingungen, die nicht eingestellt sind, erscheint
+sie trotzdem, aber mit einer Liste dessen, was fehlt. Das ist Absicht: Ein
+Lernender soll sehen, dass die Reaktion grundsätzlich möglich ist, und was ihr
+noch fehlt.
+
+**Mehrere mögliche Produkte.** Eine Vorschrift kann an mehreren Stellen eines
+Moleküls greifen. `pickProductSet()` bevorzugt den Satz, dessen Produkte in der
+Stoffdatenbank bekannt sind – das ist in aller Regel das gemeinte Produkt.

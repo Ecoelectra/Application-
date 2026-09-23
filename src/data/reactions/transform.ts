@@ -307,7 +307,7 @@ export const TRANSFORM_REACTIONS: ReactionRule[] = [
     reactionType: 'Nucleophile Acyl-Substitution',
     summary:
       'Alkohole, Phenole und Amine werden mit Acetanhydrid acetyliert. Die bekannteste Anwendung ist die Aspirin-Synthese aus Salicylsäure.',
-    smirks: '[OX2H1:1][#6:2].CC(=O)OC(C)=O>>[#6:2][O:1]C(C)=O',
+    smirks: '[OX2H1;!$([OX2H1][CX3]=[OX1]):1][#6:2].CC(=O)OC(C)=O>>[#6:2][O:1]C(C)=O',
     reactantDefaults: ['Oc1ccccc1C(=O)O', 'CC(=O)OC(C)=O'],
     substrateSlots: [0],
     functionalGroups: ['phenol', 'alkohol_prim', 'alkohol_sek'],
@@ -1226,7 +1226,7 @@ export const TRANSFORM_REACTIONS: ReactionRule[] = [
     reactionType: 'Reduktion der Carbonylgruppe zur Methylengruppe',
     summary:
       'Eine Carbonylgruppe wird vollständig zur CH₂-Gruppe reduziert. Im Basischen gelingt das über ein Hydrazon – im Sauren leistet die Clemmensen-Reduktion dasselbe.',
-    smirks: '[CX3:1](=[OX1])[#6:2]>>[CX4H2:1][#6:2]',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1](=[OX1])[#6:2]>>[CX4H2:1][#6:2]',
     reactantDefaults: ['CC(=O)c1ccccc1'],
     substrateSlots: [0],
     functionalGroups: ['keton', 'aldehyd'],
@@ -1340,7 +1340,7 @@ export const TRANSFORM_REACTIONS: ReactionRule[] = [
     reactionType: 'Kondensation an der Carbonylgruppe',
     summary:
       'Hydroxylamin und Hydrazine addieren an Carbonylverbindungen und spalten Wasser ab. Die kristallinen Produkte dienten früher zur Identifizierung von Aldehyden und Ketonen über ihren Schmelzpunkt.',
-    smirks: '[CX3:1]=[OX1:2].[NX3H2:3][OX2H1:4]>>[CX3:1]=[NX2:3][OX2H1:4]',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1]=[OX1:2].[NX3H2:3][OX2H1:4]>>[CX3:1]=[NX2:3][OX2H1:4]',
     reactantDefaults: ['CC(C)=O', 'NO'],
     substrateSlots: [0],
     functionalGroups: ['keton', 'aldehyd'],
@@ -1834,7 +1834,7 @@ export const TRANSFORM_REACTIONS: ReactionRule[] = [
     reactionType: 'Mehrfache Halogenierung mit Spaltung',
     summary:
       'Methylketone werden im Basischen dreifach iodiert; anschließend bricht die Bindung und gelbes Iodoform fällt aus. Der gelbe Niederschlag mit typischem Geruch weist Methylketone und Ethanol nach.',
-    smirks: '[CX3:1](=[OX1:2])[CX4H3]>>[CX3:1](=[OX1:2])[OX2H1]',
+    smirks: '[CX3;!$([CX3](=[OX1])[!#6;!#1]):1](=[OX1:2])[CX4H3]>>[CX3:1](=[OX1:2])[OX2H1]',
     reactantDefaults: ['CC(=O)c1ccccc1'],
     substrateSlots: [0],
     functionalGroups: ['keton'],

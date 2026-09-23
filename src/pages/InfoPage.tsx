@@ -4,8 +4,14 @@ import { SUBSTANCES } from '../data/substances';
 import { STANDARD_POTENTIALS } from '../data/potentials';
 import { FUNCTIONAL_GROUPS } from '../data/functionalGroups';
 import { clearCache } from '../services/pubchem';
+import { useCatalog } from '../hooks/useCatalog';
+import { catalogStats } from '../data/catalog';
+import { formatNumber } from '../chem/format';
 
 export function InfoPage() {
+  const { catalog, loading: catalogLoading } = useCatalog();
+  const stats = catalogStats(catalog);
+
   return (
     <main className="page">
       <header className="page-header">
@@ -96,8 +102,14 @@ export function InfoPage() {
           <h2>Datenbestand</h2>
           <div className="grid grid-4">
             <div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700 }}>
+                {catalogLoading ? '…' : formatNumber(stats.total, 0)}
+              </div>
+              <div className="subtle">berechnete Synthesen</div>
+            </div>
+            <div>
               <div style={{ fontSize: '1.6rem', fontWeight: 700 }}>{REACTIONS.length}</div>
-              <div className="subtle">Reaktionen mit Mechanismus</div>
+              <div className="subtle">Reaktionstypen mit Mechanismus</div>
             </div>
             <div>
               <div style={{ fontSize: '1.6rem', fontWeight: 700 }}>{SUBSTANCES.length}</div>
