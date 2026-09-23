@@ -194,6 +194,8 @@ export interface FunctionalGroup {
 }
 
 export interface Substance {
+  /** URL-taugliche Kennung, aus dem Namen abgeleitet */
+  id: string;
   name: string;
   synonyms: string[];
   formula: string;

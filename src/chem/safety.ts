@@ -176,3 +176,76 @@ export const RESTRICTION_NOTICE =
   'Für diesen Stoff zeigt die App bewusst keine Synthesevorschriften an. Eigenschaften, Sicherheitsdaten ' +
   'und Literaturhinweise bleiben verfügbar. Wenn du in einem zugelassenen Labor damit arbeitest, nutze bitte ' +
   'die geprüften Vorschriften deiner Einrichtung.';
+
+/**
+ * Stoffpaare, die im Labor nicht zusammengebracht werden dürfen.
+ *
+ * Die Werkbank verweigert für diese Kombinationen jede Simulation und zeigt
+ * stattdessen den Gefahrenhinweis. Es sind dieselben Angaben, die auf den
+ * Gefäßen und auf jedem Sicherheitsplakat stehen – bewusst ohne Mengen,
+ * Bedingungen oder Durchführung.
+ */
+export interface MixtureWarning {
+  /** Kennungen der beteiligten Stoffe (Reihenfolge unerheblich) */
+  substances: [string, string];
+  hazard: string;
+}
+
+const NEVER_MIX: MixtureWarning[] = [
+  {
+    substances: ['natriumhypochlorit', 'salzsaeure'],
+    hazard: 'Hypochlorit und Säure setzen Chlor frei – ein giftiges Atemgift. Diese Mischung wird nicht simuliert.',
+  },
+  {
+    substances: ['natriumhypochlorit', 'schwefelsaeure'],
+    hazard: 'Hypochlorit und Säure setzen Chlor frei – ein giftiges Atemgift. Diese Mischung wird nicht simuliert.',
+  },
+  {
+    substances: ['natriumhypochlorit', 'essigsaeure'],
+    hazard: 'Auch schwache Säuren setzen aus Hypochlorit Chlor frei. Diese Mischung wird nicht simuliert.',
+  },
+  {
+    substances: ['natriumhypochlorit', 'ammoniak'],
+    hazard: 'Hypochlorit und Ammoniak bilden Chloramine – stark reizende, giftige Gase. Diese Mischung wird nicht simuliert.',
+  },
+  {
+    substances: ['natriumcyanid', 'salzsaeure'],
+    hazard: 'Cyanidsalze setzen mit Säuren Blausäure frei, die schon in kleinsten Mengen tödlich wirkt. Diese Mischung wird nicht simuliert.',
+  },
+  {
+    substances: ['natriumcyanid', 'schwefelsaeure'],
+    hazard: 'Cyanidsalze setzen mit Säuren Blausäure frei, die schon in kleinsten Mengen tödlich wirkt. Diese Mischung wird nicht simuliert.',
+  },
+  {
+    substances: ['kaliumcyanid', 'salzsaeure'],
+    hazard: 'Cyanidsalze setzen mit Säuren Blausäure frei, die schon in kleinsten Mengen tödlich wirkt. Diese Mischung wird nicht simuliert.',
+  },
+  {
+    substances: ['kaliumcyanid', 'schwefelsaeure'],
+    hazard: 'Cyanidsalze setzen mit Säuren Blausäure frei, die schon in kleinsten Mengen tödlich wirkt. Diese Mischung wird nicht simuliert.',
+  },
+];
+
+/** Prüft, ob zwei Stoffe zusammen eine akute Gefahr darstellen. */
+export function mixtureWarning(substanceIds: string[]): MixtureWarning | undefined {
+  return NEVER_MIX.find(
+    (entry) =>
+      substanceIds.includes(entry.substances[0]) && substanceIds.includes(entry.substances[1]),
+  );
+}
+
+/**
+ * Prüft ein berechnetes Produkt, bevor es in den Synthesekatalog aufgenommen
+ * oder in der Werkbank angezeigt wird.
+ *
+ * Der Katalog wird aus geprüften Stoffen und geprüften Reaktionsvorschriften
+ * erzeugt; diese Prüfung ist die zweite Sicherung für den Fall, dass eine
+ * Vorschrift auf ein Substrat trifft, dessen Produkt nicht gezeigt werden soll.
+ */
+export function isPublishableProduct(
+  smiles: string | undefined,
+  rdkit: MainModule | null,
+): boolean {
+  if (!smiles) return true;
+  return !assessSubstance(undefined, smiles, rdkit).restricted;
+}
