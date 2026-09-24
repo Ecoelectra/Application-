@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:massen": "vitest run src/__tests__/massentests",
     "lint": "tsc --noEmit -p tsconfig.app.json",
     "icons": "node scripts/generate-icons.mjs",
     "tauri": "tauri",

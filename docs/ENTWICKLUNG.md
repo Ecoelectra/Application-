@@ -136,6 +136,29 @@ jede Formel lesbar ist und jedes SMILES von RDKit akzeptiert wird.
 | `substances.test.ts` | Formel und Struktur jedes Stoffes stimmen überein |
 | `catalog.test.ts` | Vollständigkeit und Suche im Synthesekatalog |
 | `pubchem.test.ts` | PubChem-Client mit simulierten Antworten |
+| `complexes.test.ts` | Komplex-Werkbank: Namen, Geometrie, Spin, Isomere, Stabilität |
+
+### Massentests
+
+Unter `src/__tests__/massentests/` prüft je eine Datei ein Werkzeug an
+mindestens 1000 Fällen. Die Fälle werden systematisch aus den Datentabellen
+gebildet oder mit festem Startwert (`zufall(seed)` in `hilfen.ts`) erzeugt –
+jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
+
+| Datei | Fälle | Prüft |
+|---|---:|---|
+| `gleichungsausgleich.test.ts` | 1933 | Verbrennung jeder C/H/O/N/S-Verbindung und alle anorganischen Paarreaktionen: Atom- und Ladungserhaltung, teilerfremde Koeffizienten, Reihenfolge egal |
+| `redox.test.ts` | 2931 | Oxidationszahlen aller Stoffe und Ionen (Summe = Ladung), 48 Redoxpaare sauer/basisch, alle Kombinationen zur Gesamtgleichung |
+| `formel.test.ts` | 1665 | Molmasse jedes Stoffes gegen RDKit, 1000 Zufallsformeln mit Klammern, Hydraten, Ladungen und Unicode-Ziffern |
+| `stoechiometrie.test.ts` | 1001 | 1000 Zufallsansätze: Umrechnungen hin und zurück, Unterschussreagenz, Ausbeute, Atomökonomie, Verdünnung, Ansatzplanung |
+| `elektrochemie.test.ts` | 4722 | 1000 Zufallsfälle für Nernst, Faraday und Wasserstoffelektrode, jedes Paar der Spannungsreihe als Zelle (ΔG, K, Vorzeichen) |
+| `ionenmodell.test.ts` | 1153 | jedes Kation mit jedem Anion, auch als Hydrat: Formel, Zerlegung, Löslichkeit |
+| `werkbank.test.ts` | 1002 | 1000 Zufallsmischungen unter Zufallsbedingungen: Sperren, gültige und zulässige Produkte, ausgeglichene Gleichungen, Reihenfolge egal |
+| `komplexe.test.ts` | 3317 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
+| `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
+| `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
+
+`npm run test:massen` führt nur diese Tests aus.
 
 Dazu der Rauchtest `scripts/smoke-test.mjs`, der die gebaute App im Browser
 durchklickt und Bildschirmfotos ablegt.

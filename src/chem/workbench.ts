@@ -547,13 +547,22 @@ export function mix(
       Number(b.catalysisMatched) - Number(a.catalysisMatched),
   );
 
-  const complete = unique.filter((reaction) => !reaction.missing.length);
-  const incomplete = unique.filter((reaction) => reaction.missing.length).slice(0, MAX_INCOMPLETE);
+  // Negative Nachweise (Fehling, Tollens) sind keine Reaktion, aber eine Auskunft
+  const negative = unique.filter((reaction) => reaction.tags.includes('negativ'));
+  const positive = unique.filter((reaction) => !reaction.tags.includes('negativ'));
+  const negativeHints = negative.map((reaction) =>
+    reaction.missing.length
+      ? `${reaction.title}: ${reaction.missing.join(' ')}`
+      : `${reaction.title}: ${reaction.observation} ${reaction.explanation}`,
+  );
+
+  const complete = positive.filter((reaction) => !reaction.missing.length);
+  const incomplete = positive.filter((reaction) => reaction.missing.length).slice(0, MAX_INCOMPLETE);
   const shown = [...complete, ...incomplete];
 
   return {
     outcome: shown.length ? 'reaktion' : 'keine-reaktion',
     reactions: shown,
-    hints: shown.length ? [] : explainNoReaction(substances, conditions),
+    hints: shown.length ? negativeHints : negativeHints.length ? negativeHints : explainNoReaction(substances, conditions),
   };
 }

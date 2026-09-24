@@ -148,3 +148,14 @@ function coefficientOf(equation: string, formula: string, fallback: number): num
   if (!match) return fallback === 0 ? 1 : 1;
   return match[1] ? Number(match[1]) : 1;
 }
+
+describe('Keine Scheinreaktionen', () => {
+  it('lässt ein Hydroxid nicht mit Lauge zu sich selbst reagieren', () => {
+    expect(equations('eisen-ii-hydroxid', 'kaliumhydroxid')).toEqual([]);
+  });
+
+  it('zersetzt Ammoniumhydrogencarbonat nur auf eine Weise', () => {
+    const reactions = reactSingle(get('ammoniumhydrogencarbonat'));
+    expect(reactions.map((reaction) => reaction.equation)).toEqual(['NH4HCO3 → NH3 + CO2 + H2O']);
+  });
+});

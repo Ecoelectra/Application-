@@ -200,7 +200,12 @@ describe('Werkbank', () => {
       const glucose = mixIds(['glucose', 'fehling-reagenz'], { ...DEFAULT_CONDITIONS, temperature: 'heiss' });
       expect(glucose.reactions[0].observation).toContain('ziegelrot');
       const saccharose = mixIds(['saccharose', 'fehling-reagenz'], { ...DEFAULT_CONDITIONS, temperature: 'heiss' });
-      expect(saccharose.reactions[0].observation).toContain('negativ');
+      // negativer Nachweis: nur als Hinweis, keine vollständige Reaktion
+      expect(saccharose.reactions.filter((reaction) => !reaction.missing.length)).toEqual([]);
+      expect(saccharose.hints.join(' ')).toContain('negativ');
+      const keton = mixIds(['aceton', 'fehling-reagenz'], { ...DEFAULT_CONDITIONS, temperature: 'heiss' });
+      expect(keton.reactions.filter((reaction) => !reaction.missing.length)).toEqual([]);
+      expect(keton.hints.join(' ')).toContain('negativ');
     });
 
     it('chloriert Methan nur unter Licht', () => {

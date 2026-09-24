@@ -159,4 +159,17 @@ describe('Komplexchemie', () => {
       expect(complex.name.length, preset.label).toBeGreaterThan(5);
     }
   });
+
+  it('zählt Stereoisomere bei gemischten Liganden', () => {
+    const [isomer] = build('co3', [['nh3', 3], ['cl', 1], ['br', 1], ['i', 1]]).isomers;
+    expect(isomer.count).toBe(5);
+    expect(build('co3', [['nh3', 2], ['cl', 2], ['br', 2]]).isomers[0].count).toBe(6);
+    expect(build('pt2', [['nh3', 1], ['cl', 1], ['br', 1], ['py', 1]]).isomers[0].count).toBe(3);
+  });
+
+  it('nennt keine Isomere für unmögliche Komplexe', () => {
+    const complex = build('cu2', [['nh3', 4], ['cl', 4]]);
+    expect(complex.valid).toBe(false);
+    expect(complex.isomers).toEqual([]);
+  });
 });

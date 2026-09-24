@@ -324,23 +324,26 @@ export function runReaction(
       const set = productSets.get(i);
       if (!set) continue;
       const products: string[] = [];
+      let chemicallyValid = true;
       for (let j = 0; j < set.size(); j++) {
         const product = set.at(j);
         if (!product) continue;
         try {
           // Produkte aus run_reactants sind nicht sanitisiert: über SMILES
-          // neu einlesen, damit Aromatizität und Valenzen stimmen.
-          const raw = product.get_smiles();
-          const clean = canonicalSmiles(rdkit, raw);
-          products.push(clean ?? raw);
+          // neu einlesen, damit Aromatizität und Valenzen stimmen. Scheitert
+          // das (etwa fünfbindiger Kohlenstoff, weil dem Substrat das nötige
+          // H-Atom fehlt), ist der ganze Produktsatz unbrauchbar.
+          const clean = canonicalSmiles(rdkit, product.get_smiles());
+          if (clean) products.push(clean);
+          else chemicallyValid = false;
         } catch {
-          /* einzelnes Produkt überspringen */
+          chemicallyValid = false;
         } finally {
           product.delete();
         }
       }
       set.delete();
-      if (products.length) results.push(products);
+      if (products.length && chemicallyValid) results.push(products);
     }
   } catch {
     return dedupeProductSets(results);

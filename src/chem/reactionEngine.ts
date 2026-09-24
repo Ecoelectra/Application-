@@ -9,7 +9,7 @@
 import type { MainModule } from '@rdkit/rdkit';
 import { matchSmarts, runReaction, type SubstructureMatch } from './rdkit';
 import { parseFormula, toHillFormula } from './formula';
-import { assessSubstance, type SafetyAssessment } from './safety';
+import { assessSubstance, isPublishableProduct, type SafetyAssessment } from './safety';
 import { FUNCTIONAL_GROUPS } from '../data/functionalGroups';
 import { REACTIONS } from '../data/reactions';
 import type { FunctionalGroup, ReactionRule } from '../data/types';
@@ -76,7 +76,11 @@ export function applyRule(
   else reactants.push(substrateSmiles);
 
   const coReactants = reactants.filter((_, index) => index !== slot);
-  return { productSets: runReaction(rdkit, rule.smirks, reactants), coReactants };
+  // Produktsätze mit gesperrten Stoffen werden nicht gezeigt – wie in Werkbank und Katalog
+  const productSets = runReaction(rdkit, rule.smirks, reactants).filter((set) =>
+    set.every((smiles) => isPublishableProduct(smiles, rdkit)),
+  );
+  return { productSets, coReactants };
 }
 
 /** Normalisiert eine Summenformel für den Vergleich (Hill-Notation). */

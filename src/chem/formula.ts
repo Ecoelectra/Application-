@@ -29,13 +29,21 @@ class FormulaParser {
 
   constructor(input: string) {
     // Ladungen stehen am Ende der Formel: Fe3+, SO4^2-, OH-, H3O+.
-    // Ziffern unmittelbar vor dem Vorzeichen gehören zur Ladung, nicht zur Atomzahl.
-    const match = /\^?(\d*)([+-]+)$/.exec(input);
+    // Ziffern vor dem Vorzeichen gehören zur Ladung, wenn ein «^» davorsteht,
+    // wenn nur ein Elementsymbol vorausgeht (Fe3+) oder eine Komplexklammer
+    // ([Cu(NH3)4]2+). Bei mehratomigen Ionen wie NH4+ oder H3O+ sind sie Atomzahl.
+    const match = /(\^?)(\d*)([+-]+)$/.exec(input);
     if (match) {
-      const signs = match[2];
+      const signs = match[3];
       const uniform = signs.split('').every((c) => c === signs[0]);
-      if (uniform) {
-        const magnitude = match[1] ? Number(match[1]) : signs.length;
+      const before = input.slice(0, match.index);
+      const digitsAreCharge =
+        match[1] === '^' || /^[A-Z][a-z]?$/.test(before) || before.endsWith(']');
+      if (uniform && match[2] && !digitsAreCharge) {
+        this.charge = signs[0] === '+' ? signs.length : -signs.length;
+        this.text = input.slice(0, match.index + match[2].length);
+      } else if (uniform) {
+        const magnitude = match[2] ? Number(match[2]) : signs.length;
         this.charge = signs[0] === '+' ? magnitude : -magnitude;
         this.text = input.slice(0, match.index);
       } else {
@@ -154,15 +162,16 @@ export function parseFormula(input: string): ParsedFormula {
   const total: Record<string, number> = {};
   let charge = 0;
 
-  for (const part of parts) {
-    if (!part) continue;
+  parts.forEach((part, index) => {
+    if (!part) return;
     const leading = /^(\d+)(?=[A-Z(\[])/.exec(part);
     const factor = leading ? Number(leading[1]) : 1;
     const body = leading ? part.slice(leading[1].length) : part;
     const parsed = new FormulaParser(body).parse();
     mergeCounts(total, parsed.counts, factor);
-    charge += parsed.charge * factor;
-  }
+    // Eine Ladung am Ende gilt für die ganze Formeleinheit, nicht je Kristallwasser
+    charge += parsed.charge * (index === 0 ? factor : 1);
+  });
 
   return { counts: total, charge };
 }

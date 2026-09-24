@@ -115,3 +115,13 @@ describe('Ionenmodell', () => {
     );
   });
 });
+
+describe('Salzformeln mit zweiatomigen Ionen', () => {
+  it('setzt Peroxid und Carbid bei mehrfacher Anzahl in Klammern', () => {
+    const find = (list: typeof CATIONS, formula: string, charge: number) =>
+      list.find((entry) => entry.formula === formula && entry.charge === charge)!;
+    expect(saltFormula(find(CATIONS, 'Fe', 3), find(ANIONS, 'O2', -2))).toBe('Fe2(O2)3');
+    expect(saltFormula(find(CATIONS, 'Al', 3), find(ANIONS, 'C2', -2))).toBe('Al2(C2)3');
+    expect(saltFormula(find(CATIONS, 'Na', 1), find(ANIONS, 'O2', -2))).toBe('Na2O2');
+  });
+});

@@ -54,3 +54,22 @@ describe('toHillFormula', () => {
     expect(toHillFormula({ O: 4, S: 1, H: 2 })).toBe('H2O4S');
   });
 });
+
+describe('Ladungen mehratomiger Ionen', () => {
+  it('liest NH4+ und H3O+ als einfach geladene Ionen', () => {
+    expect(parseFormula('NH4+')).toEqual({ counts: { N: 1, H: 4 }, charge: 1 });
+    expect(parseFormula('H3O+')).toEqual({ counts: { H: 3, O: 1 }, charge: 1 });
+    expect(parseFormula('MnO4-')).toEqual({ counts: { Mn: 1, O: 4 }, charge: -1 });
+  });
+
+  it('behält Ziffern als Ladung bei einatomigen Ionen und Komplexen', () => {
+    expect(parseFormula('Fe3+').charge).toBe(3);
+    expect(parseFormula('S2-').charge).toBe(-2);
+    expect(parseFormula('[Cu(NH3)4]2+')).toEqual({ counts: { Cu: 1, N: 4, H: 12 }, charge: 2 });
+  });
+
+  it('vervielfacht die Ladung nicht mit dem Kristallwasser', () => {
+    expect(parseFormula('[Co(H2O)6]Cl2·2H2O').charge).toBe(0);
+    expect(parseFormula('Fe·3H2O^2+').charge).toBe(2);
+  });
+});

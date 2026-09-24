@@ -108,7 +108,7 @@ export function HomePage() {
         </div>
 
         <div className="card">
-          <h3>Über 5000 Synthesen</h3>
+          <h3>Über 6000 Synthesen</h3>
           <p className="muted small">
             Für jeden Stoff nachschlagen, wie er hergestellt wird. Alle Wege sind aus den
             Reaktionsvorschriften berechnet und die Gleichungen exakt ausgeglichen.

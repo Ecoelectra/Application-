@@ -421,6 +421,16 @@ export function complementaryColor(absorbedNm: number): { color: string; swatch:
   return { color: 'blassblau (Absorption im nahen Infrarot)', swatch: '#b9dcef' };
 }
 
+/** Stereoisomere oktaedrischer Komplexe mit einzähnigen Liganden, nach Anzahlmuster. */
+const OCTAHEDRAL_STEREOISOMERS: Record<string, number> = {
+  '3,2,1': 3,
+  '3,1,1,1': 5,
+  '2,2,2': 6,
+  '2,2,1,1': 8,
+  '2,1,1,1,1': 15,
+  '1,1,1,1,1,1': 30,
+};
+
 function analyseIsomers(geometry: Geometry, ligands: LigandCount[]): Isomerism[] {
   const present = ligands.filter((entry) => entry.count > 0);
   const mono = present.filter((entry) => entry.ligand.denticity === 1);
@@ -441,10 +451,16 @@ function analyseIsomers(geometry: Geometry, ligands: LigandCount[]): Isomerism[]
         result.push({ kind: 'fac/mer-Isomerie', count: 2, description: 'Drei gleiche Liganden besetzen eine Oktaederfläche (fac) oder liegen auf einem Meridian (mer).' });
       } else if (counts[0] === 4 && counts[1] === 1 && counts[2] === 1) {
         result.push({ kind: 'cis/trans-Isomerie', count: 2, description: 'Die beiden verschiedenen Liganden stehen benachbart oder gegenüber.' });
-      } else if (counts[0] === 5 || counts[0] === 6) {
-        // keine Isomere
       } else {
-        result.push({ kind: 'mehrere Stereoisomere', count: 0, description: 'Bei dieser Ligandenkombination gibt es mehrere räumliche Anordnungen.' });
+        // Zahl der Stereoisomere (einschließlich Spiegelbilder) für MA₃B₂C, MA₂B₂C₂ usw.
+        const total = OCTAHEDRAL_STEREOISOMERS[counts.join(',')];
+        if (total && total > 1) {
+          result.push({
+            kind: 'mehrere Stereoisomere',
+            count: total,
+            description: `Die ${mono.length} verschiedenen Liganden lassen sich auf ${total} räumlich verschiedene Arten um das Zentralion anordnen (Spiegelbilder mitgezählt).`,
+          });
+        }
       }
     }
   }
@@ -452,6 +468,8 @@ function analyseIsomers(geometry: Geometry, ligands: LigandCount[]): Isomerism[]
   if (geometry === 'quadratisch-planar' && !bi.length && mono.length >= 2) {
     if ((counts[0] === 2 && counts[1] === 2) || (counts[0] === 2 && counts[1] === 1 && counts[2] === 1)) {
       result.push({ kind: 'cis/trans-Isomerie', count: 2, description: 'Die gleichen Liganden stehen benachbart (cis) oder über Kreuz (trans) – wie bei Cisplatin, von dem nur das cis-Isomer als Medikament wirkt.' });
+    } else if (mono.length === 4) {
+      result.push({ kind: 'Stellungsisomerie', count: 3, description: 'Bei vier verschiedenen Liganden entscheidet, welcher Ligand welchem gegenübersteht – das ergibt drei Isomere.' });
     }
   }
 
@@ -622,7 +640,8 @@ export function analyseComplex(metal: CentralIon, rawLigands: LigandCount[]): Co
     colorSource,
     trivialName: known?.trivialName,
     note: known?.note,
-    isomers: analyseIsomers(geometry, ligands),
+    // Isomere nur für Komplexe, die es geben kann
+    isomers: [2, 4, 5, 6].includes(coordinationNumber) ? analyseIsomers(geometry, ligands) : [],
     chelate: ligands.some((entry) => entry.ligand.denticity > 1),
     logBeta: STABILITY[stabilityKey],
     formation,

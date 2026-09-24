@@ -9,6 +9,8 @@ import {
   suggestReactions,
 } from '../reactionEngine';
 import { reactionById } from '../../data/reactions';
+import { isPublishableProduct } from '../safety';
+import { canonicalSmiles } from '../rdkit';
 
 let rdkit: MainModule;
 
@@ -138,5 +140,29 @@ describe('Reaktionssuche', () => {
   it('filtert nach funktioneller Gruppe', () => {
     const results = searchReactions('', { groups: ['aldehyd'] });
     expect(results.every((rule) => rule.functionalGroups.includes('aldehyd'))).toBe(true);
+  });
+});
+
+describe('Sicherheitsfilter der Vorschläge', () => {
+  it('zeigt keine Produkte, die die Sicherheitsprüfung sperrt', () => {
+    // mehrfach substituierte Aromaten und Amine: hier greifen Nitrierung und Chlorierung
+    for (const smiles of ['O=[N+]([O-])c1ccc(Cl)c([N+](=O)[O-])c1', 'CC(C)N(CC)C(C)C', 'O=C1CCC(=O)N1']) {
+      const result = analyzeSubstance(rdkit, { smiles });
+      for (const suggestion of result.suggestions) {
+        for (const set of suggestion.productSets) {
+          for (const product of set) expect(isPublishableProduct(product, rdkit), product).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('verwirft Produktsätze mit falschen Valenzen', () => {
+    const rule = reactionById('aldol-kondensation');
+    expect(rule?.smirks).toBeTruthy();
+    // Isobutyraldehyd hat nur ein α-H-Atom und kann nicht zum Enal kondensieren
+    const { productSets } = applyRule(rdkit, rule!, 'CC(C)C=O');
+    for (const set of productSets) {
+      for (const product of set) expect(canonicalSmiles(rdkit, product), product).not.toBeNull();
+    }
   });
 });

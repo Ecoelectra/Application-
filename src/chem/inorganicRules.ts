@@ -230,6 +230,9 @@ function build(options: BuildOptions): InorganicReaction | null {
     return null;
   }
   if (balanced.warnings.some((warning) => warning.includes('Keine'))) return null;
+  // Scheinreaktionen wie «Fe(OH)2 + KOH → Fe(OH)2 + KOH» verwerfen
+  const sortedKey = (list: string[]) => [...list].sort().join('|');
+  if (sortedKey(options.reactants) === sortedKey(options.products)) return null;
 
   return {
     id: options.id,
@@ -1206,7 +1209,8 @@ export function reactSingle(substance: Substance): InorganicReaction[] {
   }
 
   // Hydrogencarbonate zerfallen schon beim Backen
-  if (reagent.salt?.anion.formula === 'HCO3') {
+  // (Ammoniumhydrogencarbonat zerfällt vollständig, siehe unten)
+  if (reagent.salt?.anion.formula === 'HCO3' && reagent.salt.cation.formula !== 'NH4') {
     const metal = reagent.salt.cation;
     const carbonate = saltFormula(metal, makeAnion('CO3', -2, ''));
     const reaction = build({

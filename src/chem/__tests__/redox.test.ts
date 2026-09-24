@@ -59,3 +59,22 @@ describe('balanceRedox', () => {
     expect(result.equation).toBe('5 Fe2+ + MnO4^- + 8 H+ → 5 Fe3+ + Mn2+ + 4 H2O');
   });
 });
+
+describe('Oxidationszahlen in Sonderfällen', () => {
+  it('gibt Wasserstoff in Hydroxiden +I, in Metallhydriden −I', () => {
+    expect(oxidationStates('NaOH')).toEqual({ Na: 1, O: -2, H: 1 });
+    expect(oxidationStates('Ca(OH)2')).toEqual({ Ca: 2, O: -2, H: 1 });
+    expect(oxidationStates('CaH2')).toEqual({ Ca: 2, H: -1 });
+    expect(oxidationStates('KH')).toEqual({ K: 1, H: -1 });
+  });
+
+  it('verteilt die Ladung bei Polyhalogeniden', () => {
+    expect(oxidationStates('KI3')?.I).toBeCloseTo(-1 / 3, 9);
+  });
+
+  it('gleicht die Nitrat-Reduktion zum Ammonium-Ion aus', () => {
+    const half = balanceHalfReaction('NO3^-', 'NH4+', 'sauer');
+    expect(half.electrons).toBe(8);
+    expect(half.equation).toBe('NO3^- + 10 H+ + 8 e- → NH4+ + 3 H2O');
+  });
+});

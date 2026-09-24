@@ -210,10 +210,10 @@ export function saltFormula(cation: Ion, anion: Ion): string {
 
   const part = (ionEntry: Ion, count: number): string => {
     if (count === 1) return ionEntry.formula;
-    // Ionen aus mehreren Elementen brauchen Klammern: Ca(NO3)2 und Fe(OH)3,
-    // nicht CaNO32 oder FeOH3.
-    const elementCount = (ionEntry.formula.match(/[A-Z]/g) ?? []).length;
-    return elementCount > 1 ? `(${ionEntry.formula})${count}` : `${ionEntry.formula}${count}`;
+    // Mehratomige Ionen brauchen Klammern: Ca(NO3)2, Fe(OH)3 und Fe2(O2)3,
+    // nicht CaNO32, FeOH3 oder Fe2O23.
+    const polyatomic = /[A-Z].*[A-Z]|\d/.test(ionEntry.formula);
+    return polyatomic ? `(${ionEntry.formula})${count}` : `${ionEntry.formula}${count}`;
   };
 
   return `${part(cation, cationCount)}${part(anion, anionCount)}`;

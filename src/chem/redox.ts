@@ -79,12 +79,14 @@ export function oxidationStates(formula: string): Record<string, number> | null 
     if (element === 'F') known.F = -1;
     else if (isAlkali(element)) known[element] = 1;
     else if (isAlkalineEarth(element)) known[element] = 2;
-    else if (element === 'H') known.H = elements.some((e) => isMetal(e) && e !== 'H') ? -1 : 1;
+    // Hydrid nur in Verbindungen aus Metall und Wasserstoff (NaH, CaH2) – nicht in NaOH
+    else if (element === 'H') known.H = elements.every((e) => e === 'H' || isMetal(e)) ? -1 : 1;
     else if (element === 'O') known.O = -2;
     else unknown.push(element);
   }
 
   // Halogene sind -1, solange kein elektronegativerer Partner vorhanden ist
+  let defaultHalogen: string | undefined;
   for (const element of [...unknown]) {
     if (['Cl', 'Br', 'I'].includes(element)) {
       const moreElectronegative = elements.some(
@@ -92,12 +94,19 @@ export function oxidationStates(formula: string): Record<string, number> | null 
       );
       if (!moreElectronegative) {
         known[element] = -1;
+        defaultHalogen = element;
         unknown.splice(unknown.indexOf(element), 1);
       }
     }
   }
 
-  if (unknown.length === 0) return known;
+  if (unknown.length === 0) {
+    const sum = Object.entries(known).reduce((total, [element, state]) => total + state * counts[element], 0);
+    if (sum === charge || !defaultHalogen) return known;
+    // Polyhalogenide wie KI3: das Halogen trägt den Rest der Ladung (I: −1/3)
+    delete known[defaultHalogen];
+    unknown.push(defaultHalogen);
+  }
   if (unknown.length > 1) {
     // Mehrdeutig (z. B. organische Verbindungen mit mehreren Zentralatomen)
     return null;

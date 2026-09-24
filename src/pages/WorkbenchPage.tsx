@@ -322,6 +322,16 @@ export function WorkbenchPage() {
             </div>
           )}
 
+          {!running && result?.outcome === 'reaktion' && result.hints.length > 0 && (
+            <Callout variant="info" title="Negativer Nachweis">
+              {result.hints.map((hint) => (
+                <p key={hint} style={{ marginBottom: 8 }}>
+                  {hint}
+                </p>
+              ))}
+            </Callout>
+          )}
+
           {!running &&
             result?.outcome === 'reaktion' &&
             result.reactions.map((reaction) => (

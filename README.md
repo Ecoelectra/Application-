@@ -4,7 +4,8 @@ Eine App für **Windows** und **iPad**, die aus einem eingegebenen Stoff passend
 chemische Synthesen und Reaktionen vorschlägt – mit Reaktionsgleichung,
 Reaktionsmechanismus, vollständiger Arbeitsanleitung, Sicherheitshinweisen und
 elektrochemischen Kennzahlen. Dazu eine **Werkbank**, in der sich Stoffe
-zusammengeben lassen, und ein Katalog aus **5498 berechneten Synthesen**.
+zusammengeben lassen, eine **Komplex-Werkbank** und ein Katalog aus **6485 berechneten
+Synthesen**.
 
 ![Werkbank](docs/bilder/werkbank.png)
 
@@ -13,15 +14,19 @@ zusammengeben lassen, und ein Katalog aus **5498 berechneten Synthesen**.
 ## Was die App kann
 
 **Werkbank: Stoffe zusammengeben und sehen, was entsteht.**
-Im Chemikalienschrank stehen 653 Stoffe bereit. Bis zu vier davon wandern ins
-Reaktionsgefäß, dazu lassen sich Bedingungen einstellen – erhitzen, Katalysator,
-wässrige Lösung. Die App liefert dann:
+Im Chemikalienschrank stehen 664 Stoffe bereit. Bis zu vier davon wandern ins
+Reaktionsgefäß, dazu lassen sich Bedingungen einstellen – kühlen oder erhitzen,
+**säure- oder basenkatalysiert**, Metall- oder Lewis-Säure-Katalyse, wässrige
+Lösung, UV-Licht oder Elektrolyse. Erkannt werden Neutralisation, Fällung,
+Gasentwicklung, Metallverdrängung, Verbrennung, Thermit- und Knallgasreaktion,
+Halogenverdrängung, Nachweisreaktionen (Fehling, Tollens, Iod-Stärke, Berliner
+Blau), Komplexbildung und die organischen Reaktionsvorlagen. Die App liefert dann:
 
 - die **ausgeglichene Reaktionsgleichung** und, wo sinnvoll, die Ionengleichung
 - die **Beobachtung**: welche Farbe der Niederschlag hat, ob es sprudelt, was man riecht
 - eine **Erklärung**, warum die Reaktion so abläuft
 - die **Struktur des Produkts**, gezeichnet aus der berechneten Formel
-- bei Bedarf den Hinweis, **was noch fehlt** (Wärme, Katalysator, Elektrolysezelle)
+- bei Bedarf den Hinweis, **was noch fehlt** (Wärme, Säure- oder Basenkatalyse, Elektrolysezelle)
 - und wenn nichts passiert: **warum** nicht – etwa weil das Metall edler als
   Wasserstoff ist oder alle Ionen in Lösung bleiben
 
@@ -29,9 +34,18 @@ Jedes Produkt lässt sich mit einem Tipp als neues Edukt übernehmen, sodass sic
 mehrstufige Synthesen durchspielen lassen. Das Laborjournal hält fest, was man
 schon probiert hat.
 
-**Synthesekatalog: 5498 Wege zu 2008 Stoffen.**
+**Komplex-Werkbank: mit Komplexen spielen.**
+Zentralion wählen (20 Ionen von Cu²⁺ bis Pt⁴⁺), Liganden hinzufügen (19 Liganden
+von I⁻ bis CO, auch en, EDTA, bipy) – und die App zeigt sofort Formel und
+IUPAC-Namen, Koordinationszahl und räumliche Gestalt, das Aufspaltungsschema der
+d-Orbitale mit High- oder Low-Spin-Besetzung, magnetisches Moment,
+Ligandenfeld-Stabilisierung, die zu erwartende Farbe, mögliche Isomere, die
+Bildungsgleichung und die Stabilitätskonstante. Aus der Werkbank führt ein Link
+direkt zum entstandenen Komplex.
+
+**Synthesekatalog: 6485 Wege zu 2290 Stoffen.**
 Für jeden Stoff nachschlagen, wie er hergestellt wird. Der Katalog ist nicht
-abgeschrieben, sondern gerechnet: Jede der 87 Reaktionsvorlagen wird auf alle
+abgeschrieben, sondern gerechnet: Jede der 83 Reaktionsvorlagen wird auf alle
 passenden Stoffe der Datenbank angewendet und das Produkt mit RDKit bestimmt;
 die anorganischen Gleichungen entstehen aus dem Ionenmodell und sind exakt
 ausgeglichen. Auf jeder Stoffseite stehen deshalb «So wird X hergestellt» und
@@ -76,12 +90,13 @@ Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen.
 
 | | |
 |---|---|
-| berechnete Synthesen | 5498 |
-| davon organisch / anorganisch | 3490 / 2008 |
-| verschiedene Zielstoffe | 2008 |
-| Reaktionstypen mit Mechanismus | 87 |
+| berechnete Synthesen | 6485 |
+| davon organisch / anorganisch | 4233 / 2252 |
+| verschiedene Zielstoffe | 2290 |
+| Reaktionstypen mit Mechanismus | 96 |
 | davon elektrochemisch | 15 |
-| Stoffe offline verfügbar | 653 |
+| Stoffe offline verfügbar | 664 |
+| Zentralionen / Liganden der Komplex-Werkbank | 20 / 19 |
 | Standardpotentiale | 61 |
 | erkannte funktionelle Gruppen | 34 |
 | Elemente mit Atommassen | 118 |
@@ -123,7 +138,8 @@ Dafür werden [Rust](https://rustup.rs/) und die
 ```bash
 npm install
 npm run dev        # Entwicklungsserver auf http://localhost:5173
-npm test           # 209 Tests (Chemiekern, Reaktionen, Werkbank, Katalog)
+npm test           # 20 583 Tests, davon je über 1000 pro Werkzeug (rund 80 s)
+npm run test:massen  # nur die Massentests (src/__tests__/massentests)
 npm run lint       # Typprüfung
 npm run catalog    # Synthesekatalog neu berechnen (rund 13 s)
 npm run build      # Produktionsbuild nach dist/
@@ -152,6 +168,9 @@ src/
     ions.ts           Ionenmodell, Löslichkeitsregeln, Spannungsreihe
     inorganicRules.ts Anorganische Reaktionsregeln mit Beobachtungen
     workbench.ts      Werkbank: Was entsteht aus diesen Stoffen?
+    organicAcidBase.ts Säure-Base-Reaktionen organischer Stoffe
+    specialReactions.ts Nachweise, Komplexbildung, technische Verfahren
+    complexes.ts      Komplex-Werkbank: Namen, Ligandenfeld, Farbe, Stabilität
     rdkit.ts          Anbindung der RDKit-WebAssembly-Bibliothek
     reactionEngine.ts Gruppenerkennung, Produktberechnung, Vorschläge
     safety.ts         Reglementierte Stoffe und gefährliche Mischungen
@@ -163,9 +182,11 @@ src/
     substances.ts     Offline-Stoffdatenbank
     potentials.ts     Elektrochemische Spannungsreihe
     catalog.ts        Zugriff und Suche im Synthesekatalog
+    workbenchSpecs.ts Bedingungen und Katalyse je Reaktionsvorlage
   services/       PubChem-Anbindung mit Ratenbegrenzung und Cache
   components/     Wiederverwendbare Bausteine der Oberfläche
-  pages/          Die neun Seiten der App
+  pages/          Die zehn Seiten der App
+  __tests__/massentests/  Je über 1000 Tests pro Werkzeug
 scripts/
   build-catalog.ts  Erzeugt den Synthesekatalog
 src-tauri/        Windows-Anwendung (Tauri v2)
