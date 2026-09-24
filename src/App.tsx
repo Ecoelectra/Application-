@@ -8,11 +8,13 @@ import { ElectrochemistryPage } from './pages/ElectrochemistryPage';
 import { ToolsPage } from './pages/ToolsPage';
 import { WorkbenchPage } from './pages/WorkbenchPage';
 import { CatalogPage } from './pages/CatalogPage';
+import { ComplexPage } from './pages/ComplexPage';
 import { InfoPage } from './pages/InfoPage';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Start', end: true },
   { to: '/werkbank', label: 'Werkbank' },
+  { to: '/komplexe', label: 'Komplexe' },
   { to: '/synthesen', label: 'Synthesen' },
   { to: '/suche', label: 'Reaktionen' },
   { to: '/elektrochemie', label: 'Elektrochemie' },
@@ -64,6 +66,7 @@ export function App() {
           <Route path="/elektrochemie" element={<ElectrochemistryPage />} />
           <Route path="/werkbank" element={<WorkbenchPage />} />
           <Route path="/synthesen" element={<CatalogPage />} />
+          <Route path="/komplexe" element={<ComplexPage />} />
           <Route path="/werkzeuge" element={<ToolsPage />} />
           <Route path="/info" element={<InfoPage />} />
           <Route

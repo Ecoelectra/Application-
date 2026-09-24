@@ -6,6 +6,8 @@
 import type { MainModule } from '@rdkit/rdkit';
 import type { InorganicReaction } from './inorganicRules';
 import { matchSmarts } from './rdkit';
+import { splitSalt } from './ions';
+import { analyseComplex, CENTRAL_ION_BY_ID, LIGAND_BY_ID } from './complexes';
 import { formulaKey } from '../data/substances';
 import { REACTIONS } from '../data/reactions';
 import { WORKBENCH_SPECS, type Requirements } from '../data/workbenchSpecs';
@@ -16,7 +18,47 @@ export interface SpecialReaction extends InorganicReaction {
   productIds: string[];
   /** Verweis auf die Detailseite */
   ruleId?: string;
+  /** Adresse in der Komplex-Werkbank, falls ein Komplex entsteht */
+  complexLink?: string;
 }
+
+/** Stoffe, die als Ligandenquelle dienen, und der gebildete Ligand. */
+const LIGAND_SOURCES: Record<string, string> = {
+  ammoniak: 'nh3',
+  kaliumthiocyanat: 'scn',
+  natriumthiosulfat: 's2o3',
+  ethylendiamin: 'en',
+  'dinatrium-edta': 'edta',
+  natriumfluorid: 'f',
+  salzsaeure: 'cl',
+  kaliumiodid: 'i',
+};
+
+/** Welcher Komplex sich aus Zentralion und Ligand typischerweise bildet. */
+const TYPICAL_COMPLEX: Record<string, Array<[string, number]>> = {
+  'cu2|nh3': [['nh3', 4], ['h2o', 2]],
+  'cu2|en': [['en', 2]],
+  'cu2|edta': [['edta', 1]],
+  'cu2|cl': [['cl', 4]],
+  'ni2|nh3': [['nh3', 6]],
+  'ni2|en': [['en', 3]],
+  'ni2|edta': [['edta', 1]],
+  'co2|cl': [['cl', 4]],
+  'co2|nh3': [['nh3', 6]],
+  'co2|edta': [['edta', 1]],
+  'fe3|scn': [['scn', 1], ['h2o', 5]],
+  'fe3|f': [['f', 6]],
+  'fe3|edta': [['edta', 1]],
+  'fe2|edta': [['edta', 1]],
+  'ag1|nh3': [['nh3', 2]],
+  'ag1|s2o3': [['s2o3', 2]],
+  'zn2|nh3': [['nh3', 4]],
+  'zn2|edta': [['edta', 1]],
+  'ca2|edta': [['edta', 1]],
+  'mg2|edta': [['edta', 1]],
+  'mn2|edta': [['edta', 1]],
+  'hg2|i': [['i', 4]],
+};
 
 const ALDEHYDE = '[CX3H1](=O)[#6]';
 const REDUCING_SUGAR = '[OX2H1][CX4H1;R]([OX2;R])';
@@ -220,6 +262,89 @@ export function specialReactions(rdkit: MainModule | null, substances: Substance
     if (!water) {
       // Wasser fehlt – die Werkbank zeigt das über die Bedingung «in Wasser».
     }
+  }
+
+  // Komplexbildung: Metallsalz und Ligandenquelle
+  for (const ligandSource of substances) {
+    const ligandId = LIGAND_SOURCES[ligandSource.id];
+    if (!ligandId) continue;
+    for (const saltSubstance of substances) {
+      if (saltSubstance === ligandSource) continue;
+      const salt = splitSalt(saltSubstance.formula);
+      if (!salt) continue;
+      const metalId = `${salt.cation.formula.toLowerCase()}${salt.cation.charge}`;
+      const recipe = TYPICAL_COMPLEX[`${metalId}|${ligandId}`];
+      const metal = CENTRAL_ION_BY_ID.get(metalId);
+      if (!recipe || !metal) continue;
+      const complex = analyseComplex(
+        metal,
+        recipe.map(([id, count]) => ({ ligand: LIGAND_BY_ID.get(id)!, count })),
+      );
+      const insoluble = ['AgCl', 'AgBr', 'AgI'].includes(salt.anhydrous);
+      const copperAmmonia = metalId === 'cu2' && ligandId === 'nh3';
+      results.push(
+        special({
+          id: `komplex-${saltSubstance.id}-${ligandSource.id}`,
+          type: 'Nachweisreaktion',
+          title: `Komplexbildung: ${complex.name}`,
+          equation: complex.formation ?? `${saltSubstance.formula} + ${ligandSource.formula} → ${complex.formula}`,
+          reactants: [saltSubstance.formula, ligandSource.formula],
+          products: [complex.formula],
+          observation: [
+            copperAmmonia
+              ? 'Mit wenig Ammoniak fällt zuerst hellblaues Kupferhydroxid aus; im Überschuss löst es sich zu einer tiefblauen Lösung.'
+              : insoluble
+                ? `Der Niederschlag von ${saltSubstance.name} löst sich auf.`
+                : complex.color === 'farblos'
+                  ? 'Die Lösung bleibt bzw. wird farblos.'
+                  : `Die Lösung färbt sich ${complex.color}.`,
+            complex.note ?? '',
+          ].filter(Boolean).join(' '),
+          explanation: `Die ${ligandSource.name} liefert ${LIGAND_BY_ID.get(ligandId)?.label}-Liganden, die das Wasser am ${metal.element}-Ion verdrängen. Es entsteht ${complex.formulaPretty}${complex.logBeta !== undefined ? ` (lg β = ${String(complex.logBeta).replace('.', ',')})` : ''} – ${complex.geometry}, ${complex.unpaired} ungepaarte Elektronen.`,
+          conditions: ligandId === 'cl' ? 'konzentrierte Salzsäure' : 'wässrige Lösung, Raumtemperatur',
+          requires: { aqueous: true },
+          level: 'Schulversuch',
+          hazards: ligandId === 'nh3' ? ['Ammoniak reizt Augen und Atemwege.'] : [],
+          tags: ['Komplexbildung', complex.color],
+        }),
+      );
+      results[results.length - 1].complexLink = `/komplexe?zentral=${metalId}&liganden=${recipe.map(([id, count]) => `${id}:${count}`).join(',')}`;
+    }
+  }
+
+  // Berliner Blau und Turnbulls Blau
+  const hexacyanido = [
+    { id: 'kaliumhexacyanoferrat-ii', partner: 3, name: 'Berliner Blau' },
+    { id: 'kaliumhexacyanoferrat-iii', partner: 2, name: 'Turnbulls Blau' },
+  ];
+  for (const entry of hexacyanido) {
+    if (!has(substances, entry.id)) continue;
+    const iron = substances.find((substance) => {
+      const salt = splitSalt(substance.formula);
+      return salt?.cation.formula === 'Fe' && salt.cation.charge === entry.partner;
+    });
+    if (!iron) continue;
+    results.push(
+      special({
+        id: `blau-${entry.id}-${iron.id}`,
+        type: 'Nachweisreaktion',
+        title: entry.name,
+        equation:
+          entry.partner === 3
+            ? 'Fe³⁺ + K⁺ + [Fe(CN)₆]⁴⁻ → KFe[Fe(CN)₆]↓'
+            : 'Fe²⁺ + K⁺ + [Fe(CN)₆]³⁻ → KFe[Fe(CN)₆]↓',
+        reactants: [iron.formula, entry.partner === 3 ? 'K4[Fe(CN)6]' : 'K3[Fe(CN)6]'],
+        products: ['KFe[Fe(CN)6]'],
+        observation: 'Sofort fällt ein tiefblauer Niederschlag aus.',
+        explanation:
+          `Nachweis für Eisen(${entry.partner === 3 ? 'III' : 'II'})-Ionen. Berliner Blau und Turnbulls Blau sind – wie man heute weiß – derselbe Stoff: In beiden liegen Eisen(II) und Eisen(III) nebeneinander vor, und die Elektronenübertragung zwischen ihnen (Intervalenz-Charge-Transfer) verursacht die intensive Farbe.`,
+        conditions: 'wässrige Lösung',
+        requires: { aqueous: true },
+        level: 'Schulversuch',
+        hazards: [],
+        tags: ['Nachweis', 'Niederschlag', 'tiefblau'],
+      }),
+    );
   }
 
   // Technische Verfahren und Versuche mit fester Gleichung

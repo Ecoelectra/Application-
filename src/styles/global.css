@@ -905,3 +905,86 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
   max-width: 62ch;
   margin: 0;
 }
+
+/* ---------- Komplex-Werkbank ---------- */
+
+.ion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.bottle-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ligand-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ligand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.ligand-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepper button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stepper span {
+  min-width: 1.2em;
+  text-align: center;
+}
+
+.complex-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.color-swatch {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  box-shadow: inset 0 -8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.complex-formula {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  word-break: break-word;
+}

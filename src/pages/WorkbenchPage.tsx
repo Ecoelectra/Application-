@@ -504,6 +504,11 @@ function ReactionResult({
             Ausführliche Anleitung
           </Link>
         )}
+        {reaction.complexLink && (
+          <Link className="button button-small" to={reaction.complexLink}>
+            In der Komplex-Werkbank ansehen
+          </Link>
+        )}
       </div>
     </article>
   );

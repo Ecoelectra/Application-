@@ -222,4 +222,29 @@ describe('Werkbank', () => {
       expect(substance?.molarMass).toBeGreaterThan(80);
     });
   });
+
+  describe('Komplexbildung', () => {
+    it('bildet mit Kupfersulfat und Ammoniak den tiefblauen Komplex', () => {
+      const result = mixIds(['kupfersulfat', 'ammoniak']);
+      const complex = result.reactions.find((reaction) => reaction.complexLink);
+      expect(complex?.equation).toBe('[Cu(H₂O)₆]²⁺ + 4 NH₃ ⇌ [Cu(NH₃)₄(H₂O)₂]²⁺ + 4 H₂O');
+      expect(complex?.observation).toContain('tiefblau');
+      expect(complex?.complexLink).toBe('/komplexe?zentral=cu2&liganden=nh3:4,h2o:2');
+    });
+
+    it('färbt Eisen(III)-chlorid mit Thiocyanat blutrot', () => {
+      const result = mixIds(['eisen-iii-chlorid', 'kaliumthiocyanat']);
+      expect(result.reactions.some((reaction) => reaction.observation.includes('blutrot'))).toBe(true);
+    });
+
+    it('zeigt Berliner Blau', () => {
+      const result = mixIds(['eisen-iii-chlorid', 'kaliumhexacyanoferrat-ii']);
+      expect(result.reactions.some((reaction) => reaction.title === 'Berliner Blau')).toBe(true);
+    });
+
+    it('löst Silberchlorid in Ammoniak', () => {
+      const result = mixIds(['silberchlorid', 'ammoniak']);
+      expect(result.reactions.some((reaction) => reaction.observation.includes('löst sich'))).toBe(true);
+    });
+  });
 });

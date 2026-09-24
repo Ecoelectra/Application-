@@ -83,6 +83,8 @@ export interface WorkbenchReaction {
   missing: string[];
   /** Die gewählte Katalyse ist genau die, die diese Reaktion braucht */
   catalysisMatched: boolean;
+  /** Adresse in der Komplex-Werkbank, falls ein Komplex entsteht */
+  complexLink?: string;
 }
 
 export type MixOutcome = 'reaktion' | 'keine-reaktion' | 'gesperrt';
@@ -239,7 +241,7 @@ function fromInorganic(
   reaction: InorganicReaction,
   conditions: WorkbenchConditions,
   substances: Substance[],
-  extra: { productSmiles?: string[]; productIds?: string[]; ruleId?: string; rdkit?: MainModule | null } = {},
+  extra: { productSmiles?: string[]; productIds?: string[]; ruleId?: string; rdkit?: MainModule | null; complexLink?: string } = {},
 ): WorkbenchReaction {
   const { missing, catalysisMatched } = missingRequirements(reaction.requires ?? {}, conditions, substances);
 
@@ -275,6 +277,7 @@ function fromInorganic(
     tags: reaction.tags,
     missing,
     catalysisMatched,
+    complexLink: extra.complexLink,
   };
 }
 
@@ -517,7 +520,11 @@ export function mix(
   // 3. Nachweise, Sonderreaktionen, technische Verfahren
   for (const reaction of specialReactions(rdkit, substances)) {
     reactions.push(
-      fromInorganic(reaction, conditions, substances, { productIds: reaction.productIds, ruleId: reaction.ruleId }),
+      fromInorganic(reaction, conditions, substances, {
+        productIds: reaction.productIds,
+        ruleId: reaction.ruleId,
+        complexLink: reaction.complexLink,
+      }),
     );
   }
 

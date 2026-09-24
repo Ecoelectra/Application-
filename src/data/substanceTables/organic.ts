@@ -394,4 +394,5 @@ Methylentriphenylphosphoran|Methylen-Wittig-Ylid|C19H17P|C=P(c1ccccc1)(c1ccccc1)
 Methylmagnesiumbromid|MeMgBr|CH3BrMg|C[Mg]Br|||Reagenz|Grignard-Reagenz, in Ether gelöst, reagiert heftig mit Wasser
 Ethylmagnesiumbromid|EtMgBr|C2H5BrMg|CC[Mg]Br|||Reagenz|Grignard-Reagenz
 Phenylmagnesiumbromid|PhMgBr|C6H5BrMg|Br[Mg]c1ccccc1|||Reagenz|Aryl-Grignard-Reagenz, Baustein für Triphenylmethanol
+Dinatrium-EDTA|Titriplex III;Na2H2EDTA|C10H14N2Na2O8|O=C(O)CN(CCN(CC(=O)[O-])CC(=O)[O-])CC(=O)O.[Na+].[Na+]|||Reagenz|Sechszähniger Komplexbildner, Maßlösung der Wasserhärtebestimmung
 `.trim();
