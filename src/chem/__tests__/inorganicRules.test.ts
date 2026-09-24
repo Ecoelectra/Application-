@@ -53,7 +53,7 @@ describe('Anorganische Reaktionsregeln', () => {
     expect(equations('calciumcarbonat', 'salzsaeure')).toContain(
       'CaCO3 + 2 HCl → CaCl2 + H2O + CO2',
     );
-    expect(equations('natriumhydrogencarbonat', 'essigsaeure')).toHaveLength(1);
+    expect(equations('natriumhydrogencarbonat', 'salzsaeure')).toContain('NaHCO3 + HCl → NaCl + H2O + CO2');
   });
 
   it('erkennt Fällungsreaktionen mit der richtigen Farbe', () => {

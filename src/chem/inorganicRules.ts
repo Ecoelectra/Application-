@@ -12,6 +12,7 @@ import { parseFormula, sameComposition } from './formula';
 import {
   dissolvesInAcid,
   displaces,
+  METAL_SERIES,
   saltFormula,
   solubility,
   splitSalt,
@@ -19,6 +20,7 @@ import {
   type SaltComposition,
 } from './ions';
 import type { SafetyLevel, Substance } from '../data/types';
+import type { Requirements } from '../data/workbenchSpecs';
 
 export type InorganicReactionType =
   | 'Neutralisation'
@@ -34,7 +36,18 @@ export type InorganicReactionType =
   | 'Thermische Zersetzung'
   | 'Verbrennung'
   | 'Nachweisreaktion'
-  | 'Amphoteres Hydroxid';
+  | 'Amphoteres Hydroxid'
+  | 'Ammoniak und Säure'
+  | 'Ammoniumsalz und Lauge'
+  | 'Säureanhydrid und Base'
+  | 'Reduktion von Metalloxiden'
+  | 'Aluminothermie'
+  | 'Halogenverdrängung'
+  | 'Nichtmetall-Synthese'
+  | 'Hydratbildung'
+  | 'Hydrolyse'
+  | 'Katalytische Zersetzung'
+  | 'Gasentwicklung mit Säure';
 
 export interface InorganicReaction {
   /** Kennung, aus Regel und Edukten gebildet */
@@ -57,6 +70,8 @@ export interface InorganicReaction {
   hazards: string[];
   /** Gasentwicklung, Niederschlag und Ähnliches für die Darstellung */
   tags: string[];
+  /** Bedingungen, ohne die die Reaktion nicht abläuft */
+  requires: Requirements;
 }
 
 export interface RuleContext {
@@ -102,8 +117,6 @@ const ACIDS: Record<string, { anion: string; name: string; strong: boolean; oxid
   H2CO3: { anion: 'CO3', name: 'Kohlensäure', strong: false },
   H2SO3: { anion: 'SO3', name: 'Schweflige Säure', strong: false },
   HF: { anion: 'F', name: 'Flusssäure', strong: false },
-  'CH3COOH': { anion: 'CH3COO', name: 'Essigsäure', strong: false },
-  C2H4O2: { anion: 'CH3COO', name: 'Essigsäure', strong: false },
 };
 
 /** Basen mit dem zugehörigen Kation. */
@@ -148,6 +161,11 @@ const ACID_ANHYDRIDES: Record<string, { acid: string; acidName: string }> = {
   P4O10: { acid: 'H3PO4', acidName: 'Phosphorsäure' },
 };
 
+/** Säureformel zum Säurerest, für Produkte wie HCl oder HNO3. */
+const ACID_BY_ANION: Record<string, string> = {
+  Cl: 'HCl', Br: 'HBr', I: 'HI', NO3: 'HNO3', SO4: 'H2SO4', PO4: 'H3PO4', F: 'HF',
+};
+
 const ALKALI_METALS = ['Li', 'Na', 'K'];
 const ALKALINE_EARTH = ['Ca', 'Ba', 'Sr'];
 
@@ -183,7 +201,7 @@ const ANION_NAMES: Record<string, string> = {
   SO3: 'Sulfit', S: 'Sulfid', O: 'Oxid', OH: 'Hydroxid',
 };
 
-interface BuildOptions {
+export interface BuildOptions {
   id: string;
   type: InorganicReactionType;
   title: string;
@@ -196,9 +214,14 @@ interface BuildOptions {
   hazards?: string[];
   tags?: string[];
   ionicEquation?: string;
+  requires?: Requirements;
 }
 
 /** Baut eine Reaktion und gleicht die Gleichung aus; null, wenn das misslingt. */
+export function buildReaction(options: BuildOptions): InorganicReaction | null {
+  return build(options);
+}
+
 function build(options: BuildOptions): InorganicReaction | null {
   let balanced: BalanceResult;
   try {
@@ -222,6 +245,7 @@ function build(options: BuildOptions): InorganicReaction | null {
     safetyLevel: options.safetyLevel ?? 'Laborpraktikum',
     hazards: options.hazards ?? [],
     tags: options.tags ?? [],
+    requires: options.requires ?? {},
   };
 }
 
@@ -243,6 +267,7 @@ function neutralisation(a: Reagent, b: Reagent): InorganicReaction | null {
   return build({
     id: `neutralisation-${acidEntry.formula}-${baseEntry.formula}`,
     type: 'Neutralisation',
+    requires: { aqueous: true },
     title: `${acidEntry.substance.name} und ${baseEntry.substance.name}`,
     reactants: [acidEntry.formula, baseEntry.formula],
     products: [salt, 'H2O'],
@@ -271,6 +296,7 @@ function metalAndAcid(a: Reagent, b: Reagent): InorganicReaction | null {
     return build({
       id: `edelmetall-salpetersaeure-${metal}`,
       type: 'Metall und Säure',
+      requires: { aqueous: true },
       title: `${metalEntry.substance.name} in Salpetersäure`,
       reactants: [metal, 'HNO3'],
       products: [saltFormula(makeCation(metal, metal === 'Ag' ? 1 : 2, ''), makeAnion('NO3', -1, '')), 'NO', 'H2O'],
@@ -296,6 +322,7 @@ function metalAndAcid(a: Reagent, b: Reagent): InorganicReaction | null {
   return build({
     id: `metall-saeure-${metal}-${acidEntry.formula}`,
     type: 'Metall und Säure',
+    requires: { aqueous: true },
     title: `${metalEntry.substance.name} in ${acidEntry.substance.name}`,
     reactants: [metal, acidEntry.formula],
     products: [salt, 'H2'],
@@ -326,6 +353,7 @@ function metalOxideAndAcid(a: Reagent, b: Reagent): InorganicReaction | null {
   return build({
     id: `oxid-saeure-${oxideEntry.formula}-${acidEntry.formula}`,
     type: 'Metalloxid und Säure',
+    requires: { aqueous: true },
     title: `${oxideEntry.substance.name} löst sich in ${acidEntry.substance.name}`,
     reactants: [oxideEntry.formula, acidEntry.formula],
     products: [salt, 'H2O'],
@@ -355,6 +383,7 @@ function carbonateAndAcid(a: Reagent, b: Reagent): InorganicReaction | null {
   return build({
     id: `carbonat-saeure-${carbonateEntry.formula}-${acidEntry.formula}`,
     type: 'Carbonat und Säure',
+    requires: { aqueous: true },
     title: `${carbonateEntry.substance.name} und ${acidEntry.substance.name}`,
     reactants: [carbonateEntry.formula, acidEntry.formula],
     products: [salt, 'H2O', 'CO2'],
@@ -368,8 +397,31 @@ function carbonateAndAcid(a: Reagent, b: Reagent): InorganicReaction | null {
   });
 }
 
-/** Zwei lösliche Salze bilden einen Niederschlag. */
-function precipitation(a: Reagent, b: Reagent): InorganicReaction | null {
+/** Ionenpaar eines Salzes oder einer Säure. */
+function ionsOf(reagent: Reagent): SaltComposition | null {
+  // Säuren zuerst: H2SO4 soll als 2 H+ und SO4 2- gelten, nicht als H+ und HSO4-
+  const acid = ACIDS[reagent.formula];
+  if (!acid && reagent.salt) return reagent.salt;
+  if (!acid || acid.anion === 'CH3COO') return null;
+  const charge = ['SO4', 'CO3', 'SO3'].includes(acid.anion) ? -2 : acid.anion === 'PO4' ? -3 : -1;
+  return {
+    cation: makeCation('H', 1, 'Proton'),
+    anion: makeAnion(acid.anion, charge, ''),
+    cationCount: -charge,
+    anionCount: 1,
+    hydrate: 0,
+    anhydrous: reagent.formula,
+  };
+}
+
+/** Zwei lösliche Salze (oder Salz und Säure) bilden einen Niederschlag. */
+function precipitation(left: Reagent, right: Reagent): InorganicReaction | null {
+  const leftIons = ionsOf(left);
+  const rightIons = ionsOf(right);
+  if (!leftIons || !rightIons) return null;
+  if (leftIons.cation.formula === 'H' && rightIons.cation.formula === 'H') return null;
+  const a = { ...left, salt: leftIons };
+  const b = { ...right, salt: rightIons };
   if (!a.salt || !b.salt) return null;
   const solubleA = solubility(a.salt.cation, a.salt.anion).solubility === 'löslich';
   const solubleB = solubility(b.salt.cation, b.salt.anion).solubility === 'löslich';
@@ -387,7 +439,7 @@ function precipitation(a: Reagent, b: Reagent): InorganicReaction | null {
   const info = precipitate === first ? firstInfo : secondInfo;
   const other = precipitate === first ? second : first;
   const precipitateFormula = saltFormula(precipitate.cation, precipitate.anion);
-  const otherFormula = saltFormula(other.cation, other.anion);
+  const otherFormula = other.cation.formula === 'H' ? ACID_BY_ANION[other.anion.formula] ?? saltFormula(other.cation, other.anion) : saltFormula(other.cation, other.anion);
   if (sameComposition(precipitateFormula, a.formula) || sameComposition(precipitateFormula, b.formula)) return null;
 
   const anionName = ANION_NAMES[precipitate.anion.formula] ?? precipitate.anion.formula;
@@ -395,6 +447,7 @@ function precipitation(a: Reagent, b: Reagent): InorganicReaction | null {
   return build({
     id: `faellung-${a.formula}-${b.formula}`,
     type: 'Fällungsreaktion',
+    requires: { aqueous: true },
     title: `${a.substance.name} und ${b.substance.name}`,
     reactants: [a.formula, b.formula],
     products: [precipitateFormula, otherFormula],
@@ -416,6 +469,8 @@ function displacement(a: Reagent, b: Reagent): InorganicReaction | null {
   const metal = metalEntry.formula;
   const saltMetal = saltEntry.salt.cation.formula;
   if (metal === saltMetal) return null;
+  // Säuren sind formal «Wasserstoffsalze» – das regelt metalAndAcid
+  if (saltMetal === 'H' || saltMetal === 'NH4') return null;
   if (!displaces(metal, saltMetal)) return null;
   if (solubility(saltEntry.salt.cation, saltEntry.salt.anion).solubility !== 'löslich') return null;
 
@@ -425,6 +480,7 @@ function displacement(a: Reagent, b: Reagent): InorganicReaction | null {
   return build({
     id: `verdraengung-${metal}-${saltEntry.formula}`,
     type: 'Metallverdrängung',
+    requires: { aqueous: true },
     title: `${metalEntry.substance.name} in ${saltEntry.substance.name}-Lösung`,
     reactants: [metal, saltEntry.formula],
     products: [newSalt, saltMetal],
@@ -457,12 +513,30 @@ function directSynthesis(a: Reagent, b: Reagent): InorganicReaction | null {
   const nonMetal = nonMetals[nonMetalEntry.formula];
   const metal = metalEntry.formula;
   const charge = ['Al'].includes(metal) ? 3 : ['Li', 'Na', 'K'].includes(metal) ? 1 : 2;
-  const product = saltFormula(makeCation(metal, charge, ''), makeAnion(nonMetal.anion, nonMetal.charge, ''));
+
+  // Einige Metalle bilden nicht das «naheliegende» Salz: Eisen verbrennt in
+  // Chlor zu FeCl3 und an Luft zu Fe3O4, Kupfer mit Schwefel zu Cu2S,
+  // Natrium an Luft zum Peroxid. Kalium bildet das Hyperoxid – das wird nicht
+  // angeboten, statt ein falsches Produkt zu zeigen.
+  const special: Record<string, string | null> = {
+    'Fe|Cl2': 'FeCl3',
+    'Fe|Br2': 'FeBr3',
+    'Fe|O2': 'Fe3O4',
+    'Cu|S': 'Cu2S',
+    'Cu|I2': 'CuI',
+    'Na|O2': 'Na2O2',
+    'K|O2': null,
+  };
+  const key = `${metal}|${nonMetalEntry.formula}`;
+  if (key in special && special[key] === null) return null;
+  const product =
+    special[key] ?? saltFormula(makeCation(metal, charge, ''), makeAnion(nonMetal.anion, nonMetal.charge, ''));
   const isOxide = nonMetal.anion === 'O';
 
   return build({
     id: `synthese-${metal}-${nonMetalEntry.formula}`,
     type: 'Salzbildung aus den Elementen',
+    requires: { heat: true },
     title: `${metalEntry.substance.name} verbrennt in ${nonMetal.name}`,
     reactants: [metal, nonMetalEntry.formula],
     products: [product],
@@ -577,6 +651,7 @@ function hydroxidePrecipitation(a: Reagent, b: Reagent): InorganicReaction | nul
   return build({
     id: `hydroxidfaellung-${saltEntry.formula}-${baseEntry.formula}`,
     type: amphoteric ? 'Amphoteres Hydroxid' : 'Fällungsreaktion',
+    requires: { aqueous: true },
     title: `${saltEntry.substance.name} und ${baseEntry.substance.name}`,
     reactants: [saltEntry.formula, baseEntry.formula],
     products: [hydroxide, newSalt],
@@ -591,9 +666,486 @@ function hydroxidePrecipitation(a: Reagent, b: Reagent): InorganicReaction | nul
   });
 }
 
+
+// ======================================================================
+// Weitere Reaktionstypen
+// ======================================================================
+
+/** Summenformel eines organischen Stoffes, falls er nur C, H, O, N, S enthält. */
+function combustibleCounts(substance: Substance): Record<string, number> | null {
+  if (!substance.smiles) return null;
+  try {
+    const parsed = parseFormula(substance.formula);
+    if (parsed.charge !== 0 || !parsed.counts.C || !parsed.counts.H) return null;
+    if (Object.keys(parsed.counts).some((element) => !['C', 'H', 'O', 'N', 'S'].includes(element))) return null;
+    return parsed.counts;
+  } catch {
+    return null;
+  }
+}
+
+/** Organische Stoffe verbrennen zu Kohlenstoffdioxid und Wasser. */
+function combustion(a: Reagent, b: Reagent): InorganicReaction | null {
+  const oxygen = a.formula === 'O2' ? a : b.formula === 'O2' ? b : null;
+  const fuel = oxygen === a ? b : a;
+  if (!oxygen || fuel === oxygen) return null;
+  const counts = combustibleCounts(fuel.substance);
+  if (!counts) return null;
+
+  const products = ['CO2', 'H2O'];
+  if (counts.N) products.push('N2');
+  if (counts.S) products.push('SO2');
+  const sooty = counts.C >= 6 && counts.C / counts.H >= 0.8;
+
+  return build({
+    id: `verbrennung-${fuel.substance.id}`,
+    type: 'Verbrennung',
+    requires: { heat: true },
+    title: `Verbrennung von ${fuel.substance.name}`,
+    reactants: [fuel.formula, 'O2'],
+    products,
+    observation: sooty
+      ? 'Der Stoff verbrennt mit stark rußender, gelber Flamme – typisch für kohlenstoffreiche Aromaten.'
+      : 'Der Stoff verbrennt mit bläulicher bis gelber Flamme. Das Abgas trübt Kalkwasser (Kohlenstoffdioxid), an einer kalten Glasfläche beschlägt Wasser.',
+    explanation:
+      'Bei der vollständigen Verbrennung wird der gesamte Kohlenstoff zu Kohlenstoffdioxid und der Wasserstoff zu Wasser oxidiert. Die Reaktion ist stark exotherm – ihre Energie nutzen wir in Motoren, Heizungen und in der Zellatmung (dort in vielen kleinen Schritten).',
+    conditions: 'Zünden, ausreichend Sauerstoff',
+    safetyLevel: 'Laborpraktikum',
+    hazards: ['Brandgefahr – nur kleine Mengen und nie in geschlossenen Gefäßen verbrennen.', 'Bei Sauerstoffmangel entsteht giftiges Kohlenstoffmonoxid.'],
+    tags: ['exotherm', 'Verbrennung', 'Redoxreaktion'],
+  });
+}
+
+/** Nichtmetalle untereinander: Knallgas, Chlorknallgas, Schwefel- und Kohleverbrennung. */
+function nonMetalSynthesis(a: Reagent, b: Reagent): InorganicReaction | null {
+  const pair = [a.formula, b.formula].sort().join('+');
+  const table: Record<string, { products: string[]; title: string; observation: string; explanation: string; requires: Requirements; level: SafetyLevel; hazards: string[] }> = {
+    'H2+O2': {
+      products: ['H2O'],
+      title: 'Knallgasreaktion',
+      observation: 'Beim Zünden reagiert das Gemisch mit lautem Knall; an der Gefäßwand beschlägt Wasser.',
+      explanation: 'Wasserstoff und Sauerstoff reagieren in einer Radikalkettenreaktion explosionsartig zu Wasser. Genau darauf beruht die Knallgasprobe zum Nachweis von Wasserstoff.',
+      requires: { heat: true },
+      level: 'Laborpraktikum',
+      hazards: ['Explosionsgefahr – nur kleinste Mengen im Reagenzglas zünden.'],
+    },
+    'Cl2+H2': {
+      products: ['HCl'],
+      title: 'Chlorknallgas',
+      observation: 'Im Dunkeln passiert nichts; bei Belichtung reagiert das Gemisch explosionsartig, es entsteht Chlorwasserstoff (Nebel an feuchter Luft).',
+      explanation: 'Licht spaltet Chlormoleküle in Radikale und startet eine Kettenreaktion – das Lehrbuchbeispiel für einen Radikalkettenmechanismus.',
+      requires: { light: true },
+      level: 'Nur Fachlabor',
+      hazards: ['Explosionsgefahr durch Licht.', 'Chlor und Chlorwasserstoff sind giftig und ätzend.'],
+    },
+    'O2+S': {
+      products: ['SO2'],
+      title: 'Schwefel verbrennt',
+      observation: 'Schwefel schmilzt und verbrennt mit kleiner blauer Flamme; es entsteht ein stechend riechendes Gas.',
+      explanation: 'Schwefel wird zu Schwefeldioxid oxidiert, dem Ausgangsstoff der Schwefelsäureherstellung – und einer Ursache des sauren Regens.',
+      requires: { heat: true },
+      level: 'Laborpraktikum',
+      hazards: ['Schwefeldioxid reizt die Atemwege stark – nur im Abzug.'],
+    },
+    'C+O2': {
+      products: ['CO2'],
+      title: 'Kohlenstoff verbrennt',
+      observation: 'Die Kohle glüht auf; das entstehende Gas trübt Kalkwasser.',
+      explanation: 'Kohlenstoff wird vollständig zu Kohlenstoffdioxid oxidiert. Bei Sauerstoffmangel entstünde giftiges Kohlenstoffmonoxid.',
+      requires: { heat: true },
+      level: 'Schulversuch',
+      hazards: ['Glut und heiße Asche.'],
+    },
+    'O2+P': {
+      products: ['P4O10'],
+      title: 'Phosphor verbrennt',
+      observation: 'Phosphor verbrennt mit greller Flamme zu dichtem weißem Rauch.',
+      explanation: 'Phosphor wird zu Phosphor(V)-oxid oxidiert, das mit Luftfeuchtigkeit Phosphorsäure bildet.',
+      requires: { heat: true },
+      level: 'Nur Fachlabor',
+      hazards: ['Heftige Verbrennung, der Rauch ist ätzend.'],
+    },
+  };
+  const entry = table[pair];
+  if (!entry) return null;
+  return build({
+    id: `nichtmetall-${pair}`,
+    type: 'Nichtmetall-Synthese',
+    requires: entry.requires,
+    title: entry.title,
+    reactants: [a.formula, b.formula],
+    products: entry.products,
+    observation: entry.observation,
+    explanation: entry.explanation,
+    conditions: entry.requires.light ? 'Belichtung' : 'Zünden',
+    safetyLevel: entry.level,
+    hazards: entry.hazards,
+    tags: ['Redoxreaktion', 'exotherm'],
+  });
+}
+
+/** Ammoniak ist eine Base und bildet mit Säuren Ammoniumsalze. */
+function ammoniaAndAcid(a: Reagent, b: Reagent): InorganicReaction | null {
+  const ammonia = a.formula === 'NH3' ? a : b.formula === 'NH3' ? b : null;
+  const acidEntry = isAcid(a.formula) ? a : isAcid(b.formula) ? b : null;
+  if (!ammonia || !acidEntry) return null;
+  const acid = ACIDS[acidEntry.formula];
+  const charge = ['SO4', 'CO3', 'SO3'].includes(acid.anion) ? -2 : acid.anion === 'PO4' ? -3 : -1;
+  const salt = saltFormula(makeCation('NH4', 1, ''), makeAnion(acid.anion, charge, ''));
+  return build({
+    id: `ammoniak-${acidEntry.formula}`,
+    type: 'Ammoniak und Säure',
+    title: `Ammoniak und ${acidEntry.substance.name}`,
+    reactants: ['NH3', acidEntry.formula],
+    products: [salt],
+    observation:
+      acidEntry.formula === 'HCl'
+        ? 'Treffen die Dämpfe von Ammoniak und Salzsäure aufeinander, entsteht ein dichter weißer Rauch aus Ammoniumchlorid.'
+        : 'Die Lösung erwärmt sich; beim Eindampfen bleibt das Ammoniumsalz zurück.',
+    explanation:
+      'Ammoniak nimmt mit seinem freien Elektronenpaar ein Proton der Säure auf und wird zum Ammonium-Ion – eine Säure-Base-Reaktion nach Brønsted ohne Wasserbildung. So werden Ammoniumdünger hergestellt.',
+    safetyLevel: 'Schulversuch',
+    hazards: ['Ammoniak und konzentrierte Säuren reizen die Atemwege – im Abzug arbeiten.'],
+    tags: ['Säure-Base-Reaktion', 'Salzbildung', acidEntry.formula === 'HCl' ? 'Rauch' : 'exotherm'],
+  });
+}
+
+/** Ammoniumsalze setzen mit starken Laugen Ammoniak frei. */
+function ammoniumAndBase(a: Reagent, b: Reagent): InorganicReaction | null {
+  const ammonium = [a, b].find((entry) => entry.salt?.cation.formula === 'NH4');
+  const baseEntry = [a, b].find((entry) => ['NaOH', 'KOH', 'Ca(OH)2', 'LiOH'].includes(entry.formula));
+  if (!ammonium || !baseEntry || !ammonium.salt) return null;
+  const base = BASES[baseEntry.formula];
+  const newSalt = saltFormula(makeCation(base.cation, base.charge, ''), ammonium.salt.anion);
+  return build({
+    id: `ammonium-lauge-${ammonium.formula}-${baseEntry.formula}`,
+    type: 'Ammoniumsalz und Lauge',
+    requires: { heat: true },
+    title: `${ammonium.substance.name} und ${baseEntry.substance.name}`,
+    reactants: [ammonium.formula, baseEntry.formula],
+    products: [newSalt, 'NH3', 'H2O'],
+    ionicEquation: 'NH4+ + OH- → NH3 + H2O',
+    observation:
+      'Beim Erwärmen riecht es stechend nach Ammoniak; ein angefeuchtetes rotes Lackmuspapier über der Öffnung färbt sich blau.',
+    explanation:
+      'Die starke Base entreißt dem Ammonium-Ion ein Proton. Das freigesetzte Ammoniak entweicht als Gas – der klassische Nachweis für Ammonium-Ionen.',
+    safetyLevel: 'Schulversuch',
+    hazards: ['Ammoniak reizt Augen und Atemwege.', 'Laugen sind ätzend.'],
+    tags: ['Gasentwicklung', 'Nachweis', 'Ammoniak'],
+  });
+}
+
+/** Saure Oxide reagieren mit Laugen zu Salzen – etwa die Kalkwassertrübung. */
+function anhydrideAndBase(a: Reagent, b: Reagent): InorganicReaction | null {
+  const anhydrides: Record<string, { anion: string; charge: number }> = {
+    CO2: { anion: 'CO3', charge: -2 },
+    SO2: { anion: 'SO3', charge: -2 },
+    SO3: { anion: 'SO4', charge: -2 },
+  };
+  const oxide = a.formula in anhydrides ? a : b.formula in anhydrides ? b : null;
+  const baseEntry = isBase(a.formula) ? a : isBase(b.formula) ? b : null;
+  if (!oxide || !baseEntry) return null;
+  const base = BASES[baseEntry.formula];
+  if (!['Na', 'K', 'Li', 'Ca', 'Ba'].includes(base.cation)) return null;
+  const target = anhydrides[oxide.formula];
+  const cation = makeCation(base.cation, base.charge, '');
+  const anion = makeAnion(target.anion, target.charge, '');
+  const salt = saltFormula(cation, anion);
+  const info = solubility(cation, anion);
+  const limewater = oxide.formula === 'CO2' && ['Ca', 'Ba'].includes(base.cation);
+  return build({
+    id: `anhydrid-base-${oxide.formula}-${baseEntry.formula}`,
+    type: 'Säureanhydrid und Base',
+    requires: { aqueous: true },
+    title: limewater ? 'Kalkwasserprobe' : `${oxide.substance.name} in ${baseEntry.substance.name}`,
+    reactants: [oxide.formula, baseEntry.formula],
+    products: [salt, 'H2O'],
+    observation: limewater
+      ? 'Das klare Kalkwasser trübt sich milchig weiß – es fällt Carbonat aus. Das ist der Nachweis für Kohlenstoffdioxid.'
+      : info.solubility === 'löslich'
+        ? 'Das Gas wird von der Lauge aufgenommen; die Lösung bleibt klar.'
+        : `Es fällt ${info.color ?? 'ein'} ${salt} aus.`,
+    explanation:
+      'Nichtmetalloxide sind Säureanhydride: Mit Wasser bilden sie Säuren, mit Laugen deshalb direkt Salze. Kohlenstoffdioxid und Kalkwasser ergeben unlösliches Calciumcarbonat – daher die Trübung.',
+    safetyLevel: 'Schulversuch',
+    hazards: ['Laugen sind ätzend.'],
+    tags: limewater ? ['Niederschlag', 'Nachweis', 'weiß'] : ['Säure-Base-Reaktion'],
+  });
+}
+
+/** Wasserstoff, Kohle oder Kohlenstoffmonoxid reduzieren edlere Metalloxide. */
+function oxideReduction(a: Reagent, b: Reagent): InorganicReaction | null {
+  const reducers: Record<string, { product: string; limit: number; name: string }> = {
+    H2: { product: 'H2O', limit: -0.5, name: 'Wasserstoff' },
+    C: { product: 'CO2', limit: -0.8, name: 'Kohlenstoff' },
+    CO: { product: 'CO2', limit: -0.5, name: 'Kohlenstoffmonoxid' },
+  };
+  const reducer = a.formula in reducers ? a : b.formula in reducers ? b : null;
+  const oxide = reducer === a ? b : a;
+  if (!reducer || !(oxide.formula in METAL_OXIDES)) return null;
+  const { metal } = METAL_OXIDES[oxide.formula];
+  const potential = METAL_SERIES[metal];
+  const spec = reducers[reducer.formula];
+  if (potential === undefined || potential < spec.limit) return null;
+  return build({
+    id: `reduktion-${oxide.formula}-${reducer.formula}`,
+    type: 'Reduktion von Metalloxiden',
+    requires: { heat: true },
+    title: `${oxide.substance.name} wird mit ${spec.name} reduziert`,
+    reactants: [oxide.formula, reducer.formula],
+    products: [metal, spec.product],
+    observation:
+      metal === 'Cu'
+        ? 'Das schwarze Kupferoxid glüht auf und wird zu rotbraunem, metallischem Kupfer.'
+        : `Aus dem Oxid entsteht metallisches ${metal}.`,
+    explanation: `${spec.name} hat eine größere Affinität zum Sauerstoff als ${metal} und entreißt dem Oxid den Sauerstoff. So gewinnt man seit Jahrtausenden Metalle aus Erzen – im Hochofen mit Koks und Kohlenstoffmonoxid.`,
+    conditions: 'kräftig erhitzen',
+    safetyLevel: reducer.formula === 'H2' ? 'Fortgeschritten' : 'Laborpraktikum',
+    hazards:
+      reducer.formula === 'H2'
+        ? ['Wasserstoff muss vor dem Erhitzen die Luft vollständig verdrängt haben – Knallgasgefahr.']
+        : reducer.formula === 'CO'
+          ? ['Kohlenstoffmonoxid ist ein farb- und geruchloses Atemgift.']
+          : ['Sehr hohe Temperaturen.'],
+    tags: ['Redoxreaktion', 'Metallgewinnung'],
+  });
+}
+
+/** Unedles Metall entreißt einem Metalloxid den Sauerstoff (Thermit-Typ). */
+function aluminothermy(a: Reagent, b: Reagent): InorganicReaction | null {
+  const metalEntry = ['Al', 'Mg'].includes(a.formula) ? a : ['Al', 'Mg'].includes(b.formula) ? b : null;
+  const oxide = metalEntry === a ? b : a;
+  if (!metalEntry || !(oxide.formula in METAL_OXIDES)) return null;
+  const target = METAL_OXIDES[oxide.formula].metal;
+  if (target === metalEntry.formula || !displaces(metalEntry.formula, target)) return null;
+  if ((METAL_SERIES[target] ?? -9) - (METAL_SERIES[metalEntry.formula] ?? 0) < 0.8) return null;
+  const newOxide = metalEntry.formula === 'Al' ? 'Al2O3' : 'MgO';
+  return build({
+    id: `thermit-${metalEntry.formula}-${oxide.formula}`,
+    type: 'Aluminothermie',
+    requires: { heat: true },
+    title: `${metalEntry.substance.name} und ${oxide.substance.name}`,
+    reactants: [metalEntry.formula, oxide.formula],
+    products: [newOxide, target],
+    observation:
+      'Nach dem Zünden läuft die Reaktion unter grellem Licht und Funkenflug von selbst weiter; es entsteht flüssiges Metall.',
+    explanation: `${metalEntry.substance.name} bindet Sauerstoff viel fester als ${target}. Die Differenz der Bildungsenthalpien wird als Wärme frei – so viel, dass das entstehende Metall schmilzt. Mit Eisenoxid schweißt man so Eisenbahnschienen.`,
+    conditions: 'Zünden mit Magnesiumband, in Sand',
+    safetyLevel: 'Nur Fachlabor',
+    hazards: ['Temperaturen über 2000 °C, flüssiges Metall und Funkenflug.', 'Nur im Freien, in Sand und mit großem Abstand.'],
+    tags: ['Redoxreaktion', 'stark exotherm'],
+  });
+}
+
+/** Stärkere Halogene verdrängen schwächere aus ihren Salzen. */
+function halogenDisplacement(a: Reagent, b: Reagent): InorganicReaction | null {
+  const order = ['Cl2', 'Br2', 'I2'];
+  const halogen = order.includes(a.formula) ? a : order.includes(b.formula) ? b : null;
+  const salt = halogen === a ? b : a;
+  if (!halogen || !salt.salt) return null;
+  const anion = salt.salt.anion.formula;
+  const anionHalogen = `${anion}2`;
+  if (!order.includes(anionHalogen)) return null;
+  if (order.indexOf(halogen.formula) >= order.indexOf(anionHalogen)) return null;
+  const newSalt = saltFormula(salt.salt.cation, makeAnion(halogen.formula.replace('2', ''), -1, ''));
+  return build({
+    id: `halogen-${halogen.formula}-${salt.formula}`,
+    type: 'Halogenverdrängung',
+    requires: { aqueous: true },
+    title: `${halogen.substance.name} und ${salt.substance.name}`,
+    reactants: [halogen.formula, salt.formula],
+    products: [newSalt, anionHalogen],
+    observation:
+      anionHalogen === 'I2'
+        ? 'Die Lösung färbt sich braun; mit Stärke wird sie blauschwarz – es ist Iod entstanden.'
+        : 'Die Lösung färbt sich gelbbraun – es ist Brom entstanden.',
+    explanation:
+      'Die Oxidationskraft der Halogene nimmt von Fluor zu Iod ab. Ein stärkeres Halogen nimmt dem Halogenid-Ion eines schwächeren das Elektron weg.',
+    safetyLevel: 'Laborpraktikum',
+    hazards: ['Chlor und Brom sind giftig und ätzend – im Abzug arbeiten.'],
+    tags: ['Redoxreaktion', 'Halogene'],
+  });
+}
+
+/** Säuren setzen aus Sulfiden, Sulfiten und Thiosulfat Gase frei. */
+function gasFromAcid(a: Reagent, b: Reagent): InorganicReaction | null {
+  const acidEntry = isAcid(a.formula) ? a : isAcid(b.formula) ? b : null;
+  const saltEntry = acidEntry === a ? b : a;
+  if (!acidEntry || !saltEntry.salt) return null;
+  const anion = saltEntry.salt.anion.formula;
+  const acid = ACIDS[acidEntry.formula];
+  if (!acid.strong || !['S', 'SO3', 'S2O3'].includes(anion)) return null;
+  const charge = ['SO4'].includes(acid.anion) ? -2 : acid.anion === 'PO4' ? -3 : -1;
+  const salt = saltFormula(saltEntry.salt.cation, makeAnion(acid.anion, charge, ''));
+  const variants: Record<string, { products: string[]; observation: string; explanation: string; hazards: string[]; level: SafetyLevel }> = {
+    S: {
+      products: [salt, 'H2S'],
+      observation: 'Es entweicht ein Gas mit Geruch nach faulen Eiern; Bleiacetatpapier färbt sich schwarz.',
+      explanation: 'Die starke Säure verdrängt die schwache, flüchtige Säure Schwefelwasserstoff aus ihrem Salz.',
+      hazards: ['Schwefelwasserstoff ist sehr giftig und lähmt in höherer Konzentration den Geruchssinn – nur im Abzug und in kleinsten Mengen.'],
+      level: 'Nur Fachlabor',
+    },
+    SO3: {
+      products: [salt, 'H2O', 'SO2'],
+      observation: 'Es entweicht ein stechend riechendes Gas (Schwefeldioxid).',
+      explanation: 'Die Säure setzt aus dem Sulfit Schweflige Säure frei, die in Wasser und Schwefeldioxid zerfällt.',
+      hazards: ['Schwefeldioxid reizt die Atemwege – im Abzug arbeiten.'],
+      level: 'Laborpraktikum',
+    },
+    S2O3: {
+      products: [salt, 'S', 'SO2', 'H2O'],
+      observation: 'Nach kurzer Zeit trübt sich die Lösung gelblich-weiß durch ausfallenden Schwefel – die «Schwefeluhr».',
+      explanation: 'Thiosulfat zerfällt im Sauren in Schwefel und Schwefeldioxid. Die Zeit bis zur Trübung hängt von Konzentration und Temperatur ab – ein klassischer Versuch zur Reaktionsgeschwindigkeit.',
+      hazards: ['Es entsteht Schwefeldioxid – gut lüften.'],
+      level: 'Schulversuch',
+    },
+  };
+  const variant = variants[anion];
+  return build({
+    id: `gas-${saltEntry.formula}-${acidEntry.formula}`,
+    type: 'Gasentwicklung mit Säure',
+    requires: { aqueous: true },
+    title: `${saltEntry.substance.name} und ${acidEntry.substance.name}`,
+    reactants: [saltEntry.formula, acidEntry.formula],
+    products: variant.products,
+    observation: variant.observation,
+    explanation: variant.explanation,
+    safetyLevel: variant.level,
+    hazards: variant.hazards,
+    tags: ['Gasentwicklung'],
+  });
+}
+
+/** Stoffe, die mit Wasser heftig oder charakteristisch reagieren. */
+function waterSpecial(a: Reagent, b: Reagent): InorganicReaction | null {
+  const water = a.formula === 'H2O' ? a : b.formula === 'H2O' ? b : null;
+  const other = water === a ? b : a;
+  if (!water || other === water) return null;
+  const table: Record<string, { products: string[]; title: string; observation: string; explanation: string; requires: Requirements; level: SafetyLevel; hazards: string[]; type: InorganicReactionType }> = {
+    CaC2: {
+      products: ['C2H2', 'Ca(OH)2'],
+      title: 'Carbid und Wasser',
+      observation: 'Heftige Gasentwicklung; das Gas (Ethin) riecht durch Verunreinigungen nach Knoblauch und brennt mit stark rußender Flamme.',
+      explanation: 'Das Carbid-Ion ist eine extrem starke Base und nimmt zwei Protonen des Wassers auf. So wurden früher Grubenlampen und Fahrradlampen betrieben.',
+      requires: {},
+      level: 'Laborpraktikum',
+      hazards: ['Ethin ist hochentzündlich und bildet mit Luft explosive Gemische.'],
+      type: 'Hydrolyse',
+    },
+    NaH: {
+      products: ['NaOH', 'H2'],
+      title: 'Natriumhydrid und Wasser',
+      observation: 'Heftige Wasserstoffentwicklung, oft mit Entzündung.',
+      explanation: 'Das Hydrid-Ion ist eine sehr starke Base und reagiert mit dem Proton des Wassers zu Wasserstoff.',
+      requires: {},
+      level: 'Nur Fachlabor',
+      hazards: ['Selbstentzündung möglich – niemals mit Wasser in Berührung bringen außer zur kontrollierten Vernichtung.'],
+      type: 'Hydrolyse',
+    },
+    NaNH2: {
+      products: ['NaOH', 'NH3'],
+      title: 'Natriumamid und Wasser',
+      observation: 'Heftige Reaktion, es riecht nach Ammoniak.',
+      explanation: 'Das Amid-Ion ist eine stärkere Base als Hydroxid und entreißt dem Wasser ein Proton.',
+      requires: {},
+      level: 'Nur Fachlabor',
+      hazards: ['Heftige Reaktion, ätzende Produkte.'],
+      type: 'Hydrolyse',
+    },
+    Mg: {
+      products: ['Mg(OH)2', 'H2'],
+      title: 'Magnesium und heißes Wasser',
+      observation: 'In kaltem Wasser kaum Reaktion, in siedendem Wasser steigen Gasbläschen auf; Phenolphthalein färbt sich rosa.',
+      explanation: 'Magnesium ist unedel genug, um Wasser zu reduzieren, wird aber von einer Hydroxidschicht geschützt. Erst die Wärme macht die Reaktion merklich.',
+      requires: { heat: true },
+      level: 'Schulversuch',
+      hazards: ['Heißes Wasser – Verbrühungsgefahr.'],
+      type: 'Alkalimetall und Wasser',
+    },
+    CuSO4: {
+      products: ['CuSO4·5H2O'],
+      title: 'Wassernachweis mit Kupfersulfat',
+      observation: 'Das weiße Pulver färbt sich sofort blau.',
+      explanation: 'Wasserfreies Kupfersulfat nimmt Wasser als Liganden auf. Erst die Aqua-Komplexe der Kupfer-Ionen sind blau – deshalb dient es als empfindlicher Wassernachweis.',
+      requires: {},
+      level: 'Schulversuch',
+      hazards: ['Kupfersulfat ist gesundheitsschädlich und umweltgefährlich.'],
+      type: 'Hydratbildung',
+    },
+  };
+  const entry = table[other.formula];
+  if (!entry) return null;
+  return build({
+    id: `wasser-${other.formula}`,
+    type: entry.type,
+    requires: entry.requires,
+    title: entry.title,
+    reactants: [other.formula, 'H2O'],
+    products: entry.products,
+    observation: entry.observation,
+    explanation: entry.explanation,
+    safetyLevel: entry.level,
+    hazards: entry.hazards,
+    tags: entry.type === 'Hydratbildung' ? ['Nachweis', 'Farbwechsel'] : ['Gasentwicklung'],
+  });
+}
+
+/** Magnesium brennt sogar in Kohlenstoffdioxid weiter. */
+function magnesiumCarbonDioxide(a: Reagent, b: Reagent): InorganicReaction | null {
+  if ([a.formula, b.formula].sort().join('+') !== 'CO2+Mg') return null;
+  return build({
+    id: 'magnesium-co2',
+    type: 'Reduktion von Metalloxiden',
+    requires: { heat: true },
+    title: 'Magnesium brennt in Kohlenstoffdioxid',
+    reactants: ['Mg', 'CO2'],
+    products: ['MgO', 'C'],
+    observation: 'Das brennende Magnesiumband erlischt nicht, sondern brennt weiter; es bleiben weißes Magnesiumoxid und schwarze Rußflocken zurück.',
+    explanation: 'Magnesium bindet Sauerstoff so fest, dass es ihn sogar dem Kohlenstoffdioxid entreißt. Deshalb darf man Metallbrände nie mit CO₂-Löschern löschen.',
+    conditions: 'brennendes Magnesium in CO₂-Atmosphäre',
+    safetyLevel: 'Laborpraktikum',
+    hazards: ['Grelles Licht, nicht direkt hineinsehen.'],
+    tags: ['Redoxreaktion', 'Löschmittel'],
+  });
+}
+
+/** Katalytische Zersetzung von Wasserstoffperoxid. */
+function peroxideDecomposition(a: Reagent, b: Reagent): InorganicReaction | null {
+  const peroxide = a.formula === 'H2O2' ? a : b.formula === 'H2O2' ? b : null;
+  const catalyst = peroxide === a ? b : a;
+  if (!peroxide || !['MnO2', 'KI', 'Pt', 'FeCl3'].includes(catalyst.formula)) return null;
+  return build({
+    id: `peroxid-${catalyst.formula}`,
+    type: 'Katalytische Zersetzung',
+    title: `Wasserstoffperoxid mit ${catalyst.substance.name}`,
+    reactants: ['H2O2'],
+    products: ['H2O', 'O2'],
+    observation:
+      catalyst.formula === 'KI'
+        ? 'Stürmische Gasentwicklung; mit Spülmittel entsteht ein dicker Schaumberg («Elefantenzahnpasta»). Ein glimmender Span flammt im Gas auf.'
+        : 'Lebhafte Gasentwicklung. Ein glimmender Holzspan flammt im Gas hell auf – der Nachweis für Sauerstoff.',
+    explanation: `${catalyst.substance.name} wird nicht verbraucht, senkt aber die Aktivierungsenergie der Zersetzung erheblich. Ohne Katalysator zerfällt Wasserstoffperoxid nur sehr langsam.`,
+    safetyLevel: 'Schulversuch',
+    hazards: ['Konzentriertes Wasserstoffperoxid verätzt die Haut.', 'Die Reaktion ist exotherm, der Schaum kann heiß sein.'],
+    tags: ['Katalyse', 'Gasentwicklung', 'Sauerstoff'],
+  });
+}
+
 type PairRule = (a: Reagent, b: Reagent) => InorganicReaction | null;
 
 const PAIR_RULES: PairRule[] = [
+  peroxideDecomposition,
+  combustion,
+  nonMetalSynthesis,
+  ammoniaAndAcid,
+  ammoniumAndBase,
+  anhydrideAndBase,
+  oxideReduction,
+  aluminothermy,
+  magnesiumCarbonDioxide,
+  halogenDisplacement,
+  gasFromAcid,
+  waterSpecial,
   neutralisation,
   metalAndAcid,
   metalOxideAndAcid,
@@ -635,6 +1187,7 @@ export function reactSingle(substance: Substance): InorganicReaction[] {
     const reaction = build({
       id: `zersetzung-${reagent.formula}`,
       type: 'Thermische Zersetzung',
+      requires: { heat: true, solid: true },
       title: `${substance.name} wird gebrannt`,
       reactants: [reagent.formula],
       products: [oxide, 'CO2'],
@@ -659,6 +1212,7 @@ export function reactSingle(substance: Substance): InorganicReaction[] {
     const reaction = build({
       id: `zersetzung-${reagent.formula}`,
       type: 'Thermische Zersetzung',
+      requires: { heat: true, solid: true },
       title: `${substance.name} beim Erhitzen`,
       reactants: [reagent.formula],
       products: [carbonate, 'H2O', 'CO2'],
@@ -668,6 +1222,107 @@ export function reactSingle(substance: Substance): InorganicReaction[] {
       conditions: 'ab etwa 50–100 °C',
       safetyLevel: 'Schulversuch',
       tags: ['Gasentwicklung', 'Backtriebmittel'],
+    });
+    if (reaction) results.push(reaction);
+  }
+
+  // Weitere Zersetzungen beim Erhitzen
+  const decompositions: Record<string, { products: string[]; observation: string; explanation: string; level: SafetyLevel; hazards: string[]; tags: string[] }> = {
+    NH4Cl: {
+      products: ['NH3', 'HCl'],
+      observation: 'Der weiße Feststoff verschwindet scheinbar und schlägt sich am kalten Teil des Reagenzglases wieder nieder.',
+      explanation: 'Ammoniumchlorid zerfällt in Ammoniak und Chlorwasserstoff, die sich an kälteren Stellen wieder vereinigen – das sieht aus wie Sublimation, ist aber eine Zersetzung mit Rückreaktion.',
+      level: 'Schulversuch', hazards: ['Ammoniak und Chlorwasserstoff reizen die Atemwege.'], tags: ['Gleichgewicht', 'Scheinsublimation'],
+    },
+    '(NH4)2CO3': {
+      products: ['NH3', 'CO2', 'H2O'],
+      observation: 'Der Feststoff zerfällt vollständig in Gase; es riecht nach Ammoniak.',
+      explanation: 'Ammoniumcarbonat zerfällt beim Erwärmen rückstandsfrei. Deshalb eignet sich Hirschhornsalz als Triebmittel für flaches Gebäck, aus dem das Ammoniak entweichen kann.',
+      level: 'Schulversuch', hazards: ['Ammoniakgeruch.'], tags: ['Gasentwicklung', 'Backtriebmittel'],
+    },
+    NH4HCO3: {
+      products: ['NH3', 'CO2', 'H2O'],
+      observation: 'Der Feststoff zerfällt vollständig in Gase; es riecht nach Ammoniak.',
+      explanation: 'Hirschhornsalz zerfällt rückstandsfrei in Ammoniak, Kohlenstoffdioxid und Wasser – die Gase lockern den Teig.',
+      level: 'Schulversuch', hazards: ['Ammoniakgeruch.'], tags: ['Gasentwicklung', 'Backtriebmittel'],
+    },
+    KClO3: {
+      products: ['KCl', 'O2'],
+      observation: 'Die Schmelze gibt Sauerstoff ab; ein glimmender Span flammt auf. Mit etwas Braunstein gelingt das schon bei niedrigerer Temperatur.',
+      explanation: 'Kaliumchlorat ist sauerstoffreich und gibt beim Erhitzen Sauerstoff ab – früher eine übliche Laborquelle für Sauerstoff.',
+      level: 'Fortgeschritten', hazards: ['Chlorate bilden mit brennbaren Stoffen explosionsfähige Gemische – nur rein und in kleinen Mengen erhitzen.'], tags: ['Gasentwicklung', 'Sauerstoff'],
+    },
+    HgO: {
+      products: ['Hg', 'O2'],
+      observation: 'Das rote Pulver zerfällt; an der kalten Glaswand schlagen sich silbrige Quecksilbertröpfchen nieder, ein glimmender Span flammt auf.',
+      explanation: 'Mit genau diesem Versuch entdeckten Priestley und Lavoisier den Sauerstoff. Heute wird er wegen des giftigen Quecksilbers nicht mehr durchgeführt.',
+      level: 'Nur Fachlabor', hazards: ['Quecksilberdampf ist sehr giftig – nur als Gedankenexperiment.'], tags: ['Gasentwicklung', 'historisch'],
+    },
+    Ag2O: {
+      products: ['Ag', 'O2'],
+      observation: 'Das braune Pulver wird zu glänzendem Silber; es entweicht Sauerstoff.',
+      explanation: 'Silberoxid ist so wenig stabil, dass schon mäßiges Erhitzen genügt, um es in die Elemente zu zerlegen – Silber ist ein edles Metall.',
+      level: 'Schulversuch', hazards: ['Heiße Glasgeräte.'], tags: ['Gasentwicklung', 'Edelmetall'],
+    },
+    'Cu(OH)2': {
+      products: ['CuO', 'H2O'],
+      observation: 'Der hellblaue Niederschlag färbt sich beim Erwärmen schwarz.',
+      explanation: 'Kupferhydroxid spaltet schon beim leichten Erwärmen Wasser ab und geht in schwarzes Kupferoxid über.',
+      level: 'Schulversuch', hazards: [], tags: ['Farbwechsel'],
+    },
+    'Fe(OH)3': {
+      products: ['Fe2O3', 'H2O'],
+      observation: 'Der rotbraune Niederschlag wird zu rotem Eisenoxid.',
+      explanation: 'Eisenhydroxid spaltet beim Erhitzen Wasser ab – auf diese Weise entsteht auch das Pigment Eisenoxidrot.',
+      level: 'Schulversuch', hazards: [], tags: ['Farbwechsel'],
+    },
+    KMnO4: {
+      products: ['K2MnO4', 'MnO2', 'O2'],
+      observation: 'Die violetten Kristalle knistern und zerfallen zu einem dunklen Pulver; ein glimmender Span flammt auf.',
+      explanation: 'Permanganat gibt beim Erhitzen einen Teil seines Sauerstoffs ab. Mangan wird dabei von +VII zu +VI und +IV reduziert.',
+      level: 'Laborpraktikum', hazards: ['Brandfördernd.'], tags: ['Gasentwicklung', 'Sauerstoff'],
+    },
+  };
+  const reagentFormula = reagent.formula;
+  const decomposition = decompositions[reagentFormula];
+  if (decomposition) {
+    const reaction = build({
+      id: `zersetzung-${reagentFormula}`,
+      type: 'Thermische Zersetzung',
+      requires: { heat: true, solid: true },
+      title: `${substance.name} beim Erhitzen`,
+      reactants: [reagentFormula],
+      products: decomposition.products,
+      observation: decomposition.observation,
+      explanation: decomposition.explanation,
+      conditions: 'kräftig erhitzen',
+      safetyLevel: decomposition.level,
+      hazards: decomposition.hazards,
+      tags: decomposition.tags,
+    });
+    if (reaction) results.push(reaction);
+  }
+
+  // Kristallwasser wird ausgetrieben
+  if (reagent.salt && reagent.salt.hydrate > 0 && !decomposition) {
+    const water = reagent.salt.hydrate;
+    const reaction = build({
+      id: `entwaesserung-${substance.id}`,
+      type: 'Thermische Zersetzung',
+      requires: { heat: true, solid: true },
+      title: `${substance.name} verliert sein Kristallwasser`,
+      reactants: [substance.formula],
+      products: [reagent.salt.anhydrous, 'H2O'],
+      observation:
+        reagent.salt.cation.formula === 'Cu'
+          ? 'Die blauen Kristalle werden weiß; am kalten Glas schlägt sich Wasser nieder. Gibt man Wasser zurück, wird das Pulver wieder blau.'
+          : `Das Salz gibt ${water} Moleküle Kristallwasser je Formeleinheit ab; am kalten Glas schlägt sich Wasser nieder.`,
+      explanation:
+        'Kristallwasser ist im Gitter fest gebunden, lässt sich aber durch Erhitzen austreiben. Bei Kupfersulfat hängt sogar die Farbe daran: Erst die an Kupfer gebundenen Wassermoleküle machen es blau.',
+      conditions: 'erhitzen',
+      safetyLevel: 'Schulversuch',
+      hazards: [],
+      tags: ['Kristallwasser', 'Farbwechsel'],
     });
     if (reaction) results.push(reaction);
   }

@@ -387,4 +387,11 @@ Thiaminchlorid|Vitamin B1|C12H17ClN4OS|Cc1ncc(C[n+]2csc(CCO)c2C)c(N)n1.[Cl-]|||K
 Palladium(II)-acetat||C4H6O4Pd|CC(=O)[O-].CC(=O)[O-].[Pd+2]|||Katalysator|Katalysatorvorstufe für Heck- und Suzuki-Kupplungen
 Tetrakis(triphenylphosphin)palladium|Pd(PPh3)4|C72H60P4Pd|[Pd].c1ccc(P(c2ccccc2)c2ccccc2)cc1.c1ccc(P(c2ccccc2)c2ccccc2)cc1.c1ccc(P(c2ccccc2)c2ccccc2)cc1.c1ccc(P(c2ccccc2)c2ccccc2)cc1|||Katalysator|Palladium(0)-Katalysator für Kreuzkupplungen
 Grubbs-Katalysator|Grubbs I|C43H72Cl2P2Ru||||Katalysator|Rutheniumkatalysator der Olefinmetathese
+Thionylchlorid||Cl2OS|O=S(Cl)Cl|||Reagenz|Überführt Carbonsäuren in Säurechloride; SO₂ und HCl entweichen
+Tetrabrommethan|Tetrabromkohlenstoff|CBr4|BrC(Br)(Br)Br|||Reagenz|Bromquelle der Appel-Reaktion
+Boran|Boran-THF-Komplex|BH3|B|||Reagenz|Addiert an Alkene (Hydroborierung); als THF-Komplex im Handel
+Methylentriphenylphosphoran|Methylen-Wittig-Ylid|C19H17P|C=P(c1ccccc1)(c1ccccc1)c1ccccc1|||Reagenz|Wittig-Ylid, überführt Carbonylgruppen in Methylengruppen
+Methylmagnesiumbromid|MeMgBr|CH3BrMg|C[Mg]Br|||Reagenz|Grignard-Reagenz, in Ether gelöst, reagiert heftig mit Wasser
+Ethylmagnesiumbromid|EtMgBr|C2H5BrMg|CC[Mg]Br|||Reagenz|Grignard-Reagenz
+Phenylmagnesiumbromid|PhMgBr|C6H5BrMg|Br[Mg]c1ccccc1|||Reagenz|Aryl-Grignard-Reagenz, Baustein für Triphenylmethanol
 `.trim();

@@ -4,8 +4,11 @@ import { useRDKit } from '../hooks/useRDKit';
 import {
   DEFAULT_CONDITIONS,
   mix,
+  productAsSubstance,
   type MixResult,
+  type Temperature,
   type WorkbenchConditions,
+  type WorkbenchProduct,
   type WorkbenchReaction,
 } from '../chem/workbench';
 import { MoleculeStructure } from '../components/MoleculeStructure';
@@ -44,6 +47,20 @@ const FAVOURITES = [
 ];
 
 const MAX_SLOTS = 4;
+
+const TEMPERATURES: Array<{ id: Temperature; label: string; icon: string }> = [
+  { id: 'kalt', label: 'Kühlen (Eisbad)', icon: '❄' },
+  { id: 'raum', label: 'Raumtemperatur', icon: '🌡' },
+  { id: 'heiss', label: 'Erhitzen', icon: '🔥' },
+];
+
+const CATALYSES: Array<{ id: WorkbenchConditions['catalysis']; label: string; icon: string; hint: string }> = [
+  { id: 'keine', label: 'Ohne Katalysator', icon: '○', hint: 'Nichts zusetzen' },
+  { id: 'sauer', label: 'Säurekatalysiert (H⁺)', icon: '🟥', hint: 'Einige Tropfen konzentrierte Schwefelsäure oder p-Toluolsulfonsäure' },
+  { id: 'basisch', label: 'Basenkatalysiert (OH⁻)', icon: '🟦', hint: 'Natronlauge, Alkoholat oder eine Aminbase' },
+  { id: 'metall', label: 'Metallkatalysator', icon: '⬡', hint: 'Palladium, Platin oder Nickel' },
+  { id: 'lewis', label: 'Lewis-Säure', icon: '◆', hint: 'Aluminiumchlorid oder Eisen(III)-bromid' },
+];
 
 export function WorkbenchPage() {
   const { rdkit, status } = useRDKit();
@@ -114,12 +131,12 @@ export function WorkbenchPage() {
     setResult(null);
   };
 
-  /** Ein Produkt als neues Edukt übernehmen. */
-  const useProduct = (substanceId?: string): void => {
-    if (!substanceId) return;
-    const substance = substanceById(substanceId);
+  /** Ein Produkt als neues Edukt übernehmen – auch wenn es nicht in der Datenbank steht. */
+  const useProduct = (product: WorkbenchProduct): void => {
+    const substance = productAsSubstance(product);
     if (!substance) return;
     setSelected([substance]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -224,25 +241,58 @@ export function WorkbenchPage() {
               )}
             </div>
 
-            <h3 style={{ marginTop: 16 }}>Bedingungen</h3>
+            <h3 style={{ marginTop: 16 }}>Temperatur</h3>
+            <div className="row" role="radiogroup" aria-label="Temperatur">
+              {TEMPERATURES.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={conditions.temperature === entry.id}
+                  className={`chip${conditions.temperature === entry.id ? ' active' : ''}`}
+                  onClick={() => setConditions((c) => ({ ...c, temperature: entry.id }))}
+                >
+                  <span aria-hidden="true">{entry.icon}</span> {entry.label}
+                </button>
+              ))}
+            </div>
+
+            <h3 style={{ marginTop: 14 }}>Katalyse</h3>
+            <div className="row" role="radiogroup" aria-label="Katalyse">
+              {CATALYSES.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={conditions.catalysis === entry.id}
+                  className={`chip${conditions.catalysis === entry.id ? ' active' : ''}`}
+                  title={entry.hint}
+                  onClick={() => setConditions((c) => ({ ...c, catalysis: entry.id }))}
+                >
+                  <span aria-hidden="true">{entry.icon}</span> {entry.label}
+                </button>
+              ))}
+            </div>
+
+            <h3 style={{ marginTop: 14 }}>Weitere Bedingungen</h3>
             <div className="row">
               <ConditionToggle
-                label="Erhitzen"
-                icon="🔥"
-                active={conditions.heat}
-                onToggle={() => setConditions((c) => ({ ...c, heat: !c.heat }))}
-              />
-              <ConditionToggle
-                label="Katalysator / Hilfsbase"
-                icon="⚗"
-                active={conditions.catalyst}
-                onToggle={() => setConditions((c) => ({ ...c, catalyst: !c.catalyst }))}
-              />
-              <ConditionToggle
-                label="In Wasser"
+                label="In Wasser gelöst"
                 icon="💧"
                 active={conditions.aqueous}
                 onToggle={() => setConditions((c) => ({ ...c, aqueous: !c.aqueous }))}
+              />
+              <ConditionToggle
+                label="Licht (UV)"
+                icon="💡"
+                active={conditions.light}
+                onToggle={() => setConditions((c) => ({ ...c, light: !c.light }))}
+              />
+              <ConditionToggle
+                label="Strom (Elektrolyse)"
+                icon="⚡"
+                active={conditions.electrolysis}
+                onToggle={() => setConditions((c) => ({ ...c, electrolysis: !c.electrolysis }))}
               />
             </div>
           </div>
@@ -350,7 +400,7 @@ function ReactionResult({
   reaction: WorkbenchReaction;
   rdkit: ReturnType<typeof useRDKit>['rdkit'];
   rdkitReady: boolean;
-  onUseProduct: (substanceId?: string) => void;
+  onUseProduct: (product: WorkbenchProduct) => void;
 }) {
   return (
     <article className="card reaction-result">
@@ -359,9 +409,12 @@ function ReactionResult({
           <h2 style={{ marginBottom: 2 }}>{reaction.title}</h2>
           <div className="subtle">{reaction.reactionType}</div>
         </div>
-        <span className={`badge badge-${reaction.kind === 'anorganisch' ? 'anorganisch' : 'organisch'}`}>
-          {reaction.kind}
-        </span>
+        <div className="row" style={{ gap: 6 }}>
+          {reaction.catalysisMatched && <span className="badge badge-success">passende Katalyse</span>}
+          <span className={`badge badge-${reaction.kind === 'anorganisch' ? 'anorganisch' : 'organisch'}`}>
+            {reaction.kind}
+          </span>
+        </div>
       </div>
 
       <div className="equation-scroll">
@@ -434,15 +487,16 @@ function ReactionResult({
 
       <div className="row" style={{ marginTop: 14 }}>
         {reaction.products
-          .filter((product) => product.substanceId)
+          .filter((product) => (product.substanceId || product.smiles) && !['H2O', 'CO2'].includes(product.formula ?? ''))
+          .slice(0, 3)
           .map((product) => (
             <button
-              key={product.substanceId}
+              key={product.substanceId ?? product.smiles}
               type="button"
               className="button button-secondary button-small"
-              onClick={() => onUseProduct(product.substanceId)}
+              onClick={() => onUseProduct(product)}
             >
-              {product.name} weiterverwenden
+              {product.name ?? product.formula} weiterverwenden
             </button>
           ))}
         {reaction.ruleId && (

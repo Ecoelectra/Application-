@@ -175,4 +175,7 @@ Kaliumhexacyanoferrat(III)|Rotes Blutlaugensalz|K3[Fe(CN)6]||||Salz|Bildet mit E
 Kaliumthiocyanat|Kaliumrhodanid|KSCN||||Salz|Nachweisreagenz für Eisen(III)-Ionen (blutrot)
 Natriumsilicat|Wasserglas|Na2SiO3||||Salz|Kieselsäurequelle, Grundlage des chemischen Gartens
 Borax|Natriumtetraborat|Na2B4O7·10H2O||||Salz|Borsäurequelle und Flussmittel
+Lugolsche Lösung|Iod-Kaliumiodid-Lösung|KI3||||Nachweisreagenz|Braune Iodlösung, färbt Stärke blauschwarz
+Tollens-Reagenz|ammoniakalische Silbernitratlösung|[Ag(NH3)2]OH||||Nachweisreagenz|Weist Aldehyde durch einen Silberspiegel nach
+Fehling-Reagenz|Fehlingsche Lösung|Cu(OH)2||||Nachweisreagenz|Tiefblaue alkalische Kupfer(II)-Tartratlösung, weist reduzierende Zucker und Aldehyde nach
 `.trim();

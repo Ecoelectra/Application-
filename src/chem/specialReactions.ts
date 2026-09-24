@@ -1,0 +1,258 @@
+/**
+ * Reaktionen, die sich weder über Reaktions-SMARTS noch über das Ionenmodell
+ * beschreiben lassen: Nachweisreaktionen mit Reagenzgemischen, die Spaltung
+ * von Zuckern und die technischen Verfahren mit fester Gleichung.
+ */
+import type { MainModule } from '@rdkit/rdkit';
+import type { InorganicReaction } from './inorganicRules';
+import { matchSmarts } from './rdkit';
+import { formulaKey } from '../data/substances';
+import { REACTIONS } from '../data/reactions';
+import { WORKBENCH_SPECS, type Requirements } from '../data/workbenchSpecs';
+import type { SafetyLevel, Substance } from '../data/types';
+
+export interface SpecialReaction extends InorganicReaction {
+  /** Produkte als Stoffkennungen, soweit bekannt */
+  productIds: string[];
+  /** Verweis auf die Detailseite */
+  ruleId?: string;
+}
+
+const ALDEHYDE = '[CX3H1](=O)[#6]';
+const REDUCING_SUGAR = '[OX2H1][CX4H1;R]([OX2;R])';
+const KETOSE = '[OX2H1][CX4;R]([OX2;R])[CH2][OX2H1]';
+const AMINO_ACID = '[NX3H2][CX4][CX3](=O)[OX2H1]';
+
+function has(substances: Substance[], id: string): Substance | undefined {
+  return substances.find((substance) => substance.id === id);
+}
+
+function special(options: {
+  id: string;
+  type: InorganicReaction['type'];
+  title: string;
+  equation: string;
+  reactants: string[];
+  products: string[];
+  productIds?: string[];
+  observation: string;
+  explanation: string;
+  conditions: string;
+  requires: Requirements;
+  level: SafetyLevel;
+  hazards: string[];
+  tags: string[];
+  ruleId?: string;
+}): SpecialReaction {
+  return {
+    id: options.id,
+    type: options.type,
+    title: options.title,
+    reactants: options.reactants,
+    products: options.products,
+    productIds: options.productIds ?? [],
+    equation: options.equation,
+    observation: options.observation,
+    explanation: options.explanation,
+    conditions: options.conditions,
+    safetyLevel: options.level,
+    hazards: options.hazards,
+    tags: options.tags,
+    requires: options.requires,
+    ruleId: options.ruleId,
+  };
+}
+
+/** Findet Nachweis- und Sonderreaktionen für die Stoffe im Gefäß. */
+export function specialReactions(rdkit: MainModule | null, substances: Substance[]): SpecialReaction[] {
+  const results: SpecialReaction[] = [];
+  const structural = substances.filter((substance) => substance.smiles);
+
+  const reducing = (substance: Substance): boolean =>
+    Boolean(
+      rdkit &&
+        substance.smiles &&
+        (matchSmarts(rdkit, substance.smiles, ALDEHYDE).length ||
+          matchSmarts(rdkit, substance.smiles, REDUCING_SUGAR).length ||
+          matchSmarts(rdkit, substance.smiles, KETOSE).length),
+    );
+
+  // Fehling-Probe
+  if (has(substances, 'fehling-reagenz')) {
+    for (const substance of structural) {
+      const positive = reducing(substance);
+      results.push(
+        special({
+          id: `fehling-${substance.id}`,
+          type: 'Nachweisreaktion',
+          title: `Fehling-Probe mit ${substance.name}`,
+          equation: positive
+            ? 'R–CHO + 2 Cu²⁺ + 5 OH⁻ → R–COO⁻ + Cu₂O↓ + 3 H₂O'
+            : 'keine Reaktion – die Lösung bleibt tiefblau',
+          reactants: [substance.formula, 'Cu²⁺'],
+          products: positive ? ['Cu2O'] : [],
+          productIds: positive ? ['kupfer-i-oxid'] : [],
+          observation: positive
+            ? 'Beim Erwärmen schlägt die tiefblaue Farbe über Grün nach Orange um; es fällt ziegelroter Kupfer(I)-oxid aus. Die Probe ist positiv.'
+            : 'Die Lösung bleibt auch beim Erwärmen tiefblau – die Probe ist negativ.',
+          explanation: positive
+            ? 'Aldehydgruppen – auch die offenkettige Form reduzierender Zucker – reduzieren Kupfer(II) zu Kupfer(I). Das Tartrat hält das Kupfer in alkalischer Lösung gelöst, bis es als rotes Cu₂O ausfällt.'
+            : 'Ohne freie Aldehydgruppe (oder Halbacetal, das sich öffnen kann) findet keine Reduktion statt. Saccharose ist deshalb Fehling-negativ, obwohl sie aus zwei Zuckern besteht.',
+          conditions: 'im siedenden Wasserbad erwärmen',
+          requires: { heat: true, aqueous: true },
+          level: 'Schulversuch',
+          hazards: ['Fehling II enthält konzentrierte Natronlauge – ätzend.'],
+          tags: positive ? ['Nachweis', 'Niederschlag', 'ziegelrot'] : ['Nachweis', 'negativ'],
+        }),
+      );
+    }
+  }
+
+  // Tollens-Probe (Silberspiegel)
+  if (has(substances, 'tollens-reagenz')) {
+    for (const substance of structural) {
+      const positive = reducing(substance);
+      results.push(
+        special({
+          id: `tollens-${substance.id}`,
+          type: 'Nachweisreaktion',
+          title: `Silberspiegelprobe mit ${substance.name}`,
+          equation: positive
+            ? 'R–CHO + 2 [Ag(NH₃)₂]⁺ + 3 OH⁻ → R–COO⁻ + 2 Ag↓ + 4 NH₃ + 2 H₂O'
+            : 'keine Reaktion',
+          reactants: [substance.formula, '[Ag(NH3)2]+'],
+          products: positive ? ['Ag'] : [],
+          productIds: positive ? ['silber'] : [],
+          observation: positive
+            ? 'An der Wand des sauberen Reagenzglases scheidet sich ein glänzender Silberspiegel ab.'
+            : 'Die Lösung bleibt klar – kein Silberspiegel.',
+          explanation: positive
+            ? 'Die Aldehydgruppe wird zur Carbonsäure oxidiert und reduziert dabei die Silber-Ionen des Diamminkomplexes zu metallischem Silber.'
+            : 'Ketone und nichtreduzierende Zucker reduzieren das Silber nicht.',
+          conditions: 'im Wasserbad bei 60 °C, ohne zu schütteln',
+          requires: { heat: true, aqueous: true },
+          level: 'Schulversuch',
+          hazards: ['Tollens-Reagenz nie aufbewahren – beim Stehen kann sich explosives Silbernitrid bilden. Reste sofort mit verdünnter Salpetersäure vernichten.'],
+          tags: positive ? ['Nachweis', 'Silberspiegel'] : ['Nachweis', 'negativ'],
+        }),
+      );
+    }
+  }
+
+  // Iod-Stärke-Reaktion
+  const iodine = has(substances, 'iod') ?? has(substances, 'lugolsche-loesung');
+  if (iodine && has(substances, 'staerke')) {
+    results.push(
+      special({
+        id: 'iod-staerke',
+        type: 'Nachweisreaktion',
+        title: 'Iod-Stärke-Reaktion',
+        equation: 'Amylose + I₂ (als I₃⁻/I₅⁻) → Iod-Stärke-Einschlussverbindung (blauschwarz)',
+        reactants: ['(C6H10O5)n', 'I2'],
+        products: [],
+        observation: 'Die Lösung färbt sich tiefblau bis schwarz. Beim Erhitzen verschwindet die Farbe, beim Abkühlen kehrt sie zurück.',
+        explanation:
+          'Die Amylose der Stärke bildet eine Helix, in deren Innerem sich Polyiodid-Ketten einlagern. Diese Einschlussverbindung absorbiert fast das ganze sichtbare Licht. Wärme entwindet die Helix – deshalb verschwindet die Farbe beim Erhitzen.',
+        conditions: 'kalt, wässrige Lösung',
+        requires: { aqueous: true },
+        level: 'Schulversuch',
+        hazards: ['Iod färbt Haut und Kleidung.'],
+        tags: ['Nachweis', 'blauschwarz', 'Einschlussverbindung'],
+      }),
+    );
+  }
+
+  // Ninhydrin-Reaktion
+  if (has(substances, 'ninhydrin') && rdkit) {
+    for (const substance of structural) {
+      if (!substance.smiles || !matchSmarts(rdkit, substance.smiles, AMINO_ACID).length) continue;
+      results.push(
+        special({
+          id: `ninhydrin-${substance.id}`,
+          type: 'Nachweisreaktion',
+          title: `Ninhydrin-Reaktion mit ${substance.name}`,
+          equation: 'Aminosäure + 2 Ninhydrin → Ruhemanns Purpur + Aldehyd + CO₂ + 3 H₂O',
+          reactants: [substance.formula, 'C9H6O4'],
+          products: ['CO2', 'H2O'],
+          observation: 'Beim Erwärmen färbt sich die Lösung tief violett (Ruhemanns Purpur).',
+          explanation:
+            'Ninhydrin baut die Aminosäure unter Decarboxylierung ab; der freigesetzte Stickstoff verbindet zwei Ninhydrinmoleküle zu einem violetten Farbstoff. So macht man Fingerabdrücke und Aminosäuren auf Chromatogrammen sichtbar.',
+          conditions: 'erwärmen',
+          requires: { heat: true },
+          level: 'Schulversuch',
+          hazards: ['Ninhydrin färbt die Haut violett und ist gesundheitsschädlich.'],
+          tags: ['Nachweis', 'violett'],
+        }),
+      );
+    }
+  }
+
+  // Säurekatalysierte Spaltung von Disacchariden
+  const water = has(substances, 'wasser');
+  const disaccharides: Record<string, { products: [string, string]; names: string; title: string }> = {
+    saccharose: { products: ['glucose', 'fructose'], names: 'Glucose und Fructose', title: 'Inversion des Rohrzuckers' },
+    lactose: { products: ['glucose', 'galactose'], names: 'Glucose und Galactose', title: 'Spaltung des Milchzuckers' },
+  };
+  for (const [id, entry] of Object.entries(disaccharides)) {
+    if (!has(substances, id)) continue;
+    results.push(
+      special({
+        id: `hydrolyse-${id}`,
+        type: 'Hydrolyse',
+        title: entry.title,
+        equation: `C₁₂H₂₂O₁₁ + H₂O → C₆H₁₂O₆ + C₆H₁₂O₆  (${entry.names})`,
+        reactants: ['C12H22O11', 'H2O'],
+        products: ['C6H12O6', 'C6H12O6'],
+        productIds: entry.products,
+        observation:
+          id === 'saccharose'
+            ? 'Äußerlich ändert sich nichts. Die Lösung dreht polarisiertes Licht danach aber nach links statt nach rechts, und sie ist Fehling-positiv geworden.'
+            : 'Äußerlich ändert sich nichts; die entstandenen Monosaccharide lassen sich mit der Fehling-Probe nachweisen.',
+        explanation:
+          'Die Säure protoniert den Sauerstoff der glykosidischen Bindung; Wasser spaltet sie. Weil Fructose stärker links dreht als Glucose rechts, kehrt sich die Drehrichtung um – daher der Name Invertzucker, der Hauptbestandteil von Honig.',
+        conditions: 'verdünnte Säure, erwärmen',
+        requires: { heat: true, aqueous: true, catalysis: ['sauer'] },
+        level: 'Schulversuch',
+        hazards: ['Säuren sind ätzend.'],
+        tags: ['Hydrolyse', 'Säurekatalyse', 'Kohlenhydrate'],
+      }),
+    );
+    if (!water) {
+      // Wasser fehlt – die Werkbank zeigt das über die Bedingung «in Wasser».
+    }
+  }
+
+  // Technische Verfahren und Versuche mit fester Gleichung
+  const keys = new Set(substances.map((substance) => formulaKey(substance.formula)).filter(Boolean));
+  for (const rule of REACTIONS) {
+    const fixed = rule.fixedEquation;
+    if (!fixed) continue;
+    const reactantKeys = fixed.reactants.map((formula) => formulaKey(formula));
+    if (!reactantKeys.length || !reactantKeys.every((key) => key && keys.has(key))) continue;
+    if (fixed.reactants.join('|') === fixed.products.join('|')) continue;
+    // Einstoff-Verfahren wie die Wasserelektrolyse nur anbieten, wenn der Stoff
+    // allein im Gefäß ist – sonst stünde sie bei jeder wässrigen Mischung da.
+    if (fixed.reactants.length < 2 && substances.length > 1) continue;
+    const spec = WORKBENCH_SPECS[rule.id];
+    results.push(
+      special({
+        id: `verfahren-${rule.id}`,
+        type: 'Nichtmetall-Synthese',
+        title: rule.name,
+        equation: fixed.balanced,
+        reactants: fixed.reactants,
+        products: fixed.products,
+        observation: rule.summary,
+        explanation: rule.mechanism.summary,
+        conditions: rule.conditions.temperature,
+        requires: spec ?? { heat: true, electro: Boolean(rule.electro) },
+        level: rule.safety.level,
+        hazards: rule.safety.hazards,
+        tags: rule.keywords.slice(0, 3),
+        ruleId: rule.id,
+      }),
+    );
+  }
+
+  return results;
+}
