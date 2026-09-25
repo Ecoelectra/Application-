@@ -99,8 +99,8 @@ export function HomePage() {
         <div className="card">
           <h3>Werkbank</h3>
           <p className="muted small">
-            Stoffe ins Reaktionsgefäß geben und sehen, was entsteht – mit ausgeglichener Gleichung,
-            Beobachtung und Erklärung, warum es so abläuft.
+            Stoffe ins Reaktionsgefäß geben und sehen, was entsteht – abgeglichen mit 100 000
+            belegten Reaktionen aus Patenten. Jedes Ergebnis sagt, ob es belegt oder nur vorhergesagt ist.
           </p>
           <a className="button button-small" href="#/werkbank">
             Werkbank öffnen
@@ -108,7 +108,7 @@ export function HomePage() {
         </div>
 
         <div className="card">
-          <h3>Über 6000 Synthesen</h3>
+          <h3>Über 7000 berechnete Synthesen</h3>
           <p className="muted small">
             Für jeden Stoff nachschlagen, wie er hergestellt wird. Alle Wege sind aus den
             Reaktionsvorschriften berechnet und die Gleichungen exakt ausgeglichen.

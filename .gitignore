@@ -29,3 +29,6 @@ coverage/
 
 # RDKit wird beim Build aus node_modules kopiert
 public/rdkit/
+
+# Rohdaten für scripts/build-reactions.ts
+.cache/

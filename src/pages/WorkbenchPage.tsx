@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useRDKit } from '../hooks/useRDKit';
 import {
   DEFAULT_CONDITIONS,
+  EVIDENCE_LABELS,
+  documentedSuggestions,
   mix,
   productAsSubstance,
+  vesselKeys,
+  type DocumentedSuggestion,
+  type Evidence,
   type MixResult,
   type Temperature,
   type WorkbenchConditions,
@@ -15,6 +20,12 @@ import { MoleculeStructure } from '../components/MoleculeStructure';
 import { Callout } from '../components/Callout';
 import { SUBSTANCES, searchSubstances, substanceById } from '../data/substances';
 import type { Substance } from '../data/types';
+import {
+  loadReactionIndex,
+  reactionsInvolving,
+  type DocumentedReaction,
+  type ReactionDatabaseIndex,
+} from '../data/documentedReactions';
 
 /** Gruppen für den Chemikalienschrank. */
 const SHELVES: Array<{ id: string; label: string; categories: string[] }> = [
@@ -71,6 +82,46 @@ export function WorkbenchPage() {
   const [result, setResult] = useState<MixResult | null>(null);
   const [running, setRunning] = useState(false);
   const [journal, setJournal] = useState<Array<{ educts: string; outcome: string }>>([]);
+  const [params] = useSearchParams();
+  const [database, setDatabase] = useState<ReactionDatabaseIndex | null>(null);
+  const [documented, setDocumented] = useState<{ ids: string; reactions: DocumentedReaction[] } | null>(null);
+
+  // Stoffe aus der Adresse übernehmen, z. B. #/werkbank?stoffe=anilin,acetanhydrid
+  useEffect(() => {
+    const ids = params.get('stoffe')?.split(',') ?? [];
+    const fromUrl = ids.map((id) => substanceById(id)).filter((entry): entry is Substance => Boolean(entry));
+    if (fromUrl.length) setSelected(fromUrl.slice(0, MAX_SLOTS));
+  }, [params]);
+
+  useEffect(() => {
+    loadReactionIndex().then(setDatabase);
+  }, []);
+
+  // Belegte Reaktionen der Stoffe im Gefäß nachladen
+  const selectionKey = selected.map((entry) => entry.id).join('|');
+  useEffect(() => {
+    if (!rdkit || !selected.length) {
+      setDocumented(null);
+      return;
+    }
+    let cancelled = false;
+    reactionsInvolving(vesselKeys(rdkit, selected)).then((reactions) => {
+      if (!cancelled) setDocumented({ ids: selectionKey, reactions });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rdkit, selectionKey]);
+
+  const documentedReady = !rdkit || (documented !== null && documented.ids === selectionKey);
+  const documentedList = documentedReady ? (documented?.reactions ?? []) : [];
+
+  const suggestions = useMemo<DocumentedSuggestion[]>(
+    () => (rdkit && documentedReady && selected.length ? documentedSuggestions(rdkit, selected, conditions, documentedList) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rdkit, documentedReady, documented, conditions],
+  );
 
   const searchResults = useMemo(() => (query.trim() ? searchSubstances(query, 24) : []), [query]);
 
@@ -92,13 +143,15 @@ export function WorkbenchPage() {
       return;
     }
     setRunning(true);
+    if (!documentedReady) return;
     // Kurze Verzögerung, damit die Animation sichtbar wird
     const timer = window.setTimeout(() => {
-      setResult(mix(rdkit, selected, conditions));
+      setResult(mix(rdkit, selected, conditions, documentedList));
       setRunning(false);
     }, 320);
     return () => window.clearTimeout(timer);
-  }, [rdkit, selected, conditions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rdkit, selected, conditions, documentedReady, documented]);
 
   const addSubstance = (substance: Substance): void => {
     setSelected((current) => {
@@ -146,6 +199,12 @@ export function WorkbenchPage() {
         <p className="lead">
           Stoffe ins Reaktionsgefäß geben und sehen, was entsteht. Die App rechnet die Gleichung aus,
           beschreibt die Beobachtung und erklärt, warum es so abläuft.
+        </p>
+        <p className="small muted" style={{ marginTop: 6 }}>
+          Jedes Ergebnis ist gekennzeichnet: <EvidenceBadge evidence="belegt" /> in der Literatur beschrieben
+          {database ? ` (Abgleich mit ${database.total.toLocaleString('de-DE')} Reaktionen aus US-Patenten)` : ''},{' '}
+          <EvidenceBadge evidence="lehrbuch" /> fest hinterlegte Standardreaktion,{' '}
+          <EvidenceBadge evidence="vorhersage" /> aus Regeln oder Vorlagen berechnet und nicht einzeln belegt.
         </p>
       </div>
 
@@ -332,6 +391,8 @@ export function WorkbenchPage() {
             </Callout>
           )}
 
+          {!running && result?.outcome === 'reaktion' && <EvidenceSummary reactions={result.reactions} />}
+
           {!running &&
             result?.outcome === 'reaktion' &&
             result.reactions.map((reaction) => (
@@ -343,6 +404,16 @@ export function WorkbenchPage() {
                 onUseProduct={useProduct}
               />
             ))}
+
+          {!running && suggestions.length > 0 && (
+            <DocumentedPanel
+              suggestions={suggestions}
+              rdkit={rdkit}
+              rdkitReady={status === 'bereit'}
+              slotsLeft={MAX_SLOTS - selected.length}
+              onAdd={(substances) => substances.forEach(addSubstance)}
+            />
+          )}
 
           {journal.length > 0 && (
             <div className="card">
@@ -420,6 +491,7 @@ function ReactionResult({
           <div className="subtle">{reaction.reactionType}</div>
         </div>
         <div className="row" style={{ gap: 6 }}>
+          <EvidenceBadge evidence={reaction.evidence} count={reaction.documented?.count} />
           {reaction.catalysisMatched && <span className="badge badge-success">passende Katalyse</span>}
           <span className={`badge badge-${reaction.kind === 'anorganisch' ? 'anorganisch' : 'organisch'}`}>
             {reaction.kind}
@@ -465,7 +537,14 @@ function ReactionResult({
         </div>
       )}
 
-      <p style={{ marginTop: 12 }}>{reaction.explanation}</p>
+      {reaction.explanation !== reaction.evidenceNote && <p style={{ marginTop: 12 }}>{reaction.explanation}</p>}
+
+      <Callout
+        variant={EVIDENCE_VARIANT[reaction.evidence]}
+        title={reaction.evidence === 'vorhersage' ? 'Nur eine Vorhersage' : EVIDENCE_LABELS[reaction.evidence]}
+      >
+        <p style={{ margin: 0 }}>{reaction.evidenceNote}</p>
+      </Callout>
 
       {reaction.missing.length > 0 && (
         <Callout variant="warning" title="Dafür fehlt noch etwas">
@@ -521,5 +600,103 @@ function ReactionResult({
         )}
       </div>
     </article>
+  );
+}
+
+const EVIDENCE_VARIANT: Record<Evidence, 'success' | 'info' | 'warning'> = {
+  belegt: 'success',
+  lehrbuch: 'info',
+  vorhersage: 'warning',
+};
+
+const EVIDENCE_ICONS: Record<Evidence, string> = { belegt: '✓', lehrbuch: '📘', vorhersage: '≈' };
+
+function EvidenceBadge({ evidence, count }: { evidence: Evidence; count?: number }) {
+  const title =
+    evidence === 'belegt'
+      ? 'In der Patentliteratur beschrieben'
+      : evidence === 'lehrbuch'
+        ? 'Fest hinterlegte Standardreaktion'
+        : 'Berechnet – nicht einzeln belegt';
+  return (
+    <span className={`badge badge-${EVIDENCE_VARIANT[evidence] === 'info' ? 'analytik' : EVIDENCE_VARIANT[evidence]}`} title={title}>
+      <span aria-hidden="true">{EVIDENCE_ICONS[evidence]}</span> {EVIDENCE_LABELS[evidence]}
+      {count && count > 1 ? ` (${count}×)` : ''}
+    </span>
+  );
+}
+
+function EvidenceSummary({ reactions }: { reactions: WorkbenchReaction[] }) {
+  const complete = reactions.filter((reaction) => !reaction.missing.length);
+  const count = (evidence: Evidence) => complete.filter((reaction) => reaction.evidence === evidence).length;
+  const predictedOnly = complete.length > 0 && complete.every((reaction) => reaction.evidence === 'vorhersage');
+  if (!complete.length) return null;
+  return (
+    <Callout variant={predictedOnly ? 'warning' : 'neutral'} title={predictedOnly ? 'Hinweis: nur Vorhersagen' : 'Herkunft der Ergebnisse'}>
+      <p style={{ margin: 0 }}>
+        {predictedOnly
+          ? 'Für diese Mischung ist keine Reaktion belegt. Die Ergebnisse unten sind aus Regeln und Reaktionsvorlagen berechnet – chemisch plausibel, aber nicht experimentell für genau diese Stoffe nachgewiesen.'
+          : `${count('belegt')} belegt, ${count('lehrbuch')} Lehrbuchreaktion${count('lehrbuch') === 1 ? '' : 'en'}, ${count('vorhersage')} Vorhersage${count('vorhersage') === 1 ? '' : 'n'}.`}
+      </p>
+    </Callout>
+  );
+}
+
+function DocumentedPanel({
+  suggestions,
+  rdkit,
+  rdkitReady,
+  slotsLeft,
+  onAdd,
+}: {
+  suggestions: DocumentedSuggestion[];
+  rdkit: ReturnType<typeof useRDKit>['rdkit'];
+  rdkitReady: boolean;
+  slotsLeft: number;
+  onAdd: (substances: Substance[]) => void;
+}) {
+  return (
+    <section className="card">
+      <h2>Belegte Reaktionen mit diesen Stoffen</h2>
+      <p className="muted small">
+        So wurden die Stoffe im Gefäß in Patenten tatsächlich umgesetzt. Gib den fehlenden Partner dazu, um die
+        Reaktion in der Werkbank nachzustellen.
+      </p>
+      <ul className="documented-list">
+        {suggestions.map((entry) => (
+          <li key={entry.reaction.id} className="documented-item">
+            <MoleculeStructure
+              rdkit={rdkit}
+              smiles={entry.reaction.product}
+              width={120}
+              height={90}
+              fallback={rdkitReady ? entry.productName : '…'}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div>
+                <strong>{entry.from}</strong>
+                {entry.partners.length > 0 && <> + {entry.partners.map((partner) => partner.name).join(' + ')}</>} →{' '}
+                <strong>{entry.productName}</strong>
+              </div>
+              <div className="subtle small">
+                {entry.reagents.length > 0 && <>Reagenzien laut Vorschrift: {entry.reagents.join(', ')} · </>}
+                {entry.reaction.count > 1 ? `${entry.reaction.count} Fundstellen` : '1 Fundstelle'}
+              </div>
+              {entry.partners.length > 0 && (
+                <button
+                  type="button"
+                  className="button button-secondary button-small"
+                  style={{ marginTop: 6 }}
+                  disabled={entry.partners.length > slotsLeft}
+                  onClick={() => onAdd(entry.partners)}
+                >
+                  {entry.partners.length > slotsLeft ? 'Gefäß ist voll' : 'Partner ins Gefäß'}
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

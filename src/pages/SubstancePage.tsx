@@ -12,6 +12,8 @@ import { Callout } from '../components/Callout';
 import { GhsPictograms } from '../components/GhsPictograms';
 import { SubstanceSearch } from '../components/SubstanceSearch';
 import { SynthesisCard } from '../components/SynthesisCard';
+import { DocumentedRoutes } from '../components/DocumentedRoutes';
+import { structureOf } from '../chem/substanceStructures';
 import { useCatalog } from '../hooks/useCatalog';
 import { reactionsFrom, routesTo } from '../data/catalog';
 import { substanceByName, SUBSTANCES } from '../data/substances';
@@ -501,10 +503,20 @@ export function SubstancePage() {
             </section>
           )}
 
+          {!analysis.safety.restricted && (
+            <DocumentedRoutes
+              rdkit={rdkit}
+              smiles={resolution.smiles ?? (resolution.local ? structureOf(resolution.local) : undefined)}
+              name={displayName}
+            />
+          )}
+
           {!analysis.safety.restricted && routes.length > 0 && (
             <section style={{ marginBottom: 22 }}>
               <div className="row-between" style={{ marginBottom: 12 }}>
-                <h2 style={{ margin: 0 }}>So wird {displayName} hergestellt</h2>
+                <h2 style={{ margin: 0 }}>
+                  So wird {displayName} hergestellt <span className="badge badge-warning">≈ berechnet</span>
+                </h2>
                 <Link className="button button-secondary button-small" to={`/synthesen?q=${encodeURIComponent(displayName)}`}>
                   Alle Wege ansehen
                 </Link>

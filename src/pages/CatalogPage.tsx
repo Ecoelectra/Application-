@@ -40,6 +40,11 @@ export function CatalogPage() {
           der hinterlegten Reaktionsvorschriften auf die Stoffe der Datenbank, die anorganischen
           Gleichungen sind exakt ausgeglichen.
         </p>
+        <p className="small muted" style={{ marginTop: 6 }}>
+          <span className="badge badge-warning">≈ Vorhersagen</span> Die Einträge sind aus Regeln berechnet, nicht
+          einzeln belegt. Belegte Herstellungswege aus der Patentliteratur stehen auf der Seite des jeweiligen
+          Stoffes; in der Werkbank wird jedes Ergebnis mit den 100 000 belegten Reaktionen abgeglichen.
+        </p>
       </div>
 
       <div className="card no-print" style={{ marginBottom: 18 }}>

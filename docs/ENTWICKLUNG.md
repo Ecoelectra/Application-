@@ -118,6 +118,36 @@ Name|Synonyme|Formel|SMILES|CAS|PubChem-CID|Kategorie|Beschreibung
 Die molare Masse wird beim Laden aus der Formel berechnet. Die Tests prüfen, ob
 jede Formel lesbar ist und jedes SMILES von RDKit akzeptiert wird.
 
+## Datenbank belegter Reaktionen
+
+`npm run reaktionen` erzeugt `public/reaktionen/` neu. Das Skript lädt einmalig
+den USPTO-MIT-Datensatz (rund 480 000 atomzugeordnete Reaktionen aus
+US-Patenten) von GitHub nach `.cache/uspto` und
+
+1. entfernt die Atomnummern und kanonisiert jede Struktur mit RDKit, ohne
+   Stereochemie (`structureKey` in `src/chem/reactionKeys.ts` – dieselbe
+   Funktion nutzt die App),
+2. trennt Edukte (liefern Atome ins Hauptprodukt) von Hilfsstoffen,
+3. verwirft unplausible Zuordnungen: Ein Edukt mit mehr als drei Atomen muss
+   mindestens 35 % seiner Atome ins Produkt geben – außer es überträgt nur
+   Halogen-, Sauerstoff- oder Schwefelatome (Thionylchlorid, NBS, Persäuren),
+4. fasst Doppelte zusammen (die Zahl der Fundstellen bleibt erhalten),
+5. wählt 100 000 Reaktionen aus – zuerst solche, deren Edukte alle in der
+   Stoffdatenbank stehen, dann solche mit mindestens einem bekannten Stoff,
+6. prüft jede Struktur mit `assessSubstance` und verwirft Reaktionen mit
+   gesperrten Stoffen,
+7. schreibt je Edukt und je Produkt 256 gzip-Teildateien (`e-xx`, `p-xx`).
+
+Die App lädt nur die Teile, die sie für die Stoffe im Gefäß braucht, und
+entpackt sie mit `DecompressionStream`. Salze und Säuren ohne SMILES bekommen
+ihre Struktur aus `src/chem/substanceStructures.ts`.
+
+In der Werkbank trägt jede Reaktion ein Feld `evidence`: `belegt`
+(Datenbanktreffer, alle Edukte im Gefäß; bei nur einem Edukt muss zusätzlich
+ein Reagenz aus der Vorschrift da sein), `lehrbuch` (fest hinterlegte
+Standardreaktion) oder `vorhersage` (Regel oder Vorlage). Bestätigt ein
+Datenbanktreffer eine Vorlage, wird diese als belegt markiert.
+
 ## Tests
 
 | Datei | Prüft |
@@ -137,6 +167,7 @@ jede Formel lesbar ist und jedes SMILES von RDKit akzeptiert wird.
 | `catalog.test.ts` | Vollständigkeit und Suche im Synthesekatalog |
 | `pubchem.test.ts` | PubChem-Client mit simulierten Antworten |
 | `complexes.test.ts` | Komplex-Werkbank: Namen, Geometrie, Spin, Isomere, Stabilität |
+| `documentedReactions.test.ts` | Datenbank belegter Reaktionen, Plausibilitätsfilter, Kennzeichnung in der Werkbank |
 
 ### Massentests
 

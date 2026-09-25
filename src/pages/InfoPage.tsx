@@ -151,6 +151,12 @@ export function InfoPage() {
               angegebenen Originalarbeiten.
             </li>
             <li>
+              <strong>Belegte Reaktionen:</strong> 100 000 Reaktionen aus US-Patenten 1976–2016,
+              extrahiert von D. M. Lowe (CC0), bereinigt und atomzugeordnet von W. Jin, C. W. Coley,
+              R. Barzilay und T. Jaakkola (USPTO-MIT, NIPS 2017). Automatisch gewonnen – einzelne
+              Einträge können fehlerhaft sein.
+            </li>
+            <li>
               <strong>Standardpotentiale:</strong> Tabellenwerte gegen die Normalwasserstoffelektrode
               bei 25 °C.
             </li>

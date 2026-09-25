@@ -4,8 +4,9 @@ Eine App für **Windows** und **iPad**, die aus einem eingegebenen Stoff passend
 chemische Synthesen und Reaktionen vorschlägt – mit Reaktionsgleichung,
 Reaktionsmechanismus, vollständiger Arbeitsanleitung, Sicherheitshinweisen und
 elektrochemischen Kennzahlen. Dazu eine **Werkbank**, in der sich Stoffe
-zusammengeben lassen, eine **Komplex-Werkbank** und ein Katalog aus **6485 berechneten
-Synthesen**.
+zusammengeben lassen und die jedes Ergebnis mit **100 000 belegten Reaktionen aus
+der Patentliteratur** abgleicht, eine **Komplex-Werkbank** und ein Katalog aus
+**7215 berechneten Synthesen**.
 
 ![Werkbank](docs/bilder/werkbank.png)
 
@@ -14,7 +15,7 @@ Synthesen**.
 ## Was die App kann
 
 **Werkbank: Stoffe zusammengeben und sehen, was entsteht.**
-Im Chemikalienschrank stehen 664 Stoffe bereit. Bis zu vier davon wandern ins
+Im Chemikalienschrank stehen 747 Stoffe bereit. Bis zu vier davon wandern ins
 Reaktionsgefäß, dazu lassen sich Bedingungen einstellen – kühlen oder erhitzen,
 **säure- oder basenkatalysiert**, Metall- oder Lewis-Säure-Katalyse, wässrige
 Lösung, UV-Licht oder Elektrolyse. Erkannt werden Neutralisation, Fällung,
@@ -34,6 +35,29 @@ Jedes Produkt lässt sich mit einem Tipp als neues Edukt übernehmen, sodass sic
 mehrstufige Synthesen durchspielen lassen. Das Laborjournal hält fest, was man
 schon probiert hat.
 
+**Belegt oder nur vorhergesagt? Die Werkbank sagt es dir.**
+Jedes Ergebnis trägt ein Etikett:
+
+- **✓ Belegt** – genau diese Umsetzung ist in der Literatur beschrieben. Grundlage
+  sind 100 000 Reaktionen aus US-Patenten (1976–2016), die tatsächlich im Labor
+  durchgeführt wurden. Angezeigt werden Zahl der Fundstellen, der Eintrag im
+  Datensatz und die Hilfsstoffe aus der Vorschrift.
+- **📘 Lehrbuchreaktion** – fest hinterlegte Standardreaktion, etwa die
+  Fehling-Probe mit Glucose oder die Bildung von Berliner Blau.
+- **≈ Vorhersage** – aus einer allgemeinen Regel (Säure-Base, Löslichkeit,
+  Spannungsreihe) oder einer Reaktionsvorlage berechnet. Chemisch plausibel,
+  aber für genau diese Stoffe nicht belegt. Besteht ein Ergebnis nur aus
+  Vorhersagen, weist die Werkbank ausdrücklich darauf hin.
+
+Unter dem Ergebnis stehen die **belegten Reaktionen der Stoffe im Gefäß**, für
+die noch ein Partner fehlt – mit einem Tipp kommt er ins Gefäß. Auf jeder
+Stoffseite steht zusätzlich, **wie der Stoff tatsächlich hergestellt wurde**.
+
+Die Belege sind kein Ersatz für ein Vorhersagemodell: Die Werkbank findet nur
+Reaktionen, die so im Datensatz stehen. Der Datensatz wurde automatisch aus
+Patenttexten gewonnen; offensichtliche Zuordnungsfehler filtert die App heraus,
+einzelne fehlerhafte Einträge können trotzdem vorkommen.
+
 **Komplex-Werkbank: mit Komplexen spielen.**
 Zentralion wählen (20 Ionen von Cu²⁺ bis Pt⁴⁺), Liganden hinzufügen (19 Liganden
 von I⁻ bis CO, auch en, EDTA, bipy) – und die App zeigt sofort Formel und
@@ -43,7 +67,7 @@ Ligandenfeld-Stabilisierung, die zu erwartende Farbe, mögliche Isomere, die
 Bildungsgleichung und die Stabilitätskonstante. Aus der Werkbank führt ein Link
 direkt zum entstandenen Komplex.
 
-**Synthesekatalog: 6485 Wege zu 2290 Stoffen.**
+**Synthesekatalog: 7215 Wege zu 2561 Stoffen.**
 Für jeden Stoff nachschlagen, wie er hergestellt wird. Der Katalog ist nicht
 abgeschrieben, sondern gerechnet: Jede der 83 Reaktionsvorlagen wird auf alle
 passenden Stoffe der Datenbank angewendet und das Produkt mit RDKit bestimmt;
@@ -90,12 +114,14 @@ Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen.
 
 | | |
 |---|---|
-| berechnete Synthesen | 6485 |
-| davon organisch / anorganisch | 4233 / 2252 |
-| verschiedene Zielstoffe | 2290 |
+| belegte Reaktionen (Patentliteratur) | 100 000 |
+| davon allein mit Stoffen aus der Datenbank nachstellbar | 2406 |
+| berechnete Synthesen (Vorhersagen) | 7215 |
+| davon organisch / anorganisch | 4963 / 2252 |
+| verschiedene Zielstoffe | 2561 |
 | Reaktionstypen mit Mechanismus | 96 |
 | davon elektrochemisch | 15 |
-| Stoffe offline verfügbar | 664 |
+| Stoffe offline verfügbar | 747 |
 | Zentralionen / Liganden der Komplex-Werkbank | 20 / 19 |
 | Standardpotentiale | 61 |
 | erkannte funktionelle Gruppen | 34 |
@@ -138,10 +164,11 @@ Dafür werden [Rust](https://rustup.rs/) und die
 ```bash
 npm install
 npm run dev        # Entwicklungsserver auf http://localhost:5173
-npm test           # 20 583 Tests, davon je über 1000 pro Werkzeug (rund 80 s)
+npm test           # 20 764 Tests, davon je über 1000 pro Werkzeug (rund 90 s)
 npm run test:massen  # nur die Massentests (src/__tests__/massentests)
 npm run lint       # Typprüfung
 npm run catalog    # Synthesekatalog neu berechnen (rund 13 s)
+npm run reaktionen # Datenbank belegter Reaktionen neu erzeugen (lädt den Datensatz, rund 9 min)
 npm run build      # Produktionsbuild nach dist/
 ```
 
@@ -171,6 +198,8 @@ src/
     organicAcidBase.ts Säure-Base-Reaktionen organischer Stoffe
     specialReactions.ts Nachweise, Komplexbildung, technische Verfahren
     complexes.ts      Komplex-Werkbank: Namen, Ligandenfeld, Farbe, Stabilität
+    reactionKeys.ts   Strukturschlüssel für den Abgleich mit belegten Reaktionen
+    substanceStructures.ts Strukturen auch für Salze und Säuren ohne SMILES
     rdkit.ts          Anbindung der RDKit-WebAssembly-Bibliothek
     reactionEngine.ts Gruppenerkennung, Produktberechnung, Vorschläge
     safety.ts         Reglementierte Stoffe und gefährliche Mischungen
@@ -183,12 +212,15 @@ src/
     potentials.ts     Elektrochemische Spannungsreihe
     catalog.ts        Zugriff und Suche im Synthesekatalog
     workbenchSpecs.ts Bedingungen und Katalyse je Reaktionsvorlage
+    documentedReactions.ts Laden der belegten Reaktionen (nur benötigte Teile)
   services/       PubChem-Anbindung mit Ratenbegrenzung und Cache
   components/     Wiederverwendbare Bausteine der Oberfläche
   pages/          Die zehn Seiten der App
   __tests__/massentests/  Je über 1000 Tests pro Werkzeug
+public/reaktionen/ 100 000 belegte Reaktionen in 2 × 256 Teildateien (gzip, 9 MB)
 scripts/
   build-catalog.ts  Erzeugt den Synthesekatalog
+  build-reactions.ts Erzeugt die Datenbank belegter Reaktionen
 src-tauri/        Windows-Anwendung (Tauri v2)
 docs/             Fachliche Grundlagen und Entwicklungshinweise
 ```
@@ -206,6 +238,12 @@ Mehr dazu: [Fachliche Grundlagen](docs/CHEMIE.md) ·
 - **Reaktionen und Mechanismen:** kuratiert nach Organikum, Clayden *Organic
   Chemistry*, Hollemann-Wiberg, *Ullmann's Encyclopedia of Industrial Chemistry*
   und den bei jeder Reaktion angegebenen Originalarbeiten
+- **Belegte Reaktionen:** aus US-Patenten 1976–2016 extrahiert von D. M. Lowe
+  (*Chemical reactions from US patents*, CC0), bereinigt und atomzugeordnet von
+  W. Jin, C. W. Coley, R. Barzilay und T. Jaakkola (USPTO-MIT, NIPS 2017,
+  [github.com/wengong-jin/nips17-rexgen](https://github.com/wengong-jin/nips17-rexgen));
+  Auswahl, Plausibilitätsprüfung und Sicherheitsfilter durch
+  `scripts/build-reactions.ts`
 
 ## Sicherheit
 

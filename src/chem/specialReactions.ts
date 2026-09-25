@@ -60,7 +60,10 @@ const TYPICAL_COMPLEX: Record<string, Array<[string, number]>> = {
   'hg2|i': [['i', 4]],
 };
 
-const ALDEHYDE = '[CX3H1](=O)[#6]';
+/** Aldehydgruppe einschließlich Formaldehyd */
+const ALDEHYDE = '[$([CX3H1](=O)[#6]),$([CX3H2]=O)]';
+/** Aromatische Aldehyde (Benzaldehyd) sind Tollens-, aber nicht Fehling-positiv */
+const AROMATIC_ALDEHYDE = '[CX3H1](=O)a';
 const REDUCING_SUGAR = '[OX2H1][CX4H1;R]([OX2;R])';
 const KETOSE = '[OX2H1][CX4;R]([OX2;R])[CH2][OX2H1]';
 const AMINO_ACID = '[NX3H2][CX4][CX3](=O)[OX2H1]';
@@ -122,7 +125,14 @@ export function specialReactions(rdkit: MainModule | null, substances: Substance
   // Fehling-Probe
   if (has(substances, 'fehling-reagenz')) {
     for (const substance of structural) {
-      const positive = reducing(substance);
+      const onlyAromaticAldehyde = Boolean(
+        rdkit &&
+          substance.smiles &&
+          matchSmarts(rdkit, substance.smiles, AROMATIC_ALDEHYDE).length &&
+          !matchSmarts(rdkit, substance.smiles, REDUCING_SUGAR).length &&
+          matchSmarts(rdkit, substance.smiles, ALDEHYDE).length === matchSmarts(rdkit, substance.smiles, AROMATIC_ALDEHYDE).length,
+      );
+      const positive = reducing(substance) && !onlyAromaticAldehyde;
       results.push(
         special({
           id: `fehling-${substance.id}`,
@@ -139,7 +149,9 @@ export function specialReactions(rdkit: MainModule | null, substances: Substance
             : 'Die Lösung bleibt auch beim Erwärmen tiefblau – die Probe ist negativ.',
           explanation: positive
             ? 'Aldehydgruppen – auch die offenkettige Form reduzierender Zucker – reduzieren Kupfer(II) zu Kupfer(I). Das Tartrat hält das Kupfer in alkalischer Lösung gelöst, bis es als rotes Cu₂O ausfällt.'
-            : 'Ohne freie Aldehydgruppe (oder Halbacetal, das sich öffnen kann) findet keine Reduktion statt. Saccharose ist deshalb Fehling-negativ, obwohl sie aus zwei Zuckern besteht.',
+            : onlyAromaticAldehyde
+              ? 'Aromatische Aldehyde wie Benzaldehyd reduzieren Fehlingsche Lösung nicht – anders als die Tollens-Probe, die sie nachweist.'
+              : 'Ohne freie Aldehydgruppe (oder Halbacetal, das sich öffnen kann) findet keine Reduktion statt. Saccharose ist deshalb Fehling-negativ, obwohl sie aus zwei Zuckern besteht.',
           conditions: 'im siedenden Wasserbad erwärmen',
           requires: { heat: true, aqueous: true },
           level: 'Schulversuch',

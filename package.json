@@ -15,7 +15,8 @@
     "tauri": "tauri",
     "tauri:dev": "npm run build && tauri dev",
     "tauri:build": "npm run build && tauri build",
-    "catalog": "vite-node scripts/build-catalog.ts"
+    "catalog": "vite-node scripts/build-catalog.ts",
+    "reaktionen": "vite-node scripts/build-reactions.ts"
   },
   "dependencies": {
     "@rdkit/rdkit": "^2026.3.6",

@@ -395,4 +395,87 @@ Methylmagnesiumbromid|MeMgBr|CH3BrMg|C[Mg]Br|||Reagenz|Grignard-Reagenz, in Ethe
 Ethylmagnesiumbromid|EtMgBr|C2H5BrMg|CC[Mg]Br|||Reagenz|Grignard-Reagenz
 Phenylmagnesiumbromid|PhMgBr|C6H5BrMg|Br[Mg]c1ccccc1|||Reagenz|Aryl-Grignard-Reagenz, Baustein für Triphenylmethanol
 Dinatrium-EDTA|Titriplex III;Na2H2EDTA|C10H14N2Na2O8|O=C(O)CN(CCN(CC(=O)[O-])CC(=O)[O-])CC(=O)O.[Na+].[Na+]|||Reagenz|Sechszähniger Komplexbildner, Maßlösung der Wasserhärtebestimmung
+Phosphoroxychlorid|Phosphorylchlorid;POCl3|Cl3OP|O=P(Cl)(Cl)Cl|||Reagenz|Chlorierungsmittel, etwa für Hydroxypyridine und Vilsmeier-Reaktionen
+Sulfurylchlorid||Cl2O2S|O=S(=O)(Cl)Cl|||Reagenz|Chlorierungsmittel
+Chlorsulfonsäure||ClHO3S|O=S(=O)(O)Cl|||Säure|Führt Sulfonylchloridgruppen in Aromaten ein
+Phosphortribromid||Br3P|BrP(Br)Br|||Reagenz|Überführt Alkohole in Bromalkane
+Trimethylsilylchlorid|Chlortrimethylsilan;TMSCl|C3H9ClSi|C[Si](C)(C)Cl|||Reagenz|Silylierungsmittel, Schutzgruppe für Alkohole
+1-Methylpiperazin|N-Methylpiperazin|C5H12N2|CN1CCNCC1|||Amin|Baustein vieler Wirkstoffe
+Piperazin||C4H10N2|C1CNCCN1|||Amin|Cyclisches Diamin, Wirkstoffbaustein
+Ethanolamin|2-Aminoethanol;Monoethanolamin|C2H7NO|NCCO|||Amin|Aminoalkohol
+3-Aminopropan-1-ol|3-Aminopropanol|C3H9NO|NCCCO|||Amin|Aminoalkohol
+Cyclopropylamin||C3H7N|NC1CC1|||Amin|Kleinstes cyclisches primäres Amin
+Cyclopentylamin||C5H11N|NC1CCCC1|||Amin|Primäres Amin
+Cyclohexylamin||C6H13N|NC1CCCCC1|||Amin|Primäres Amin
+Isobutylamin|2-Methylpropan-1-amin|C4H11N|CC(C)CN|||Amin|Primäres Amin
+Allylamin|Prop-2-en-1-amin|C3H7N|C=CCN|||Amin|Ungesättigtes primäres Amin
+2-Methoxyethylamin||C3H9NO|COCCN|||Amin|Primäres Amin mit Etherfunktion
+Dipropylamin||C6H15N|CCCNCCC|||Amin|Sekundäres Amin
+Azetidin||C3H7N|C1CNC1|||Amin|Viergliedriges cyclisches Amin
+4-Hydroxypiperidin|Piperidin-4-ol|C5H11NO|OC1CCNCC1|||Amin|Wirkstoffbaustein
+4-Piperidon|Piperidin-4-on|C5H9NO|O=C1CCNCC1|||Keton|Wirkstoffbaustein
+Thiomorpholin||C4H9NS|C1CSCCN1|||Amin|Schwefelanalogon des Morpholins
+N,N-Dimethylethylendiamin||C4H12N2|CN(C)CCN|||Amin|Diamin mit tertiärer und primärer Aminogruppe
+N,O-Dimethylhydroxylamin||C2H7NO|CNOC|||Amin|Baustein der Weinreb-Amide
+O-Methylhydroxylamin|Methoxyamin|CH5NO|CON|||Amin|Bildet mit Carbonylverbindungen Oximether
+Cyclopropylmethylamin||C4H9N|NCC1CC1|||Amin|Primäres Amin
+4-Fluoranilin||C6H6FN|Nc1ccc(F)cc1|||Amin|Aromatisches Amin
+4-Chloranilin||C6H6ClN|Nc1ccc(Cl)cc1|||Amin|Aromatisches Amin
+p-Anisidin|4-Methoxyanilin|C7H9NO|COc1ccc(N)cc1|||Amin|Aromatisches Amin
+4-Fluorbenzylamin||C7H8FN|NCc1ccc(F)cc1|||Amin|Benzylamin-Derivat
+2-Aminopyridin||C5H6N2|Nc1ccccn1|||Heteroaromat|Heteroaromatisches Amin
+2-Aminothiazol||C3H4N2S|Nc1nccs1|||Heteroaromat|Heteroaromatisches Amin
+1,2,4-Triazol||C2H3N3|c1nc[nH]n1|||Heteroaromat|Stickstoffreicher Heteroaromat, Wirkstoffbaustein
+Pyrazol||C3H4N2|c1cn[nH]c1|||Heteroaromat|Fünfring-Heteroaromat mit zwei Stickstoffatomen
+2-Brompyridin||C5H4BrN|Brc1ccccn1|||Heteroaromat|Halogenpyridin für Kreuzkupplungen
+3-Brompyridin||C5H4BrN|Brc1cccnc1|||Heteroaromat|Halogenpyridin für Kreuzkupplungen
+3-Hydroxypyridin|Pyridin-3-ol|C5H5NO|Oc1cccnc1|||Heteroaromat|Hydroxypyridin
+Pyridin-3-carbaldehyd|Nicotinaldehyd|C6H5NO|O=Cc1cccnc1|||Aldehyd|Heteroaromatischer Aldehyd
+2-(Chlormethyl)pyridin|2-Picolylchlorid|C6H6ClN|ClCc1ccccn1|||Halogenverbindung|Alkylierungsmittel
+Pyridin-3-boronsäure|3-Pyridylboronsäure|C5H6BNO2|OB(O)c1cccnc1|||Boronsäure|Kupplungspartner der Suzuki-Reaktion
+Cyclopropylboronsäure||C3H7BO2|OB(O)C1CC1|||Boronsäure|Kupplungspartner der Suzuki-Reaktion
+4-Hydroxybenzaldehyd||C7H6O2|O=Cc1ccc(O)cc1|||Aldehyd|Phenolischer Aldehyd
+4-Fluorbenzaldehyd||C7H5FO|O=Cc1ccc(F)cc1|||Aldehyd|Aromatischer Aldehyd
+4-Brombenzaldehyd||C7H5BrO|O=Cc1ccc(Br)cc1|||Aldehyd|Aromatischer Aldehyd
+4-Bromphenol||C6H5BrO|Oc1ccc(Br)cc1|||Phenol|Halogenphenol
+4-Chlorphenol||C6H5ClO|Oc1ccc(Cl)cc1|||Phenol|Halogenphenol
+4-Fluorphenol||C6H5FO|Oc1ccc(F)cc1|||Phenol|Halogenphenol
+4-Fluorbenzonitril||C7H4FN|N#Cc1ccc(F)cc1|||Nitril|Aromatisches Nitril
+4-Fluorbenzylbromid||C7H6BrF|Fc1ccc(CBr)cc1|||Halogenverbindung|Benzylierungsmittel
+Bromessigsäureethylester|Ethylbromacetat|C4H7BrO2|CCOC(=O)CBr|||Ester|Alkylierungsmittel, Reformatsky-Reagenz
+Bromessigsäuremethylester|Methylbromacetat|C3H5BrO2|COC(=O)CBr|||Ester|Alkylierungsmittel
+Cyanessigsäureethylester|Ethylcyanoacetat|C5H7NO2|CCOC(=O)CC#N|||Ester|CH-acide Verbindung der Knoevenagel-Reaktion
+Glycinethylester||C4H9NO2|CCOC(=O)CN|||Ester|Ester der einfachsten Aminosäure
+Chlorameisensäureethylester|Ethylchlorformiat|C3H5ClO2|CCOC(=O)Cl|||Säurechlorid|Bildet Carbamate und gemischte Anhydride
+Chlorameisensäuremethylester|Methylchlorformiat|C2H3ClO2|COC(=O)Cl|||Säurechlorid|Bildet Carbamate
+Pivaloylchlorid||C5H9ClO|CC(C)(C)C(=O)Cl|||Säurechlorid|Sterisch anspruchsvolles Säurechlorid
+Isobutyrylchlorid||C4H7ClO|CC(C)C(=O)Cl|||Säurechlorid|Säurechlorid
+Cyclopropancarbonsäurechlorid||C4H5ClO|O=C(Cl)C1CC1|||Säurechlorid|Säurechlorid
+Acryloylchlorid|Acrylsäurechlorid|C3H3ClO|C=CC(=O)Cl|||Säurechlorid|Führt Acrylamidgruppen ein
+Methoxyacetylchlorid||C3H5ClO2|COCC(=O)Cl|||Säurechlorid|Säurechlorid
+Bromacetylbromid||C2H2Br2O|O=C(Br)CBr|||Säurechlorid|Bifunktionelles Acylierungsmittel
+Ethansulfonylchlorid||C2H5ClO2S|CCS(=O)(=O)Cl|||Säurechlorid|Bildet Sulfonamide und Sulfonate
+Methansulfonamid||CH5NO2S|CS(N)(=O)=O|||Amid|Einfachstes Sulfonamid
+Phenylisocyanat||C7H5NO|O=C=Nc1ccccc1|||Reagenz|Bildet mit Aminen Harnstoffe, mit Alkoholen Urethane
+Trimethylsilylacetylen|Ethinyltrimethylsilan|C5H10Si|C#C[Si](C)(C)C|||Alkin|Geschütztes Acetylen für Sonogashira-Kupplungen
+Propargylbromid|3-Brompropin|C3H3Br|C#CCBr|||Halogenverbindung|Alkylierungsmittel
+2-Iodpropan|Isopropyliodid|C3H7I|CC(C)I|||Halogenverbindung|Alkylierungsmittel
+1-Iodpropan|Propyliodid|C3H7I|CCCI|||Halogenverbindung|Alkylierungsmittel
+(Brommethyl)cyclopropan||C4H7Br|BrCC1CC1|||Halogenverbindung|Alkylierungsmittel
+Bromcyclopentan|Cyclopentylbromid|C5H9Br|BrC1CCCC1|||Halogenverbindung|Alkylierungsmittel
+1-Brom-3-chlorpropan||C3H6BrCl|ClCCCBr|||Halogenverbindung|Bifunktionelles Alkylierungsmittel
+1,3-Dibrompropan||C3H6Br2|BrCCCBr|||Halogenverbindung|Bifunktionelles Alkylierungsmittel
+1,4-Dibrombutan||C4H8Br2|BrCCCCBr|||Halogenverbindung|Bifunktionelles Alkylierungsmittel
+2-Bromethanol||C2H5BrO|OCCBr|||Halogenverbindung|Hydroxyethylierungsmittel
+3-Brompropan-1-ol||C3H7BrO|OCCCBr|||Halogenverbindung|Hydroxypropylierungsmittel
+2-Bromethylmethylether|1-Brom-2-methoxyethan|C3H7BrO|COCCBr|||Halogenverbindung|Alkylierungsmittel
+Bromacetonitril||C2H2BrN|N#CCBr|||Nitril|Cyanmethylierungsmittel
+Chloracetonitril||C2H2ClN|N#CCCl|||Nitril|Cyanmethylierungsmittel
+2-Methoxyethanol|Methylglykol|C3H8O2|COCCO|||Alkohol|Glykolether, Lösungsmittel
+2-Oxazolidinon||C3H5NO2|O=C1NCCO1|||Amid|Cyclisches Carbamat
+Benzylmercaptan|Phenylmethanthiol|C7H8S|SCc1ccccc1|||Schwefelverbindung|Thiol
+N-Iodsuccinimid|NIS|C4H4INO2|O=C1CCC(=O)N1I|||Reagenz|Iodierungsmittel
+(Trifluormethyl)trimethylsilan|Ruppert-Prakash-Reagenz;TMSCF3|C4H9F3Si|C[Si](C)(C)C(F)(F)F|||Reagenz|Überträgt die Trifluormethylgruppe
+Schwefelkohlenstoff|Kohlenstoffdisulfid|CS2|S=C=S|||Lösungsmittel|Leicht entzündliches Lösungsmittel, Baustein für Dithiocarbamate
+Acrylsäureethylester|Ethylacrylat|C5H8O2|C=CC(=O)OCC|||Ester|Michael-Akzeptor und Monomer
 `.trim();
