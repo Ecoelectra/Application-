@@ -15,6 +15,7 @@ import { molarMass, parseFormula, toHillFormula } from '../chem/formula';
 import type { Substance } from './types';
 import { ORGANIC_TABLE } from './substanceTables/organic';
 import { INORGANIC_TABLE } from './substanceTables/inorganic';
+import { GENERATED_TABLE } from './substanceTables/generated';
 
 const BASE_TABLE = `
 Wasser|Aqua;Oxidan|H2O|O|7732-18-5|962|anorganisch|Wichtigstes Lösungsmittel, Ampholyt und Reaktionspartner
@@ -184,10 +185,17 @@ function mergeUnique(...lists: Substance[][]): Substance[] {
   return merged;
 }
 
-export const SUBSTANCES: Substance[] = mergeUnique(
+/** Von Hand geprüfte Stoffe der Grundtabellen. */
+export const CURATED_SUBSTANCES: Substance[] = mergeUnique(
   parseTable(BASE_TABLE),
   parseTable(ORGANIC_TABLE),
   parseTable(INORGANIC_TABLE),
+);
+
+/** Alle Offline-Stoffe: Grundtabellen und systematisch erzeugte Ergänzungen. */
+export const SUBSTANCES: Substance[] = mergeUnique(
+  CURATED_SUBSTANCES,
+  parseTable(GENERATED_TABLE).map((substance) => ({ ...substance, origin: 'generiert' as const })),
 );
 
 const SUBSTANCE_BY_ID: ReadonlyMap<string, Substance> = new Map(

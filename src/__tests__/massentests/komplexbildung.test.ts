@@ -55,7 +55,9 @@ describe('Massentest Komplexbildung', () => {
       complexes++;
       const complex = reaction.complex;
       expect(complex.valid, complex.formula).toBe(true);
-      const source = sources.find((entry) => entry!.metal.id === complex.metal.id);
+      // Liefern beide Stoffe dasselbe Metall (FeI2 und Fe(SCN)2), nennt participants den Metallstoff
+      const metalId = reaction.participants?.[0];
+      const source = sources.find((entry) => entry!.metal.id === complex.metal.id && (!metalId || entry!.substance.id === metalId));
       expect(source, complex.formula).toBeDefined();
       const partner = source!.substance === metal ? ligand : metal;
       const ligandSource = ligandSourcesOf(rdkit, partner)[0];

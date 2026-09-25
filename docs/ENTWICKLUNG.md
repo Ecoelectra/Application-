@@ -118,6 +118,24 @@ Name|Synonyme|Formel|SMILES|CAS|PubChem-CID|Kategorie|Beschreibung
 Die molare Masse wird beim Laden aus der Formel berechnet. Die Tests prüfen, ob
 jede Formel lesbar ist und jedes SMILES von RDKit akzeptiert wird.
 
+Neben den von Hand gepflegten Tabellen (`CURATED_SUBSTANCES`) gibt es
+`src/data/substanceTables/generated.ts`. Diese Tabelle erzeugt
+`npm run stoffe` (`scripts/build-substances.ts`): alle Elemente mit
+Ordnungszahl 1 bis 92 (außer Astat und Francium), Salze, Hydroxide, Oxide und
+Säuren aus den Ionen von `src/chem/ions.ts` – nur Kombinationen, die es als Stoff
+gibt, ohne Cyanide und explosive Salze –, weitere anorganische Stoffe, homologe
+Reihen, ortho-/meta-/para-substituierte Benzole, Aminosäuren und Heterocyclen.
+Formeln organischer Stoffe berechnet RDKit, Stoffe der Grundtabellen und von
+der Sicherheitsprüfung gesperrte Stoffe werden übersprungen. Erzeugte Stoffe
+tragen `origin: 'generiert'`; der Synthesekatalog nutzt nur die Grundtabellen.
+
+Stoffe außerhalb der Offline-Datenbank holt die Werkbank über
+`src/chem/externalSubstances.ts` aus PubChem oder aus einem eingegebenen SMILES.
+Ist der Stoff schon offline vorhanden (gleiche CID, gleiche Struktur oder bei
+anorganischen Stoffen gleiche Formel), wird dieser Eintrag genommen; Salze
+bekommen über das Ionenmodell die übliche Formel (PubChem: `CuO4S`, App:
+`CuSO4`) und werden wie die Salze der Datenbank ohne SMILES geführt.
+
 ## Datenbank belegter Reaktionen
 
 `npm run reaktionen` erzeugt `public/reaktionen/` neu. Das Skript lädt einmalig
@@ -188,6 +206,8 @@ Aminosäure wie Glycin …).
 | `complexes.test.ts` | Komplexe: Namen, Geometrie, Spin, Isomere, Stabilität |
 | `complexFormation.test.ts` | Komplexbildung in der Werkbank: Nachweiskomplexe, Löslichkeit, Hydroxidfällung, Redox-Ausschlüsse |
 | `documentedReactions.test.ts` | Datenbank belegter Reaktionen, Plausibilitätsfilter, Kennzeichnung in der Werkbank |
+| `conditions.test.ts` | Aggregatzustände, Siedepunkt und Druck, Temperatur- und Druckbedingungen, Vorhersagen für Stoffpaare |
+| `externalSubstances.test.ts` | Stoffe aus PubChem und SMILES: Abgleich mit der Datenbank, Formeln, Sperren |
 
 ### Massentests
 
@@ -198,14 +218,14 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 
 | Datei | Fälle | Prüft |
 |---|---:|---|
-| `gleichungsausgleich.test.ts` | 1933 | Verbrennung jeder C/H/O/N/S-Verbindung und alle anorganischen Paarreaktionen: Atom- und Ladungserhaltung, teilerfremde Koeffizienten, Reihenfolge egal |
-| `redox.test.ts` | 2931 | Oxidationszahlen aller Stoffe und Ionen (Summe = Ladung), 48 Redoxpaare sauer/basisch, alle Kombinationen zur Gesamtgleichung |
-| `formel.test.ts` | 1665 | Molmasse jedes Stoffes gegen RDKit, 1000 Zufallsformeln mit Klammern, Hydraten, Ladungen und Unicode-Ziffern |
+| `gleichungsausgleich.test.ts` | 11 900 | Verbrennung jeder C/H/O/N/S-Verbindung und alle anorganischen Paarreaktionen: Atom- und Ladungserhaltung, teilerfremde Koeffizienten, Reihenfolge egal |
+| `redox.test.ts` | 3587 | Oxidationszahlen aller Stoffe und Ionen (Summe = Ladung), 48 Redoxpaare sauer/basisch, alle Kombinationen zur Gesamtgleichung |
+| `formel.test.ts` | 2545 | Molmasse jedes Stoffes gegen RDKit, 1000 Zufallsformeln mit Klammern, Hydraten, Ladungen und Unicode-Ziffern |
 | `stoechiometrie.test.ts` | 1001 | 1000 Zufallsansätze: Umrechnungen hin und zurück, Unterschussreagenz, Ausbeute, Atomökonomie, Verdünnung, Ansatzplanung |
 | `elektrochemie.test.ts` | 4722 | 1000 Zufallsfälle für Nernst, Faraday und Wasserstoffelektrode, jedes Paar der Spannungsreihe als Zelle (ΔG, K, Vorzeichen) |
 | `ionenmodell.test.ts` | 1153 | jedes Kation mit jedem Anion, auch als Hydrat: Formel, Zerlegung, Löslichkeit |
-| `werkbank.test.ts` | 1002 | 1000 Zufallsmischungen unter Zufallsbedingungen: Sperren, gültige und zulässige Produkte, ausgeglichene Gleichungen, Reihenfolge egal |
-| `komplexbildung.test.ts` | 17 883 | jede Metallquelle der Stoffdatenbank mit jeder Ligandenquelle: gültige Komplexe, ausgeglichene Gleichungen, keine Komplexe bei Redox- und Fällungspaaren, Herkunftsangabe |
+| `werkbank.test.ts` | 1502 | 1500 Zufallsmischungen unter Zufallsbedingungen, die Hälfte mit Temperatur- und Druckregler: Sperren, gültige und zulässige Produkte, ausgeglichene Gleichungen, für jedes Stoffpaar eine Aussage, Reihenfolge egal |
+| `komplexbildung.test.ts` | 105 240 | jede Metallquelle der Stoffdatenbank mit jeder Ligandenquelle: gültige Komplexe, ausgeglichene Gleichungen, keine Komplexe bei Redox- und Fällungspaaren, Herkunftsangabe |
 | `komplexe.test.ts` | 5505 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
@@ -242,7 +262,7 @@ Hash-Routen funktionieren in beiden Fällen ohne Serverkonfiguration.
 **Relativer Basispfad (`base: './'`).** Aus demselben Grund.
 
 **Eigene Offline-Stoffdatenbank neben PubChem.** Ohne Netz wäre die App sonst
-nutzlos. Die 110 mitgelieferten Stoffe decken Unterricht und Grundpraktikum ab.
+nutzlos. Die 1544 mitgelieferten Stoffe decken Unterricht und Praktikum ab.
 
 **Reaktionsvorschriften statt fest hinterlegter Produkte.** Nur so lässt sich
 eine Reaktion auf *das eingegebene* Molekül anwenden statt auf ein
@@ -293,6 +313,23 @@ Stoffe zusammengebe?» in vier Schritten:
    Vorlage.
 4. **Erklärung**, wenn nichts passiert – abgeleitet aus den Stoffkategorien und
    der Spannungsreihe.
+5. **Vorhersage für jedes Stoffpaar** (`src/chem/prediction.ts`). Hat ein Paar
+   keine vollständige Reaktion, wird eine Vorhersage erstellt: Redox über
+   Standardpotentiale (ΔE > 0,15 V), Protonenübertragung über pKs-Werte, unedle
+   Metalle mit protischen Stoffen, starke Oxidationsmittel mit organischen
+   Stoffen, sonst physikalisches Verhalten (Löslichkeitsregeln, log P,
+   Aggregatzustände). Chemische Vorhersagen landen bei den Reaktionen,
+   physikalische in `pairOutcomes`. Jede trägt `evidence: 'vorhersage'` und eine
+   `confidence` (hoch, mittel, gering). Das Ergebnis hängt nicht von der
+   Reihenfolge der Stoffe ab.
+
+**Temperatur und Druck.** `temperatureC` und `pressureBar` in den Bedingungen
+kommen von den Reglern. Anforderungen können `minTemperature`,
+`maxTemperature` und `minPressure` nennen (Kalkbrennen ab 825 °C, Haber-Bosch
+ab 150 bar). `src/chem/phase.ts` bestimmt Aggregatzustände aus
+`src/data/physicalData.ts` oder schätzt sie nach Joback; Siedepunkte folgen dem
+Druck nach Clausius-Clapeyron. `src/chem/conditionEffects.ts` ergänzt Hinweise
+zu Verdampfen, RGT-Regel und Le Chatelier.
 
 Greift eine Vorlage nur unter Bedingungen, die nicht eingestellt sind, erscheint
 sie trotzdem, aber mit einer Liste dessen, was fehlt. Das ist Absicht: Ein

@@ -211,6 +211,12 @@ export interface Substance {
   boilingPoint?: string;
   density?: string;
   solubility?: string;
+  /**
+   * Herkunft, falls der Stoff nicht aus der geprüften Grundtabelle stammt:
+   * automatisch erzeugt (Elemente, Salze, homologe Reihen), aus PubChem geladen
+   * oder als SMILES eingegeben.
+   */
+  origin?: 'generiert' | 'pubchem' | 'eingabe';
 }
 
 export interface StandardPotential {

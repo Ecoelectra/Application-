@@ -228,6 +228,9 @@ export function SubstancePage() {
   }
 
   const displayFormula = resolution.formula ?? molecule?.formula;
+  const workbenchId =
+    resolution.local?.id ??
+    (resolution.cid ? `pubchem-${resolution.cid}` : resolution.smiles ? `smiles:${resolution.smiles}` : undefined);
   const displayName = resolution.remote?.title ?? resolution.local?.name ?? name;
 
   return (
@@ -279,6 +282,14 @@ export function SubstancePage() {
                     {mass !== undefined && <> · M = {formatNumber(mass, 2)} g/mol</>}
                   </div>
                 </div>
+                {workbenchId && (
+                  <Link
+                    className="button button-small no-print"
+                    to={`/werkbank?${new URLSearchParams({ stoffe: workbenchId }).toString()}`}
+                  >
+                    ⚗ In die Werkbank
+                  </Link>
+                )}
               </div>
 
               {resolution.smiles ? (

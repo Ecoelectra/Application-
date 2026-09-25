@@ -246,6 +246,7 @@ const EXCEPTIONS: Record<string, Record<string, SolubilityInfo>> = {
   I: {
     Ag: { solubility: 'unlöslich', color: 'gelb' },
     Pb: { solubility: 'unlöslich', color: 'goldgelb', note: 'Goldregen-Versuch' },
+    Hg: { solubility: 'unlöslich', color: 'orangerot', note: 'löst sich im Iodid-Überschuss zu [HgI4]²⁻' },
   },
   SO4: {
     Ba: { solubility: 'unlöslich', color: 'weiß', note: 'Nachweis für Sulfat-Ionen' },
@@ -269,6 +270,8 @@ const EXCEPTIONS: Record<string, Record<string, SolubilityInfo>> = {
     Cr: { solubility: 'unlöslich', color: 'graugrün' },
     Pb: { solubility: 'unlöslich', color: 'weiß' },
     Ag: { solubility: 'unlöslich', color: 'braun', note: 'zerfällt zu Silberoxid' },
+    Sn: { solubility: 'unlöslich', color: 'weiß', note: 'löst sich im Basenüberschuss' },
+    Cd: { solubility: 'unlöslich', color: 'weiß' },
   },
   S: {
     Ca: { solubility: 'löslich' },
@@ -284,6 +287,8 @@ const EXCEPTIONS: Record<string, Record<string, SolubilityInfo>> = {
     Mn: { solubility: 'unlöslich', color: 'fleischfarben' },
     Ni: { solubility: 'unlöslich', color: 'schwarz' },
     Co: { solubility: 'unlöslich', color: 'schwarz' },
+    Hg: { solubility: 'unlöslich', color: 'schwarz', note: 'Zinnober ist die rote Form' },
+    Sn: { solubility: 'unlöslich', color: 'braun' },
   },
   CrO4: {
     Ag: { solubility: 'unlöslich', color: 'rotbraun' },

@@ -44,6 +44,7 @@ const SPECIAL_OXIDATION_STATES: Record<string, Record<string, number>> = {
   'H2O2': { H: 1, O: -1 },
   'Na2O2': { Na: 1, O: -1 },
   'BaO2': { Ba: 2, O: -1 },
+  'ZnO2': { Zn: 2, O: -1 },
   'KO2': { K: 1, O: -0.5 },
   'OF2': { O: 2, F: -1 },
   'O2F2': { O: 1, F: -1 },
@@ -102,7 +103,14 @@ export function oxidationStates(formula: string): Record<string, number> | null 
 
   if (unknown.length === 0) {
     const sum = Object.entries(known).reduce((total, [element, state]) => total + state * counts[element], 0);
-    if (sum === charge || !defaultHalogen) return known;
+    if (sum === charge) return known;
+    // Peroxide und Hyperoxide der Alkali- und Erdalkalimetalle (Li2O2, CaO2, KO2):
+    // Sauerstoff trägt den Rest der Ladung
+    if (known.O !== undefined && !defaultHalogen) {
+      const others = sum - known.O * counts.O;
+      return { ...known, O: (charge - others) / counts.O };
+    }
+    if (!defaultHalogen) return known;
     // Polyhalogenide wie KI3: das Halogen trägt den Rest der Ladung (I: −1/3)
     delete known[defaultHalogen];
     unknown.push(defaultHalogen);

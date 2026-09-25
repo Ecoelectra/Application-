@@ -16,7 +16,7 @@ import { canonicalSmiles, molecularFormula, runReaction } from '../src/chem/rdki
 import { isPublishableProduct } from '../src/chem/safety';
 import { reactPair, reactSingle } from '../src/chem/inorganicRules';
 import { REACTIONS } from '../src/data/reactions';
-import { SUBSTANCES, substanceSlug } from '../src/data/substances';
+import { CURATED_SUBSTANCES as SUBSTANCES, substanceSlug } from '../src/data/substances';
 import type { Substance } from '../src/data/types';
 
 /**

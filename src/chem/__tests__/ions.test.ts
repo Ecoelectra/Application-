@@ -89,8 +89,12 @@ describe('Ionenmodell', () => {
   });
 
   it('zerlegt die Salze aus der Stoffdatenbank', () => {
+    // Erzeugte Stoffe außerhalb des Ionenmodells (TiCl4, V2O5 …) prüft der Test unten
     const salts = SUBSTANCES.filter(
-      (substance) => ['Salz', 'Oxid', 'Base'].includes(substance.category) && !substance.smiles,
+      (substance) =>
+        ['Salz', 'Oxid', 'Base'].includes(substance.category) &&
+        !substance.smiles &&
+        (substance.origin !== 'generiert' || substance.description?.startsWith('Aus ')),
     );
     const failures = salts
       .filter((substance) => !splitSalt(substance.formula))

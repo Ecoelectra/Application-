@@ -28,6 +28,8 @@ import { reactPair, reactSingle, type InorganicReaction } from './inorganicRules
 import { organicAcidBase } from './organicAcidBase';
 import { specialReactions } from './specialReactions';
 import { complexChemistry } from './complexFormation';
+import { predictPair, type Confidence, type PairPrediction } from './prediction';
+import { conditionNotes, pressureNote } from './conditionEffects';
 import type { ComplexAnalysis } from './complexes';
 import { structureKey, substanceKeys } from './reactionKeys';
 import { ionStructures, saltFormula, structuresOf } from './substanceStructures';
@@ -48,7 +50,12 @@ import type { ReactionRule, SafetyLevel, Substance } from '../data/types';
 export type Temperature = 'kalt' | 'raum' | 'heiss';
 
 export interface WorkbenchConditions {
+  /** Temperaturbereich; bei eingestellter Zahl daraus abgeleitet */
   temperature: Temperature;
+  /** eingestellte Temperatur in °C (Regler); ohne Angabe gilt nur der Bereich */
+  temperatureC?: number;
+  /** eingestellter Druck in bar (Regler); ohne Angabe Normaldruck */
+  pressureBar?: number;
   /** gewählte Katalyse; «keine» heißt: nichts zugesetzt */
   catalysis: Catalysis | 'keine';
   /** In Wasser gelöst arbeiten */
@@ -78,7 +85,7 @@ export interface WorkbenchProduct {
 
 export interface WorkbenchReaction {
   id: string;
-  kind: 'anorganisch' | 'organisch';
+  kind: 'anorganisch' | 'organisch' | 'physikalisch';
   title: string;
   /** Verweis auf die ausführliche Reaktionsbeschreibung, falls vorhanden */
   ruleId?: string;
@@ -106,6 +113,10 @@ export interface WorkbenchReaction {
   documented?: { id: number; count: number; source: string };
   /** Entstehender Komplex mit Ligandenfeldanalyse */
   complex?: ComplexAnalysis;
+  /** Kennungen der beteiligten Stoffe im Gefäß */
+  participants?: string[];
+  /** bei Vorhersagen: wie verlässlich */
+  confidence?: Confidence;
 }
 
 /**
@@ -141,6 +152,10 @@ export type MixOutcome = 'reaktion' | 'keine-reaktion' | 'gesperrt';
 export interface MixResult {
   outcome: MixOutcome;
   reactions: WorkbenchReaction[];
+  /** Stoffpaare ohne chemische Reaktion: was stattdessen passiert (Vorhersage) */
+  pairOutcomes?: WorkbenchReaction[];
+  /** Auswirkungen von Temperatur und Druck */
+  notes?: string[];
   /** Grund der Sperre bei gefährlichen Mischungen */
   blocked?: string;
   /** Erklärungen, wenn nichts passiert */
@@ -222,6 +237,22 @@ function catalysisFromSubstances(substances: Substance[]): Set<Catalysis> {
 
 const SPECIFIC_CATALYSTS = new Set(['lindlar-katalysator', 'grubbs-katalysator']);
 
+export function formatTemperature(value: number): string {
+  return `${(Math.round(value) || 0).toLocaleString('de-DE')} °C`;
+}
+
+export function formatPressure(value: number): string {
+  if (value < 0.1) return `${(value * 1000).toLocaleString('de-DE', { maximumFractionDigits: 0 })} mbar`;
+  return `${value.toLocaleString('de-DE', { maximumFractionDigits: value < 10 ? 2 : 0 })} bar`;
+}
+
+/** Temperaturbereich zu einer eingestellten Temperatur. */
+export function temperatureRange(celsius: number): Temperature {
+  if (celsius <= 10) return 'kalt';
+  if (celsius < 50) return 'raum';
+  return 'heiss';
+}
+
 /** Vergleicht die Anforderungen einer Reaktion mit den eingestellten Bedingungen. */
 export function missingRequirements(
   requires: Requirements,
@@ -232,9 +263,30 @@ export function missingRequirements(
   const missing: string[] = [];
   let catalysisMatched = false;
 
-  if (requires.heat && conditions.temperature !== 'heiss') missing.push('Erhitzen nötig');
-  if (requires.cold && conditions.temperature !== 'kalt') {
-    missing.push('Kühlen nötig (Eisbad) – bei höherer Temperatur läuft die Reaktion anders oder unkontrolliert');
+  const temperature = conditions.temperatureC;
+  if (temperature !== undefined) {
+    // Regler: konkrete Temperaturen und Drücke
+    if (requires.heat) {
+      const needed = requires.minTemperature ?? 50;
+      if (temperature < needed) missing.push(`Erhitzen auf mindestens ${formatTemperature(needed)} nötig (eingestellt: ${formatTemperature(temperature)})`);
+    }
+    if (requires.cold) {
+      const limit = requires.maxTemperature ?? 5;
+      if (temperature > limit) {
+        missing.push(`Kühlen auf höchstens ${formatTemperature(limit)} nötig (eingestellt: ${formatTemperature(temperature)}) – wärmer läuft die Reaktion anders oder unkontrolliert`);
+      }
+    }
+  } else {
+    if (requires.heat && conditions.temperature !== 'heiss') missing.push('Erhitzen nötig');
+    if (requires.cold && conditions.temperature !== 'kalt') {
+      missing.push('Kühlen nötig (Eisbad) – bei höherer Temperatur läuft die Reaktion anders oder unkontrolliert');
+    }
+  }
+  if (requires.minPressure !== undefined) {
+    const pressure = conditions.pressureBar ?? 1.013;
+    if (pressure < requires.minPressure) {
+      missing.push(`Druck von mindestens ${formatPressure(requires.minPressure)} nötig (eingestellt: ${formatPressure(pressure)}) – im Autoklaven arbeiten`);
+    }
   }
   if (requires.light && !conditions.light) missing.push('Licht (UV) nötig – im Dunkeln startet die Reaktion nicht');
   if (requires.electro && !conditions.electrolysis) {
@@ -491,6 +543,7 @@ function organicReactions(
         catalysisMatched,
         evidence: 'vorhersage',
         evidenceNote: templateNote(rule.name),
+        participants: tuple.map((substance) => substance.id),
       });
       break;
     }
@@ -574,7 +627,9 @@ export function mix(
   for (let i = 0; i < reagentLike.length; i++) {
     for (let j = i + 1; j < reagentLike.length; j++) {
       for (const reaction of reactPair(reagentLike[i], reagentLike[j])) {
-        reactions.push(fromInorganic(reaction, conditions, substances));
+        const entry = fromInorganic(reaction, conditions, substances);
+        entry.participants = [reagentLike[i].id, reagentLike[j].id];
+        reactions.push(entry);
       }
     }
   }
@@ -584,7 +639,9 @@ export function mix(
   if (conditions.temperature === 'heiss') {
     for (const substance of reagentLike) {
       for (const reaction of reactSingle(substance)) {
-        reactions.push(fromInorganic(reaction, conditions, substances));
+        const entry = fromInorganic(reaction, conditions, substances);
+        entry.participants = [substance.id];
+        reactions.push(entry);
       }
     }
   }
@@ -595,13 +652,13 @@ export function mix(
       for (const partner of reagentLike) {
         if (partner === organic) continue;
         for (const reaction of organicAcidBase(rdkit, organic, partner)) {
-          reactions.push(
-            fromInorganic(reaction, conditions, substances, {
-              productSmiles: reaction.productSmiles,
-              rdkit,
-              evidence: 'vorhersage',
-            }),
-          );
+          const entry = fromInorganic(reaction, conditions, substances, {
+            productSmiles: reaction.productSmiles,
+            rdkit,
+            evidence: 'vorhersage',
+          });
+          entry.participants = [organic.id, partner.id];
+          reactions.push(entry);
         }
       }
     }
@@ -629,6 +686,7 @@ export function mix(
       complexLink: reaction.builderLink,
     });
     entry.missing.push(...reaction.missing);
+    entry.participants = reaction.participants;
     reactions.push(entry);
   }
 
@@ -666,14 +724,66 @@ export function mix(
       : `${reaction.title}: ${reaction.observation} ${reaction.explanation}`,
   );
 
+  // Beteiligte Stoffe auch dort bestimmen, wo die Regel sie nicht mitliefert
+  for (const reaction of positive) {
+    if (reaction.participants?.length) continue;
+    reaction.participants = participantsFromFormulas(reaction, reagentLike);
+  }
+
+  // Für jedes Stoffpaar ohne vollständige Reaktion: Vorhersage, was passiert
+  const temperature = conditions.temperatureC ?? { kalt: 0, raum: 20, heiss: 80 }[conditions.temperature];
+  const pressure = conditions.pressureBar ?? 1.013;
+  const pairOutcomes: WorkbenchReaction[] = [];
+  const predicted = new Set<string>();
+  for (let i = 0; i < reagentLike.length; i++) {
+    for (let j = i + 1; j < reagentLike.length; j++) {
+      const [a, b] = [reagentLike[i], reagentLike[j]];
+      const involves = (reaction: WorkbenchReaction) =>
+        Boolean(reaction.participants?.includes(a.id) && reaction.participants.includes(b.id));
+      if (positive.some((reaction) => !reaction.missing.length && involves(reaction))) continue;
+      const blocked = positive
+        .filter((reaction) => reaction.missing.length && involves(reaction))
+        .map((reaction) => ({ title: reaction.title, missing: reaction.missing }));
+      const prediction = predictPair(rdkit, a, b, { temperature, pressure, aqueous: conditions.aqueous, blocked });
+      const entry = fromPrediction(prediction);
+      predicted.add(entry.id);
+      if (prediction.chemical) positive.push(entry);
+      else pairOutcomes.push(entry);
+    }
+  }
+  positive.sort(
+    (a, b) =>
+      a.missing.length - b.missing.length ||
+      EVIDENCE_RANK[a.evidence] - EVIDENCE_RANK[b.evidence] ||
+      Number(b.catalysisMatched) - Number(a.catalysisMatched),
+  );
+
   const complete = positive.filter((reaction) => !reaction.missing.length);
-  const incomplete = positive.filter((reaction) => reaction.missing.length).slice(0, MAX_INCOMPLETE);
+  // Vorhersagen für Stoffpaare immer zeigen, auch wenn ihnen noch etwas fehlt
+  const incomplete = positive
+    .filter((reaction) => reaction.missing.length)
+    .filter((reaction, index) => index < MAX_INCOMPLETE || predicted.has(reaction.id));
   const shown = [...complete, ...incomplete];
+
+  // Druck: Gleichgewichte mit Gasen
+  if (conditions.temperatureC !== undefined || conditions.pressureBar !== undefined) {
+    for (const reaction of complete) {
+      if (reaction.kind !== 'anorganisch') continue;
+      const note = pressureNote(rdkit, reaction.equation, temperature, pressure);
+      if (note && !reaction.explanation.includes('Druck:')) reaction.explanation += ` ${note}`;
+    }
+  }
+  const notes =
+    conditions.temperatureC !== undefined || conditions.pressureBar !== undefined
+      ? conditionNotes(rdkit, substances, temperature, pressure, complete.length > 0)
+      : [];
 
   const extraHints = [...negativeHints, ...complexes.hints];
   return {
     outcome: shown.length ? 'reaktion' : 'keine-reaktion',
     reactions: shown,
+    pairOutcomes,
+    notes,
     hints: shown.length
       ? extraHints
       : extraHints.length
@@ -890,10 +1000,17 @@ function applyDocumented(
     reaction.documented = { id: proof.id, count: proof.count, source: proof.source };
   }
 
+  const owners = substances.map((substance) => ({ id: substance.id, keys: new Set(vesselKeys(rdkit, [substance])) }));
   return matches
     .filter((match) => !used.has(match.id))
     .slice(0, MAX_DOCUMENTED)
-    .map((match) => fromDocumented(rdkit, match));
+    .map((match) => {
+      const entry = fromDocumented(rdkit, match);
+      entry.participants = owners
+        .filter((owner) => match.reactants.some((reactant) => owner.keys.has(reactant)))
+        .map((owner) => owner.id);
+      return entry;
+    });
 }
 
 export interface DocumentedSuggestion {
@@ -957,4 +1074,48 @@ export function documentedSuggestions(
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map(({ score: _score, ...entry }) => entry);
+}
+
+// ---------------------------------------------------------------------
+// Vorhersagen für Stoffpaare
+// ---------------------------------------------------------------------
+
+/** Ordnet die Formeln einer Reaktion den Stoffen im Gefäß zu. */
+function participantsFromFormulas(reaction: WorkbenchReaction, substances: Substance[]): string[] {
+  const text = `${reaction.equation} ${reaction.title}`;
+  return substances
+    .filter((substance) => {
+      const formula = substance.formula.replace(/·.*$/, '');
+      return text.includes(substance.name) || new RegExp(`(^|[\\s+(])${formula.replace(/[()[\]]/g, '\\$&')}([\\s+)]|$)`).test(reaction.equation);
+    })
+    .map((substance) => substance.id);
+}
+
+const CONFIDENCE_TEXT: Record<Confidence, string> = {
+  hoch: 'hoch – das Modell ist hier verlässlich',
+  mittel: 'mittel – plausibel, aber nicht überprüft',
+  gering: 'gering – nur eine grobe Abschätzung',
+};
+
+function fromPrediction(prediction: PairPrediction): WorkbenchReaction {
+  return {
+    id: prediction.id,
+    kind: prediction.kind,
+    title: prediction.title,
+    reactionType: prediction.reactionType,
+    equation: prediction.equation,
+    products: prediction.products,
+    observation: prediction.observation,
+    explanation: prediction.explanation,
+    conditions: prediction.conditions,
+    safetyLevel: prediction.safetyLevel,
+    hazards: prediction.hazards,
+    tags: ['Vorhersage'],
+    missing: prediction.missing,
+    catalysisMatched: false,
+    evidence: 'vorhersage',
+    evidenceNote: `Vorhersage nach ${prediction.model}. Für diese Stoffkombination ist keine Reaktion hinterlegt oder belegt; das Ergebnis ist abgeschätzt. Verlässlichkeit: ${CONFIDENCE_TEXT[prediction.confidence]}.`,
+    confidence: prediction.confidence,
+    participants: prediction.participants,
+  };
 }

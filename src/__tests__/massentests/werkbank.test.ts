@@ -1,6 +1,8 @@
 /**
- * Massentest Werkbank: 1000 zufällige Mischungen aus zwei oder drei Stoffen
- * der Datenbank unter zufälligen Bedingungen. Die Werkbank darf nie abstürzen,
+ * Massentest Werkbank: 1500 zufällige Mischungen aus zwei oder drei Stoffen
+ * der Datenbank unter zufälligen Bedingungen, die Hälfte davon mit
+ * eingestellter Temperatur und eingestelltem Druck. Jedes Stoffpaar muss eine
+ * Aussage bekommen (Reaktion, Vorhersage oder «keine Reaktion»). Die Werkbank darf nie abstürzen,
  * muss gefährliche Gemische sperren, darf nur gültige und zulässige Produkte
  * zeigen und muss ausgeglichene Gleichungen liefern.
  */
@@ -10,7 +12,7 @@ import initRDKitModule from '@rdkit/rdkit';
 import { parseFormula } from '../../chem/formula';
 import { canonicalSmiles } from '../../chem/rdkit';
 import { isPublishableProduct, mixtureWarning } from '../../chem/safety';
-import { mix, type WorkbenchConditions } from '../../chem/workbench';
+import { mix, temperatureRange, type WorkbenchConditions } from '../../chem/workbench';
 import { SUBSTANCES } from '../../data/substances';
 import { ganzzahl, gleichungsFehler, wahl, zufall } from './hilfen';
 
@@ -24,10 +26,14 @@ const random = zufall(4711);
 const TEMPERATUREN: WorkbenchConditions['temperature'][] = ['kalt', 'raum', 'heiss'];
 const KATALYSEN: WorkbenchConditions['catalysis'][] = ['keine', 'sauer', 'basisch', 'metall', 'lewis'];
 
-const mischungen = Array.from({ length: 1000 }, (_, index) => {
+/** Anorganische Stoffe, damit genügend Gleichungen auf Ausgleich geprüft werden. */
+const ANORGANISCH = SUBSTANCES.filter((substance) => !substance.smiles && substance.category !== 'Nachweisreagenz');
+
+const mischungen = Array.from({ length: 1500 }, (_, index) => {
   const count = random() < 0.75 ? 2 : 3;
   const ids = new Set<string>();
-  while (ids.size < count) ids.add(wahl(random, SUBSTANCES).id);
+  const pool = index < 1000 ? SUBSTANCES : ANORGANISCH;
+  while (ids.size < count) ids.add(wahl(random, pool).id);
   const conditions: WorkbenchConditions = {
     temperature: wahl(random, TEMPERATUREN),
     catalysis: wahl(random, KATALYSEN),
@@ -35,6 +41,12 @@ const mischungen = Array.from({ length: 1000 }, (_, index) => {
     light: random() < 0.15,
     electrolysis: random() < 0.1,
   };
+  // Die Hälfte der Mischungen mit Temperatur- und Druckregler
+  if (random() < 0.5) {
+    conditions.temperatureC = ganzzahl(random, -80, 1100);
+    conditions.pressureBar = Number((10 ** (random() * 5.5 - 3)).toPrecision(3));
+    conditions.temperature = temperatureRange(conditions.temperatureC);
+  }
   return { index: index + 1, ids: [...ids], conditions, seed: ganzzahl(random, 0, 1) };
 });
 
@@ -67,8 +79,8 @@ function stoffumsatz(reaction: { equation: string }): string {
 }
 
 describe('Massentest Werkbank', () => {
-  it('hat 1000 Mischungen', () => {
-    expect(mischungen).toHaveLength(1000);
+  it('hat 1500 Mischungen', () => {
+    expect(mischungen).toHaveLength(1500);
   });
 
   it.each(mischungen.map((m) => [m.index, m.ids.join(' + '), m] as const))('#%i %s', (_, __, m) => {
@@ -113,6 +125,27 @@ describe('Massentest Werkbank', () => {
       if (reaction.ionicEquation && pruefbar(reaction.ionicEquation)) {
         expect(gleichungsFehler(reaction.ionicEquation), reaction.ionicEquation).toEqual([]);
       }
+    }
+
+    // Für jedes Stoffpaar gibt es eine Aussage: Reaktion, Vorhersage oder «keine Reaktion»
+    const partner = substances.filter((substance) => substance.category !== 'Nachweisreagenz');
+    for (let i = 0; i < partner.length; i++) {
+      for (let j = i + 1; j < partner.length; j++) {
+        const paar = [partner[i].id, partner[j].id];
+        const passt = (reaction: { participants?: string[] }) => paar.every((id) => reaction.participants?.includes(id));
+        expect(
+          result.reactions.some(passt) || (result.pairOutcomes ?? []).some(passt),
+          `keine Aussage für ${paar.join(' + ')}`,
+        ).toBe(true);
+      }
+    }
+    for (const outcome of result.pairOutcomes ?? []) {
+      expect(outcome.evidence).toBe('vorhersage');
+      expect(outcome.confidence).toBeDefined();
+      expect(outcome.observation.length).toBeGreaterThan(10);
+    }
+    for (const reaction of result.reactions) {
+      if (reaction.evidence === 'vorhersage' && reaction.tags.includes('Vorhersage')) expect(reaction.confidence).toBeDefined();
     }
 
     // Reihenfolge der Stoffe spielt keine Rolle

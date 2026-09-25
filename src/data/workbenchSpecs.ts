@@ -37,6 +37,12 @@ export interface Requirements {
   catalysis?: Catalysis[];
   /** bestimmte Katalysatoren, von denen einer vorhanden sein muss */
   catalysts?: string[];
+  /** Mindesttemperatur in °C (gilt, wenn die Temperatur als Zahl eingestellt ist) */
+  minTemperature?: number;
+  /** Höchsttemperatur in °C beim Kühlen */
+  maxTemperature?: number;
+  /** Mindestdruck in bar */
+  minPressure?: number;
 }
 
 export interface WorkbenchSpec extends Requirements {

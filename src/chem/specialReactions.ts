@@ -68,6 +68,22 @@ function special(options: {
   };
 }
 
+/** Temperatur, Druck und Apparatur der technischen Verfahren. */
+const PROCESS_CONDITIONS: Record<string, Requirements> = {
+  'haber-bosch': { heat: true, minTemperature: 400, minPressure: 150 },
+  'ostwald-verfahren': { heat: true, minTemperature: 800 },
+  kontaktverfahren: { heat: true, minTemperature: 400 },
+  hochofenprozess: { heat: true, minTemperature: 1000 },
+  thermitreaktion: { heat: true, minTemperature: 1000 },
+  'hall-heroult': { heat: true, minTemperature: 950, electro: true },
+  'downs-zelle': { heat: true, minTemperature: 600, electro: true },
+  'chloralkali-elektrolyse': { electro: true, aqueous: true },
+  wasserelektrolyse: { electro: true, aqueous: true },
+  kupferraffination: { electro: true, aqueous: true },
+  galvanisieren: { electro: true, aqueous: true },
+  'solvay-verfahren': { aqueous: true },
+};
+
 /** Findet Nachweis- und Sonderreaktionen für die Stoffe im Gefäß. */
 export function specialReactions(rdkit: MainModule | null, substances: Substance[]): SpecialReaction[] {
   const results: SpecialReaction[] = [];
@@ -282,7 +298,7 @@ export function specialReactions(rdkit: MainModule | null, substances: Substance
     // Einstoff-Verfahren wie die Wasserelektrolyse nur anbieten, wenn der Stoff
     // allein im Gefäß ist – sonst stünde sie bei jeder wässrigen Mischung da.
     if (fixed.reactants.length < 2 && substances.length > 1) continue;
-    const spec = WORKBENCH_SPECS[rule.id];
+    const spec = WORKBENCH_SPECS[rule.id] ?? PROCESS_CONDITIONS[rule.id];
     results.push(
       special({
         id: `verfahren-${rule.id}`,

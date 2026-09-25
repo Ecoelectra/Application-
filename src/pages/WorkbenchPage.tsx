@@ -4,6 +4,9 @@ import { useRDKit } from '../hooks/useRDKit';
 import {
   DEFAULT_CONDITIONS,
   EVIDENCE_LABELS,
+  formatPressure,
+  formatTemperature,
+  temperatureRange,
   documentedSuggestions,
   mix,
   productAsSubstance,
@@ -11,7 +14,6 @@ import {
   type DocumentedSuggestion,
   type Evidence,
   type MixResult,
-  type Temperature,
   type WorkbenchConditions,
   type WorkbenchProduct,
   type WorkbenchReaction,
@@ -19,6 +21,11 @@ import {
 import { MoleculeStructure } from '../components/MoleculeStructure';
 import { ComplexBuilder } from '../components/ComplexBuilder';
 import { ComplexDetails } from '../components/ComplexDetails';
+import { physicalProperties, stateAt } from '../chem/phase';
+import { substanceFromCompound, substanceFromSmiles } from '../chem/externalSubstances';
+import { compoundByCid } from '../services/pubchem';
+import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
+import type { MainModule } from '@rdkit/rdkit';
 import { Callout } from '../components/Callout';
 import { SUBSTANCES, searchSubstances, substanceById } from '../data/substances';
 import type { Substance } from '../data/types';
@@ -57,7 +64,7 @@ const SHELVES: Array<{ id: string; label: string; categories: string[]; ids?: st
   { id: 'basen', label: 'Laugen und Basen', categories: ['Base'] },
   { id: 'salze', label: 'Salze', categories: ['Salz'] },
   { id: 'metalle', label: 'Metalle und Elemente', categories: ['Element'] },
-  { id: 'oxide', label: 'Oxide und Gase', categories: ['Oxid', 'Gas'] },
+  { id: 'oxide', label: 'Oxide, Gase, Nichtmetallverbindungen', categories: ['Oxid', 'Gas', 'Nichtmetallverbindung'] },
   {
     id: 'organisch',
     label: 'Organische Stoffe',
@@ -83,11 +90,39 @@ const FAVOURITES = [
 
 const MAX_SLOTS = 4;
 
-const TEMPERATURES: Array<{ id: Temperature; label: string; icon: string }> = [
-  { id: 'kalt', label: 'Kühlen (Eisbad)', icon: '❄' },
-  { id: 'raum', label: 'Raumtemperatur', icon: '🌡' },
-  { id: 'heiss', label: 'Erhitzen', icon: '🔥' },
+/** Schnellwahl für den Temperaturregler. */
+const TEMPERATURE_PRESETS: Array<{ value: number; label: string; icon: string }> = [
+  { value: -78, label: 'Trockeneis', icon: '🧊' },
+  { value: 0, label: 'Eisbad', icon: '❄' },
+  { value: 20, label: 'Raum', icon: '🌡' },
+  { value: 80, label: 'Wasserbad', icon: '♨' },
+  { value: 300, label: 'Brenner', icon: '🔥' },
+  { value: 900, label: 'Glühen', icon: '☀' },
 ];
+
+/** Schnellwahl für den Druckregler (bar). */
+const PRESSURE_PRESETS: Array<{ value: number; label: string }> = [
+  { value: 0.02, label: 'Vakuum' },
+  { value: 1.013, label: 'Normaldruck' },
+  { value: 10, label: 'Druckgefäß' },
+  { value: 200, label: 'Hochdruck' },
+];
+
+const TEMPERATURE_MIN = -100;
+const TEMPERATURE_MAX = 1200;
+/** Druckregler in Zehnerpotenzen: 1 mbar bis 300 bar */
+const PRESSURE_LOG_MIN = -3;
+const PRESSURE_LOG_MAX = Math.log10(300);
+
+const ORIGIN_LABELS: Record<NonNullable<Substance['origin']>, { label: string; hint: string } | undefined> = {
+  pubchem: { label: 'PubChem', hint: 'Aus PubChem geladen; Name und Daten stammen von dort' },
+  eingabe: { label: 'SMILES', hint: 'Als Struktur eingegeben' },
+  generiert: undefined,
+};
+
+const STATE_ICONS: Record<string, string> = {
+  fest: '▪', flüssig: '💧', gasförmig: '💨', gelöst: '🫧', zersetzt: '⚠', unbekannt: '?',
+};
 
 const CATALYSES: Array<{ id: WorkbenchConditions['catalysis']; label: string; icon: string; hint: string }> = [
   { id: 'keine', label: 'Ohne Katalysator', icon: '○', hint: 'Nichts zusetzen' },
@@ -100,7 +135,23 @@ const CATALYSES: Array<{ id: WorkbenchConditions['catalysis']; label: string; ic
 export function WorkbenchPage() {
   const { rdkit, status } = useRDKit();
   const [selected, setSelected] = useState<Substance[]>([]);
-  const [conditions, setConditions] = useState<WorkbenchConditions>(DEFAULT_CONDITIONS);
+  const [conditions, setConditions] = useState<WorkbenchConditions>({
+    ...DEFAULT_CONDITIONS,
+    temperatureC: 20,
+    pressureBar: 1.013,
+  });
+  const temperatureC = conditions.temperatureC ?? 20;
+  const pressureBar = conditions.pressureBar ?? 1.013;
+  const setTemperature = (value: number): void => {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.max(TEMPERATURE_MIN, Math.min(TEMPERATURE_MAX, Math.round(value)));
+    setConditions((c) => ({ ...c, temperatureC: clamped, temperature: temperatureRange(clamped) }));
+  };
+  const setPressure = (value: number): void => {
+    if (!Number.isFinite(value) || value <= 0) return;
+    const clamped = Math.max(10 ** PRESSURE_LOG_MIN, Math.min(300, value));
+    setConditions((c) => ({ ...c, pressureBar: Number(clamped.toPrecision(3)) }));
+  };
   const [query, setQuery] = useState('');
   const [openShelf, setOpenShelf] = useState<string>('saeuren');
   const [result, setResult] = useState<MixResult | null>(null);
@@ -116,11 +167,25 @@ export function WorkbenchPage() {
   const [documented, setDocumented] = useState<{ ids: string; reactions: DocumentedReaction[] } | null>(null);
 
   // Stoffe aus der Adresse übernehmen, z. B. #/werkbank?stoffe=anilin,acetanhydrid
+  // Auch PubChem-Stoffe (pubchem-2519) und Strukturen (smiles:CCO) sind möglich.
+  const stoffeParam = params.get('stoffe') ?? '';
+  // Nur Stoffe außerhalb der Datenbank brauchen RDKit; sonst nicht erneut auslösen
+  const urlRdkit = stoffeParam.split(',').some((id) => id && !substanceById(id)) ? rdkit : null;
   useEffect(() => {
-    const ids = params.get('stoffe')?.split(',') ?? [];
-    const fromUrl = ids.map((id) => substanceById(id)).filter((entry): entry is Substance => Boolean(entry));
-    if (fromUrl.length) setSelected(fromUrl.slice(0, MAX_SLOTS));
-  }, [params]);
+    const ids = stoffeParam.split(',').filter(Boolean);
+    if (!ids.length) return;
+    const external = ids.some((id) => !substanceById(id));
+    if (external && !urlRdkit) return;
+    let cancelled = false;
+    (async () => {
+      const resolved = await Promise.all(ids.map((id) => resolveSubstanceId(urlRdkit, id)));
+      const fromUrl = resolved.filter((entry): entry is Substance => Boolean(entry));
+      if (!cancelled && fromUrl.length) setSelected(fromUrl.slice(0, MAX_SLOTS));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [stoffeParam, urlRdkit]);
 
   useEffect(() => {
     loadReactionIndex().then(setDatabase);
@@ -158,8 +223,10 @@ export function WorkbenchPage() {
     const shelf = SHELVES.find((entry) => entry.id === openShelf);
     if (!shelf) return [];
     if (shelf.ids) return shelf.ids.map((id) => substanceById(id)).filter((entry): entry is Substance => Boolean(entry));
-    return SUBSTANCES.filter((substance) => shelf.categories.includes(substance.category)).slice(0, 60);
+    return SUBSTANCES.filter((substance) => shelf.categories.includes(substance.category));
   }, [openShelf]);
+  const [shelfExpanded, setShelfExpanded] = useState(false);
+  const SHELF_PREVIEW = 60;
 
   const favourites = useMemo(
     () => FAVOURITES.map((id) => substanceById(id)).filter((entry): entry is Substance => Boolean(entry)),
@@ -205,7 +272,7 @@ export function WorkbenchPage() {
               ? result.reactions[0].equation
               : result.outcome === 'gesperrt'
                 ? 'nicht simuliert (Gefahr)'
-                : 'keine Reaktion',
+                : result.pairOutcomes?.[0]?.equation ?? 'keine Reaktion',
         },
         ...current.slice(0, 9),
       ]);
@@ -278,18 +345,29 @@ export function WorkbenchPage() {
             className="input"
             type="search"
             value={query}
-            placeholder="Stoff suchen …"
+            placeholder="Name, Formel, CAS-Nummer oder SMILES …"
             aria-label="Stoff suchen"
             onChange={(event) => setQuery(event.target.value)}
           />
+          <p className="small subtle" style={{ margin: '6px 0 0' }}>
+            {SUBSTANCES.length.toLocaleString('de-DE')} Stoffe offline, dazu online alle Stoffe aus PubChem.
+          </p>
 
           {query.trim() ? (
-            <div className="bottle-grid" style={{ marginTop: 12 }}>
-              {searchResults.map((substance) => (
-                <BottleButton key={substance.id} substance={substance} onAdd={addSubstance} />
-              ))}
-              {!searchResults.length && <p className="muted small">Kein Stoff gefunden.</p>}
-            </div>
+            <>
+              <div className="bottle-grid" style={{ marginTop: 12 }}>
+                {searchResults.map((substance) => (
+                  <BottleButton key={substance.id} substance={substance} onAdd={addSubstance} />
+                ))}
+                {!searchResults.length && <p className="muted small">Nicht in der App-Datenbank.</p>}
+              </div>
+              <OnlineSubstanceSearch
+                query={query}
+                rdkit={rdkit}
+                localNames={searchResults.flatMap((substance) => [substance.name, ...substance.synonyms])}
+                onAdd={addSubstance}
+              />
+            </>
           ) : (
             <>
               <div className="row" style={{ marginTop: 12, marginBottom: 10 }}>
@@ -298,17 +376,30 @@ export function WorkbenchPage() {
                     key={shelf.id}
                     type="button"
                     className={`chip${openShelf === shelf.id ? ' active' : ''}`}
-                    onClick={() => setOpenShelf(shelf.id)}
+                    onClick={() => {
+                      setOpenShelf(shelf.id);
+                      setShelfExpanded(false);
+                    }}
                   >
                     {shelf.label}
                   </button>
                 ))}
               </div>
               <div className="bottle-grid">
-                {shelfContents.map((substance) => (
+                {(shelfExpanded ? shelfContents : shelfContents.slice(0, SHELF_PREVIEW)).map((substance) => (
                   <BottleButton key={substance.id} substance={substance} onAdd={addSubstance} />
                 ))}
               </div>
+              {shelfContents.length > SHELF_PREVIEW && (
+                <button
+                  type="button"
+                  className="button button-secondary button-small"
+                  style={{ marginTop: 10 }}
+                  onClick={() => setShelfExpanded((value) => !value)}
+                >
+                  {shelfExpanded ? 'Weniger zeigen' : `Alle ${shelfContents.length} Stoffe zeigen`}
+                </button>
+              )}
             </>
           )}
 
@@ -345,7 +436,25 @@ export function WorkbenchPage() {
                     <div key={substance.id} className="vessel-item">
                       <div>
                         <strong>{substance.name}</strong>
-                        <div className="subtle mono small">{substance.formula}</div>
+                        <div className="subtle mono small">
+                          {substance.formula}
+                          {(() => {
+                            const origin = substance.origin ? ORIGIN_LABELS[substance.origin] : undefined;
+                            return origin ? (
+                              <span className="badge tag-origin" title={origin.hint}>
+                                {origin.label}
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
+                        {(() => {
+                          const state = stateAt(physicalProperties(rdkit, substance), temperatureC, pressureBar);
+                          return (
+                            <div className="small state-line" title={state.source === 'Joback-Schätzung' ? 'Schmelz- und Siedepunkt nach der Joback-Methode geschätzt' : undefined}>
+                              <span aria-hidden="true">{STATE_ICONS[state.state]}</span> {state.text}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <button
                         type="button"
@@ -361,18 +470,85 @@ export function WorkbenchPage() {
               )}
             </div>
 
-            <h3 style={{ marginTop: 16 }}>Temperatur</h3>
-            <div className="row" role="radiogroup" aria-label="Temperatur">
-              {TEMPERATURES.map((entry) => (
+            <h3 style={{ marginTop: 16 }}>
+              <label htmlFor="temperatur-regler">Temperatur</label>
+            </h3>
+            <div className="regler">
+              <input
+                id="temperatur-regler"
+                type="range"
+                min={TEMPERATURE_MIN}
+                max={TEMPERATURE_MAX}
+                step={1}
+                value={temperatureC}
+                onChange={(event) => setTemperature(Number(event.target.value))}
+                aria-valuetext={formatTemperature(temperatureC)}
+              />
+              <div className="regler-wert">
+                <input
+                  className="input"
+                  type="number"
+                  inputMode="decimal"
+                  min={TEMPERATURE_MIN}
+                  max={TEMPERATURE_MAX}
+                  value={temperatureC}
+                  aria-label="Temperatur in Grad Celsius"
+                  onChange={(event) => setTemperature(Number(event.target.value))}
+                />
+                <span>°C</span>
+              </div>
+            </div>
+            <div className="row" style={{ marginTop: 6 }}>
+              {TEMPERATURE_PRESETS.map((entry) => (
                 <button
-                  key={entry.id}
+                  key={entry.value}
                   type="button"
-                  role="radio"
-                  aria-checked={conditions.temperature === entry.id}
-                  className={`chip${conditions.temperature === entry.id ? ' active' : ''}`}
-                  onClick={() => setConditions((c) => ({ ...c, temperature: entry.id }))}
+                  className={`chip chip-small${temperatureC === entry.value ? ' active' : ''}`}
+                  onClick={() => setTemperature(entry.value)}
                 >
-                  <span aria-hidden="true">{entry.icon}</span> {entry.label}
+                  <span aria-hidden="true">{entry.icon}</span> {entry.label} {formatTemperature(entry.value)}
+                </button>
+              ))}
+            </div>
+
+            <h3 style={{ marginTop: 14 }}>
+              <label htmlFor="druck-regler">Druck</label>
+            </h3>
+            <div className="regler">
+              <input
+                id="druck-regler"
+                type="range"
+                min={PRESSURE_LOG_MIN}
+                max={PRESSURE_LOG_MAX}
+                step={0.01}
+                value={Math.log10(pressureBar)}
+                onChange={(event) => setPressure(10 ** Number(event.target.value))}
+                aria-valuetext={formatPressure(pressureBar)}
+              />
+              <div className="regler-wert">
+                <input
+                  className="input"
+                  type="number"
+                  inputMode="decimal"
+                  min={0.001}
+                  max={300}
+                  step="any"
+                  value={pressureBar}
+                  aria-label="Druck in bar"
+                  onChange={(event) => setPressure(Number(event.target.value))}
+                />
+                <span>bar</span>
+              </div>
+            </div>
+            <div className="row" style={{ marginTop: 6 }}>
+              {PRESSURE_PRESETS.map((entry) => (
+                <button
+                  key={entry.value}
+                  type="button"
+                  className={`chip chip-small${Math.abs(pressureBar - entry.value) < entry.value * 0.02 ? ' active' : ''}`}
+                  onClick={() => setPressure(entry.value)}
+                >
+                  {entry.label} {formatPressure(entry.value)}
                 </button>
               ))}
             </div>
@@ -431,9 +607,25 @@ export function WorkbenchPage() {
             </Callout>
           )}
 
+          {!running && result?.notes && result.notes.length > 0 && (
+            <Callout variant="neutral" title={`Bei ${formatTemperature(temperatureC)} und ${formatPressure(pressureBar)}`}>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {result.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </Callout>
+          )}
+
           {!running && result?.outcome === 'keine-reaktion' && (
             <div className="card">
-              <h2>Keine Reaktion</h2>
+              <h2>Keine chemische Reaktion</h2>
+              {result.pairOutcomes?.length ? (
+                <p className="muted" style={{ marginBottom: 8 }}>
+                  Für diese Stoffe ist keine Reaktion hinterlegt oder belegt. Was stattdessen passiert, sagt die
+                  Vorhersage unten.
+                </p>
+              ) : null}
               {result.hints.map((hint) => (
                 <p key={hint} className="muted" style={{ marginBottom: 8 }}>
                   {hint}
@@ -457,6 +649,18 @@ export function WorkbenchPage() {
           {!running &&
             result?.outcome === 'reaktion' &&
             result.reactions.map((reaction) => (
+              <ReactionResult
+                key={reaction.id}
+                reaction={reaction}
+                rdkit={rdkit}
+                rdkitReady={status === 'bereit'}
+                onUseProduct={useProduct}
+              />
+            ))}
+
+          {!running &&
+            result?.outcome !== 'gesperrt' &&
+            result?.pairOutcomes?.map((reaction) => (
               <ReactionResult
                 key={reaction.id}
                 reaction={reaction}
@@ -494,6 +698,24 @@ export function WorkbenchPage() {
       )}
     </main>
   );
+}
+
+/** Kennung aus der Adresse: Datenbank-ID, pubchem-CID oder smiles:… */
+async function resolveSubstanceId(rdkit: MainModule | null, id: string): Promise<Substance | null> {
+  const local = substanceById(id);
+  if (local) return local;
+  if (!rdkit) return null;
+  if (id.startsWith('smiles:')) {
+    const result = substanceFromSmiles(rdkit, id.slice('smiles:'.length));
+    return result.ok ? result.substance : null;
+  }
+  const cid = id.match(/^pubchem-(\d+)$/)?.[1];
+  if (cid) {
+    const compound = await compoundByCid(Number(cid));
+    const result = compound ? substanceFromCompound(rdkit, compound) : null;
+    return result?.ok ? result.substance : null;
+  }
+  return null;
 }
 
 function BottleButton({
@@ -555,7 +777,12 @@ function ReactionResult({
         <div className="row" style={{ gap: 6 }}>
           <EvidenceBadge evidence={reaction.evidence} count={reaction.documented?.count} />
           {reaction.catalysisMatched && <span className="badge badge-success">passende Katalyse</span>}
-          <span className={`badge badge-${reaction.kind === 'anorganisch' ? 'anorganisch' : 'organisch'}`}>
+          {reaction.confidence && (
+            <span className={`badge badge-${reaction.confidence === 'hoch' ? 'success' : reaction.confidence === 'mittel' ? 'warning' : 'danger'}`} title="Verlässlichkeit der Vorhersage">
+              Verlässlichkeit: {reaction.confidence}
+            </span>
+          )}
+          <span className={`badge badge-${reaction.kind === 'physikalisch' ? 'technisch' : reaction.kind}`}>
             {reaction.kind}
           </span>
         </div>

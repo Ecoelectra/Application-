@@ -15,10 +15,14 @@ und Orbitalschema zeigt, dazu ein Katalog aus **7280 berechneten Synthesen**.
 ## Was die App kann
 
 **Werkbank: Stoffe zusammengeben und sehen, was entsteht.**
-Im Chemikalienschrank stehen 754 Stoffe bereit. Bis zu vier davon wandern ins
-Reaktionsgefäß, dazu lassen sich Bedingungen einstellen – kühlen oder erhitzen,
-**säure- oder basenkatalysiert**, Metall- oder Lewis-Säure-Katalyse, wässrige
-Lösung, UV-Licht oder Elektrolyse. Erkannt werden Neutralisation, Fällung,
+Im Chemikalienschrank stehen offline 1544 Stoffe bereit – alle natürlich
+vorkommenden Elemente, rund 500 Salze, Säuren, Basen und Oxide sowie über 800
+organische Stoffe. Die Suche funktioniert wie auf der Startseite: Name, Formel,
+CAS-Nummer oder **SMILES**; mit Internet kommen **alle Stoffe aus PubChem** dazu
+(über 100 Millionen). Bis zu vier Stoffe wandern ins Reaktionsgefäß, dazu lassen
+sich Bedingungen einstellen – **Temperaturregler** (−100 bis 1200 °C),
+**Druckregler** (1 mbar bis 300 bar), **säure- oder basenkatalysiert**, Metall-
+oder Lewis-Säure-Katalyse, wässrige Lösung, UV-Licht oder Elektrolyse. Erkannt werden Neutralisation, Fällung,
 Gasentwicklung, Metallverdrängung, Verbrennung, Thermit- und Knallgasreaktion,
 Halogenverdrängung, Nachweisreaktionen (Fehling, Tollens, Iod-Stärke, Berliner
 Blau), Komplexbildung und die organischen Reaktionsvorlagen. Die App liefert dann:
@@ -30,6 +34,22 @@ Blau), Komplexbildung und die organischen Reaktionsvorlagen. Die App liefert dan
 - bei Bedarf den Hinweis, **was noch fehlt** (Wärme, Säure- oder Basenkatalyse, Elektrolysezelle)
 - und wenn nichts passiert: **warum** nicht – etwa weil das Metall edler als
   Wasserstoff ist oder alle Ionen in Lösung bleiben
+
+**Für jedes Stoffpaar eine Aussage.** Steht für zwei Stoffe keine Reaktion in
+der Datenbank, sagt die Werkbank das Ergebnis voraus – deutlich als
+**Vorhersage** gekennzeichnet und mit ihrer **Verlässlichkeit** (hoch, mittel,
+gering). Geprüft werden der Reihe nach Redoxreaktionen über die
+Standardpotentiale (ΔG = −z·F·ΔE), Protonenübertragungen über pKs-Werte, unedle
+Metalle mit Alkoholen oder Phenolen, starke Oxidationsmittel mit organischen
+Stoffen und zuletzt das physikalische Verhalten: löst sich, mischt sich, bildet
+zwei Phasen oder bleibt ein Feststoffgemenge.
+
+**Temperatur und Druck wirken.** Jeder Stoff im Gefäß zeigt seinen
+Aggregatzustand bei den eingestellten Bedingungen (Tabellenwerte, sonst
+Joback-Schätzung; Siedepunkte folgen dem Druck nach Clausius-Clapeyron).
+Zersetzungen wie das Kalkbrennen laufen erst oberhalb ihrer Temperatur, das
+Haber-Bosch-Verfahren verlangt hohen Druck, Gleichgewichte mit Gasen verschieben
+sich nach Le Chatelier, und die Geschwindigkeit folgt der RGT-Regel.
 
 Jedes Produkt lässt sich mit einem Tipp als neues Edukt übernehmen, sodass sich
 mehrstufige Synthesen durchspielen lassen. Das Laborjournal hält fest, was man
@@ -136,14 +156,19 @@ Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen.
 | verschiedene Zielstoffe | 2584 |
 | Reaktionstypen mit Mechanismus | 96 |
 | davon elektrochemisch | 15 |
-| Stoffe offline verfügbar | 754 |
+| Stoffe offline verfügbar | 1544 |
+| davon von Hand geprüft / systematisch erzeugt | 754 / 790 |
 | Zentralionen / Liganden für Komplexe | 24 / 31 |
 | Standardpotentiale | 61 |
 | erkannte funktionelle Gruppen | 34 |
 | Elemente mit Atommassen | 118 |
 
 Darüber hinaus sind alle Stoffe aus **PubChem** abrufbar, sobald eine
-Internetverbindung besteht.
+Internetverbindung besteht – auf der Startseite ebenso wie im
+Chemikalienschrank der Werkbank. Die systematisch erzeugten Stoffe (Elemente,
+Salze aus dem Ionenmodell, homologe Reihen, substituierte Benzole,
+Aminosäuren, Heterocyclen) entstehen mit `npm run stoffe`; ihre Formeln
+berechnet RDKit aus der Struktur.
 
 ## Installation
 
@@ -214,6 +239,10 @@ src/
     specialReactions.ts Nachweise, Komplexbildung, technische Verfahren
     complexes.ts      Komplexe: Namen, Ligandenfeld, Farbe, Stabilität
     complexFormation.ts Welche Komplexe entstehen in der Werkbank?
+    prediction.ts     Vorhersage für Stoffpaare ohne hinterlegte Reaktion
+    phase.ts          Aggregatzustände, Siedepunkt und Druck, RGT-Regel
+    conditionEffects.ts Wirkung von Temperatur- und Druckregler
+    externalSubstances.ts Stoffe aus PubChem und SMILES für die Werkbank
     reactionKeys.ts   Strukturschlüssel für den Abgleich mit belegten Reaktionen
     substanceStructures.ts Strukturen auch für Salze und Säuren ohne SMILES
     rdkit.ts          Anbindung der RDKit-WebAssembly-Bibliothek
@@ -221,7 +250,8 @@ src/
     safety.ts         Reglementierte Stoffe und gefährliche Mischungen
   data/           Wissensdatenbank
     reactions/        Reaktionen nach Stoffklassen getrennt
-    substanceTables/  Erweiterte Stofftabellen
+    substanceTables/  Erweiterte Stofftabellen (generated.ts: erzeugte Stoffe)
+    physicalData.ts   Schmelz-, Siede- und Zersetzungstemperaturen
     generated/        Erzeugter Synthesekatalog (catalog.json)
     functionalGroups.ts  SMARTS-Muster der funktionellen Gruppen
     substances.ts     Offline-Stoffdatenbank
@@ -237,6 +267,7 @@ public/reaktionen/ 100 000 belegte Reaktionen in 2 × 256 Teildateien (gzip, 9 M
 scripts/
   build-catalog.ts  Erzeugt den Synthesekatalog
   build-reactions.ts Erzeugt die Datenbank belegter Reaktionen
+  build-substances.ts Erzeugt die erweiterte Stoffdatenbank
 src-tauri/        Windows-Anwendung (Tauri v2)
 docs/             Fachliche Grundlagen und Entwicklungshinweise
 ```
@@ -282,7 +313,10 @@ Vorschlag, kein Versprechen.
 
 Für die Werkbank heißt das: Findet sie keine Reaktion, ist das **kein Beweis**,
 dass nichts passiert – die Datenbank deckt die gängigen Reaktionstypen ab, nicht
-jede denkbare Umsetzung. Umgekehrt bedeutet ein angezeigtes Produkt nicht, dass
+jede denkbare Umsetzung. Die Vorhersagen für Stoffpaare beruhen auf
+Standardpotentialen, pKs-Werten und Löslichkeitsregeln: Sie sagen, ob eine
+Reaktion thermodynamisch möglich ist, nicht, ob sie schnell genug abläuft.
+Stoffe aus PubChem tragen deren (meist englische) Namen. Umgekehrt bedeutet ein angezeigtes Produkt nicht, dass
 die Reaktion unter beliebigen Bedingungen abläuft; deshalb nennt die App, was an
 Wärme, Katalysator oder Apparatur noch fehlt.
 

@@ -10,6 +10,7 @@
 import { balanceSpecies, type BalanceResult } from './balance';
 import { parseFormula, sameComposition } from './formula';
 import {
+  CATIONS,
   dissolvesInAcid,
   displaces,
   METAL_SERIES,
@@ -455,13 +456,36 @@ function precipitation(left: Reagent, right: Reagent): InorganicReaction | null 
     title: `${a.substance.name} und ${b.substance.name}`,
     reactants: [a.formula, b.formula],
     products: [precipitateFormula, otherFormula],
-    ionicEquation: `${precipitate.cation.label} + ${precipitate.anion.label} → ${precipitateFormula}`,
+    ionicEquation: precipitationIonicEquation(precipitate.cation, precipitate.anion, precipitateFormula),
     observation: `Beim Zusammengeben fällt sofort ein ${info.color ?? ''} Niederschlag von ${precipitateFormula} aus.${info.note ? ` (${info.note})` : ''}`.replace('  ', ' '),
     explanation: `Die Ionen tauschen ihre Partner. ${precipitate.cation.label} und ${precipitate.anion.label} bilden ein schwer lösliches Salz und fallen aus; die übrigen Ionen bleiben als Zuschauerionen in Lösung. Die Reaktion eignet sich als Nachweis für ${anionName}-Ionen.`,
     safetyLevel: 'Schulversuch',
     hazards: info.color === 'goldgelb' ? ['Bleisalze sind giftig und umweltgefährlich – Reste gesondert entsorgen.'] : [],
     tags: ['Niederschlag', 'Ionenaustausch', info.color ?? ''].filter(Boolean),
   });
+}
+
+function withCoefficient(count: number, species: string): string {
+  return count === 1 ? species : `${count} ${species}`;
+}
+
+function greatestCommonDivisor(a: number, b: number): number {
+  return b === 0 ? a : greatestCommonDivisor(b, a % b);
+}
+
+/** Ausgeglichene Ionengleichung einer Fällung: 2 Ag⁺ + CrO₄²⁻ → Ag2CrO4. */
+function precipitationIonicEquation(cation: Ion, anion: Ion, precipitate: string): string {
+  const total = (cation.charge * Math.abs(anion.charge)) / greatestCommonDivisor(cation.charge, Math.abs(anion.charge));
+  return `${withCoefficient(total / cation.charge, cation.label)} + ${withCoefficient(total / Math.abs(anion.charge), anion.label)} → ${precipitate}`;
+}
+
+/** Ausgeglichene Ionengleichung einer Metallverdrängung: Fe + 2 Ag⁺ → Fe²⁺ + 2 Ag. */
+function displacementIonicEquation(metal: string, charge: number, cation: Ion): string {
+  const divisor = greatestCommonDivisor(charge, cation.charge);
+  const metalCount = cation.charge / divisor;
+  const cationCount = charge / divisor;
+  const newIon = CATIONS.find((entry) => entry.formula === metal && entry.charge === charge)?.label ?? `${metal}${charge}+`;
+  return `${withCoefficient(metalCount, metal)} + ${withCoefficient(cationCount, cation.label)} → ${withCoefficient(metalCount, newIon)} + ${withCoefficient(cationCount, cation.formula)}`;
 }
 
 /** Unedleres Metall verdrängt edleres aus seiner Salzlösung. */
@@ -488,7 +512,7 @@ function displacement(a: Reagent, b: Reagent): InorganicReaction | null {
     title: `${metalEntry.substance.name} in ${saltEntry.substance.name}-Lösung`,
     reactants: [metal, saltEntry.formula],
     products: [newSalt, saltMetal],
-    ionicEquation: `${metal} + ${saltEntry.salt.cation.label} → ${metal}${charge}+ + ${saltMetal}`,
+    ionicEquation: displacementIonicEquation(metal, charge, saltEntry.salt.cation),
     observation: `Auf dem ${metalEntry.substance.name} scheidet sich ${saltMetal === 'Cu' ? 'rotbraunes Kupfer' : saltMetal === 'Ag' ? 'glänzendes Silber' : `metallisches ${saltMetal}`} ab. Die Lösung entfärbt sich allmählich.`,
     explanation: `${metalEntry.substance.name} ist unedler als ${saltMetal} und gibt daher Elektronen ab. Die ${saltMetal}-Ionen nehmen sie auf und scheiden sich als Metall ab. Die Reaktion läuft nur in dieser Richtung – umgekehrt passiert nichts.`,
     safetyLevel: 'Schulversuch',
@@ -1332,5 +1356,22 @@ export function reactSingle(substance: Substance): InorganicReaction[] {
     if (reaction) results.push(reaction);
   }
 
+  // Zersetzungstemperaturen: ab hier läuft die Zersetzung merklich
+  for (const reaction of results) {
+    if (reaction.type !== 'Thermische Zersetzung') continue;
+    const formula = reaction.reactants[0];
+    reaction.requires = {
+      ...reaction.requires,
+      minTemperature: DECOMPOSITION_TEMPERATURE[formula] ?? (reaction.id.startsWith('entwaesserung') ? 120 : 300),
+    };
+  }
+
   return results;
 }
+
+/** Temperaturen in °C, ab denen die Zersetzung beim Erhitzen merklich abläuft. */
+const DECOMPOSITION_TEMPERATURE: Record<string, number> = {
+  CaCO3: 900, MgCO3: 350, BaCO3: 1000, ZnCO3: 300, CuCO3: 290,
+  NaHCO3: 80, KHCO3: 100, 'Ca(HCO3)2': 60, NH4HCO3: 40, '(NH4)2CO3': 60,
+  NH4Cl: 340, KClO3: 400, HgO: 450, Ag2O: 200, 'Cu(OH)2': 80, 'Fe(OH)3': 200, KMnO4: 240,
+};

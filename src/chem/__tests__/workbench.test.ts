@@ -253,4 +253,10 @@ describe('Werkbank', () => {
       expect(result.reactions.some((reaction) => reaction.observation.includes('löst sich'))).toBe(true);
     });
   });
+  it('gleicht Ionengleichungen mit Koeffizienten aus', () => {
+    const displacement = mixIds(['eisen', 'silbernitrat']).reactions.find((reaction) => reaction.ionicEquation?.includes('Ag'));
+    expect(displacement?.ionicEquation).toBe('Fe + 2 Ag⁺ → Fe²⁺ + 2 Ag');
+    const precipitate = mixIds(['blei-ii-nitrat', 'kaliumiodid']).reactions.find((reaction) => reaction.ionicEquation?.includes('I⁻'));
+    expect(precipitate?.ionicEquation).toBe('Pb²⁺ + 2 I⁻ → PbI2');
+  });
 });

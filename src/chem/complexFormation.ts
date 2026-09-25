@@ -651,6 +651,8 @@ export interface ComplexReaction {
   complex?: ComplexAnalysis;
   /** Adresse im Komplex-Baukasten, falls alle Liganden dort vorkommen */
   builderLink?: string;
+  /** beteiligte Stoffe (Kennungen) */
+  participants?: string[];
   /** für den Vergleich konkurrierender Liganden */
   strength?: number;
   metalKey?: string;
@@ -750,6 +752,7 @@ function hydroxidePrecipitation(metal: MetalSource, base: Substance, isAmmonia: 
       : 'Vorhersage: abgeleitet aus der Basizität des Amins und der Schwerlöslichkeit des Hydroxids.',
     missing: [],
     balancedFormulas,
+    participants: [metal.substance.id, base.id],
   };
 }
 
@@ -976,6 +979,7 @@ export function complexChemistry(
         builderLink: builderLink(metal.metal, ligands),
         strength: logBeta ?? score * 3,
         metalKey: metal.substance.id,
+        participants: [metal.substance.id, source.substance.id],
       });
     }
   }

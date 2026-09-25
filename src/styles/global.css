@@ -242,11 +242,13 @@ code, .mono {
 
 .card-title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
 }
+.card-title > * { min-width: 0; }
 .card-title h2, .card-title h3 { margin: 0; }
 
 .grid { display: grid; gap: 14px; }
@@ -1018,4 +1020,87 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
   .documented-item {
     grid-template-columns: 1fr;
   }
+}
+
+/* Temperatur- und Druckregler */
+.regler {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.regler input[type='range'] {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.regler-wert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.regler-wert .input {
+  width: 96px;
+  text-align: right;
+}
+
+.chip-small {
+  font-size: 0.8rem;
+  padding: 3px 9px;
+}
+
+.state-line {
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Stoffe aus PubChem und eingegebene Strukturen in der Werkbank */
+.tag-origin {
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-family: var(--font);
+  font-size: 0.68rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.online-search {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.online-search-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.online-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.bottle-online {
+  border-style: dashed;
+}
+
+.bottle:disabled {
+  cursor: progress;
+  opacity: 0.6;
+  transform: none;
+}
+
+.warning-text {
+  color: var(--warning);
+  margin: 8px 0 0;
 }
