@@ -47,7 +47,8 @@ export type InorganicReactionType =
   | 'Hydratbildung'
   | 'Hydrolyse'
   | 'Katalytische Zersetzung'
-  | 'Gasentwicklung mit Säure';
+  | 'Gasentwicklung mit Säure'
+  | 'Komplexbildung';
 
 export interface InorganicReaction {
   /** Kennung, aus Regel und Edukten gebildet */

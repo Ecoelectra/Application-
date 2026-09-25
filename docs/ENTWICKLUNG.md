@@ -148,6 +148,25 @@ ein Reagenz aus der Vorschrift da sein), `lehrbuch` (fest hinterlegte
 Standardreaktion) oder `vorhersage` (Regel oder Vorlage). Bestätigt ein
 Datenbanktreffer eine Vorlage, wird diese als belegt markiert.
 
+## Komplexbildung in der Werkbank
+
+`src/chem/complexFormation.ts` entscheidet für jedes Paar aus Metallquelle und
+Ligandenquelle, ob ein Komplex entsteht:
+
+1. Tabellierte Ausschlüsse (Redox, Fällung) haben Vorrang.
+2. Bekannte Komplexe stehen in `RECIPES` und gelten als Lehrbuchreaktion.
+3. Basische Liganden (Ammoniak, Amine) konkurrieren mit der Hydroxidfällung:
+   Löslichkeit aus lg β und pKL, bei gepufferter Ammoniaklösung mit pOH ≈ 2,5.
+4. Niederschläge lösen sich, wenn die geschätzte Löslichkeit im
+   Ligandenüberschuss (2 mol/L) 10⁻² mol/L erreicht; ab 10⁻⁴ teilweise.
+5. Sonst entscheidet das HSAB-Prinzip (`affinity`): harte/mittlere/weiche
+   Zentralionen gegen O-, N-, Halogen- und weiche Donoren, Chelate +1.
+   Solche Ergebnisse sind Vorhersagen.
+
+Stoffklassen werden über SMARTS erkannt (`GENERIC_PATTERNS`) und bekommen
+einen dynamischen Liganden mit den Daten eines Stellvertreters (Amin wie NH₃,
+Aminosäure wie Glycin …).
+
 ## Tests
 
 | Datei | Prüft |
@@ -166,7 +185,8 @@ Datenbanktreffer eine Vorlage, wird diese als belegt markiert.
 | `substances.test.ts` | Formel und Struktur jedes Stoffes stimmen überein |
 | `catalog.test.ts` | Vollständigkeit und Suche im Synthesekatalog |
 | `pubchem.test.ts` | PubChem-Client mit simulierten Antworten |
-| `complexes.test.ts` | Komplex-Werkbank: Namen, Geometrie, Spin, Isomere, Stabilität |
+| `complexes.test.ts` | Komplexe: Namen, Geometrie, Spin, Isomere, Stabilität |
+| `complexFormation.test.ts` | Komplexbildung in der Werkbank: Nachweiskomplexe, Löslichkeit, Hydroxidfällung, Redox-Ausschlüsse |
 | `documentedReactions.test.ts` | Datenbank belegter Reaktionen, Plausibilitätsfilter, Kennzeichnung in der Werkbank |
 
 ### Massentests
@@ -185,7 +205,8 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 | `elektrochemie.test.ts` | 4722 | 1000 Zufallsfälle für Nernst, Faraday und Wasserstoffelektrode, jedes Paar der Spannungsreihe als Zelle (ΔG, K, Vorzeichen) |
 | `ionenmodell.test.ts` | 1153 | jedes Kation mit jedem Anion, auch als Hydrat: Formel, Zerlegung, Löslichkeit |
 | `werkbank.test.ts` | 1002 | 1000 Zufallsmischungen unter Zufallsbedingungen: Sperren, gültige und zulässige Produkte, ausgeglichene Gleichungen, Reihenfolge egal |
-| `komplexe.test.ts` | 3317 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
+| `komplexbildung.test.ts` | 17 883 | jede Metallquelle der Stoffdatenbank mit jeder Ligandenquelle: gültige Komplexe, ausgeglichene Gleichungen, keine Komplexe bei Redox- und Fällungspaaren, Herkunftsangabe |
+| `komplexe.test.ts` | 5505 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
 

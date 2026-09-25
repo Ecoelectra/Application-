@@ -17,6 +17,8 @@ import {
   type WorkbenchReaction,
 } from '../chem/workbench';
 import { MoleculeStructure } from '../components/MoleculeStructure';
+import { ComplexBuilder } from '../components/ComplexBuilder';
+import { ComplexDetails } from '../components/ComplexDetails';
 import { Callout } from '../components/Callout';
 import { SUBSTANCES, searchSubstances, substanceById } from '../data/substances';
 import type { Substance } from '../data/types';
@@ -28,7 +30,29 @@ import {
 } from '../data/documentedReactions';
 
 /** Gruppen für den Chemikalienschrank. */
-const SHELVES: Array<{ id: string; label: string; categories: string[] }> = [
+const SHELVES: Array<{ id: string; label: string; categories: string[]; ids?: string[] }> = [
+  {
+    id: 'metallsalze',
+    label: 'Metallsalze',
+    categories: [],
+    ids: [
+      'kupfersulfat', 'kupfer-ii-chlorid', 'kupfer-i-chlorid', 'nickel-ii-chlorid', 'nickel-ii-sulfat',
+      'cobalt-ii-chlorid', 'eisen-iii-chlorid', 'eisen-ii-sulfat', 'chrom-iii-chlorid', 'mangan-ii-chlorid',
+      'zinksulfat', 'aluminiumchlorid', 'silbernitrat', 'silberchlorid', 'silberbromid', 'kupfer-ii-hydroxid',
+      'palladium-ii-chlorid', 'magnesiumchlorid', 'calciumchlorid', 'blei-ii-nitrat',
+    ],
+  },
+  {
+    id: 'komplexbildner',
+    label: 'Komplexbildner',
+    categories: [],
+    ids: [
+      'ammoniak', 'wasser', 'ethylendiamin', 'dinatrium-edta', 'kaliumthiocyanat', 'natriumthiosulfat',
+      'natriumfluorid', 'kaliumiodid', 'natriumhydroxid', 'salzsaeure', 'dimethylglyoxim', '1-10-phenanthrolin',
+      '2-2-bipyridin', '8-hydroxychinolin', 'acetylaceton', 'glycin', 'kaliumnatriumtartrat', 'glycerin',
+      'natriumoxalat', 'pyridin', 'phenol', 'salicylsaeure', 'triphenylphosphin', 'thioharnstoff',
+    ],
+  },
   { id: 'saeuren', label: 'Säuren', categories: ['Säure'] },
   { id: 'basen', label: 'Laugen und Basen', categories: ['Base'] },
   { id: 'salze', label: 'Salze', categories: ['Salz'] },
@@ -82,7 +106,12 @@ export function WorkbenchPage() {
   const [result, setResult] = useState<MixResult | null>(null);
   const [running, setRunning] = useState(false);
   const [journal, setJournal] = useState<Array<{ educts: string; outcome: string }>>([]);
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const mode = params.get('modus') === 'komplexe' ? 'komplexe' : 'mischen';
+  const switchMode = (next: 'mischen' | 'komplexe'): void => {
+    const nextParams = new URLSearchParams(next === 'komplexe' ? { modus: 'komplexe' } : {});
+    setParams(nextParams, { replace: true });
+  };
   const [database, setDatabase] = useState<ReactionDatabaseIndex | null>(null);
   const [documented, setDocumented] = useState<{ ids: string; reactions: DocumentedReaction[] } | null>(null);
 
@@ -128,6 +157,7 @@ export function WorkbenchPage() {
   const shelfContents = useMemo(() => {
     const shelf = SHELVES.find((entry) => entry.id === openShelf);
     if (!shelf) return [];
+    if (shelf.ids) return shelf.ids.map((id) => substanceById(id)).filter((entry): entry is Substance => Boolean(entry));
     return SUBSTANCES.filter((substance) => shelf.categories.includes(substance.category)).slice(0, 60);
   }, [openShelf]);
 
@@ -195,19 +225,50 @@ export function WorkbenchPage() {
   return (
     <main className="page">
       <div className="page-head">
-        <h1>Werkbank</h1>
-        <p className="lead">
-          Stoffe ins Reaktionsgefäß geben und sehen, was entsteht. Die App rechnet die Gleichung aus,
-          beschreibt die Beobachtung und erklärt, warum es so abläuft.
-        </p>
+        <div className="row-between" style={{ flexWrap: 'wrap', gap: 10 }}>
+          <h1 style={{ margin: 0 }}>Werkbank</h1>
+          <div className="row" role="tablist" aria-label="Werkbank-Modus">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'mischen'}
+              className={`chip${mode === 'mischen' ? ' active' : ''}`}
+              onClick={() => switchMode('mischen')}
+            >
+              ⚗ Stoffe mischen
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'komplexe'}
+              className={`chip${mode === 'komplexe' ? ' active' : ''}`}
+              onClick={() => switchMode('komplexe')}
+            >
+              ⬡ Komplexe bauen
+            </button>
+          </div>
+        </div>
+        {mode === 'mischen' && (
+          <p className="lead">
+            Stoffe ins Reaktionsgefäß geben und sehen, was entsteht. Die App rechnet die Gleichung aus,
+            beschreibt die Beobachtung und erklärt, warum es so abläuft. Gibst du ein Metallsalz und einen
+            Komplexbildner zusammen, zeigt sie den entstehenden Komplex mit Farbe, räumlichem Bau und
+            Orbitalschema.
+          </p>
+        )}
+        {mode === 'mischen' && (
         <p className="small muted" style={{ marginTop: 6 }}>
           Jedes Ergebnis ist gekennzeichnet: <EvidenceBadge evidence="belegt" /> in der Literatur beschrieben
           {database ? ` (Abgleich mit ${database.total.toLocaleString('de-DE')} Reaktionen aus US-Patenten)` : ''},{' '}
           <EvidenceBadge evidence="lehrbuch" /> fest hinterlegte Standardreaktion,{' '}
           <EvidenceBadge evidence="vorhersage" /> aus Regeln oder Vorlagen berechnet und nicht einzeln belegt.
         </p>
+        )}
       </div>
 
+      {mode === 'komplexe' && <ComplexBuilder />}
+
+      {mode === 'mischen' && (
       <div className="workbench">
         {/* ---------- Chemikalienschrank ---------- */}
         <section className="card cabinet">
@@ -382,7 +443,7 @@ export function WorkbenchPage() {
           )}
 
           {!running && result?.outcome === 'reaktion' && result.hints.length > 0 && (
-            <Callout variant="info" title="Negativer Nachweis">
+            <Callout variant="info" title="Hinweise">
               {result.hints.map((hint) => (
                 <p key={hint} style={{ marginBottom: 8 }}>
                   {hint}
@@ -430,6 +491,7 @@ export function WorkbenchPage() {
           )}
         </section>
       </div>
+      )}
     </main>
   );
 }
@@ -537,6 +599,12 @@ function ReactionResult({
         </div>
       )}
 
+      {reaction.complex && (
+        <div style={{ marginTop: 12 }}>
+          <ComplexDetails complex={reaction.complex} compact />
+        </div>
+      )}
+
       {reaction.explanation !== reaction.evidenceNote && <p style={{ marginTop: 12 }}>{reaction.explanation}</p>}
 
       <Callout
@@ -595,7 +663,7 @@ function ReactionResult({
         )}
         {reaction.complexLink && (
           <Link className="button button-small" to={reaction.complexLink}>
-            In der Komplex-Werkbank ansehen
+            Im Komplex-Baukasten bearbeiten
           </Link>
         )}
       </div>

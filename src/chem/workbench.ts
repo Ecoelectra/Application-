@@ -27,6 +27,8 @@ import { isPublishableProduct, mixtureWarning } from './safety';
 import { reactPair, reactSingle, type InorganicReaction } from './inorganicRules';
 import { organicAcidBase } from './organicAcidBase';
 import { specialReactions } from './specialReactions';
+import { complexChemistry } from './complexFormation';
+import type { ComplexAnalysis } from './complexes';
 import { structureKey, substanceKeys } from './reactionKeys';
 import { ionStructures, saltFormula, structuresOf } from './substanceStructures';
 import type { Ion } from './ions';
@@ -102,6 +104,8 @@ export interface WorkbenchReaction {
   evidenceNote: string;
   /** Beleg aus der Reaktionsdatenbank */
   documented?: { id: number; count: number; source: string };
+  /** Entstehender Komplex mit Ligandenfeldanalyse */
+  complex?: ComplexAnalysis;
 }
 
 /**
@@ -293,6 +297,8 @@ function fromInorganic(
     rdkit?: MainModule | null;
     complexLink?: string;
     evidence?: Evidence;
+    evidenceNote?: string;
+    complex?: ComplexAnalysis;
   } = {},
 ): WorkbenchReaction {
   const evidence = extra.evidence ?? (TEXTBOOK_TYPES.has(reaction.type) ? 'lehrbuch' : 'vorhersage');
@@ -332,7 +338,8 @@ function fromInorganic(
     catalysisMatched,
     complexLink: extra.complexLink,
     evidence,
-    evidenceNote: evidence === 'lehrbuch' ? TEXTBOOK_NOTE : RULE_NOTE,
+    evidenceNote: extra.evidenceNote ?? (evidence === 'lehrbuch' ? TEXTBOOK_NOTE : RULE_NOTE),
+    complex: extra.complex,
   };
 }
 
@@ -612,6 +619,19 @@ export function mix(
     );
   }
 
+  // Komplexbildung: jede Metallquelle mit jeder Ligandenquelle
+  const complexes = complexChemistry(rdkit, reagentLike, conditions);
+  for (const reaction of complexes.reactions) {
+    const entry = fromInorganic({ ...reaction, id: reaction.id }, conditions, substances, {
+      evidence: reaction.evidence,
+      evidenceNote: reaction.evidenceNote,
+      complex: reaction.complex,
+      complexLink: reaction.builderLink,
+    });
+    entry.missing.push(...reaction.missing);
+    reactions.push(entry);
+  }
+
   // 4. Organische Vorlagen
   if (rdkit) reactions.push(...organicReactions(rdkit, reagentLike, conditions));
 
@@ -650,10 +670,20 @@ export function mix(
   const incomplete = positive.filter((reaction) => reaction.missing.length).slice(0, MAX_INCOMPLETE);
   const shown = [...complete, ...incomplete];
 
+  const extraHints = [...negativeHints, ...complexes.hints];
   return {
     outcome: shown.length ? 'reaktion' : 'keine-reaktion',
     reactions: shown,
-    hints: shown.length ? negativeHints : negativeHints.length ? negativeHints : explainNoReaction(substances, conditions),
+    hints: shown.length
+      ? extraHints
+      : extraHints.length
+        ? [
+            ...extraHints,
+            ...explainNoReaction(substances, conditions).filter(
+              (hint) => !hint.startsWith('Für diese Kombination') && !hint.startsWith('Probiere'),
+            ),
+          ]
+        : explainNoReaction(substances, conditions),
   };
 }
 

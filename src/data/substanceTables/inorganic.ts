@@ -85,6 +85,8 @@ Kupfer(I)-iodid||CuI||||Salz|Cokatalysator der Sonogashira-Kupplung
 Zinkchlorid||ZnCl2||||Salz|Lewis-Säure, Lötwasser
 Nickel(II)-chlorid||NiCl2||||Salz|Grünes Nickelsalz
 Cobalt(II)-chlorid||CoCl2||||Salz|Feuchtigkeitsindikator (blau/rosa)
+Chrom(III)-chlorid|Chromtrichlorid-Hexahydrat|CrCl3·6H2O||||Salz|Grünes Chromsalz; in Lösung liegt Chrom(III) als Aquakomplex vor
+Palladium(II)-chlorid||PdCl2||||Salz|Ausgangsstoff für Palladiumkatalysatoren
 Mangan(II)-chlorid||MnCl2||||Salz|Blassrosa Mangansalz
 Zinn(II)-chlorid||SnCl2||||Salz|Reduktionsmittel für Nitroaromaten
 Ammoniumchlorid|Salmiak|NH4Cl||||Salz|Sublimiert beim Erhitzen unter Zerfall

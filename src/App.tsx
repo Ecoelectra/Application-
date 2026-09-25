@@ -1,4 +1,4 @@
-import { HashRouter, NavLink, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { useTheme } from './hooks/useTheme';
 import { HomePage } from './pages/HomePage';
 import { SubstancePage } from './pages/SubstancePage';
@@ -8,19 +8,25 @@ import { ElectrochemistryPage } from './pages/ElectrochemistryPage';
 import { ToolsPage } from './pages/ToolsPage';
 import { WorkbenchPage } from './pages/WorkbenchPage';
 import { CatalogPage } from './pages/CatalogPage';
-import { ComplexPage } from './pages/ComplexPage';
 import { InfoPage } from './pages/InfoPage';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Start', end: true },
   { to: '/werkbank', label: 'Werkbank' },
-  { to: '/komplexe', label: 'Komplexe' },
   { to: '/synthesen', label: 'Synthesen' },
   { to: '/suche', label: 'Reaktionen' },
   { to: '/elektrochemie', label: 'Elektrochemie' },
   { to: '/werkzeuge', label: 'Werkzeuge' },
   { to: '/info', label: 'Hinweise' },
 ];
+
+/** Die Komplex-Werkbank ist jetzt Teil der Werkbank – alte Adressen leiten weiter. */
+function ComplexRedirect() {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set('modus', 'komplexe');
+  return <Navigate to={`/werkbank?${params.toString()}`} replace />;
+}
 
 export function App() {
   const { theme, toggleTheme } = useTheme();
@@ -66,7 +72,7 @@ export function App() {
           <Route path="/elektrochemie" element={<ElectrochemistryPage />} />
           <Route path="/werkbank" element={<WorkbenchPage />} />
           <Route path="/synthesen" element={<CatalogPage />} />
-          <Route path="/komplexe" element={<ComplexPage />} />
+          <Route path="/komplexe" element={<ComplexRedirect />} />
           <Route path="/werkzeuge" element={<ToolsPage />} />
           <Route path="/info" element={<InfoPage />} />
           <Route

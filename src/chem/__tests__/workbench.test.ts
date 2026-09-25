@@ -234,7 +234,8 @@ describe('Werkbank', () => {
       const complex = result.reactions.find((reaction) => reaction.complexLink);
       expect(complex?.equation).toBe('[Cu(H₂O)₆]²⁺ + 4 NH₃ ⇌ [Cu(NH₃)₄(H₂O)₂]²⁺ + 4 H₂O');
       expect(complex?.observation).toContain('tiefblau');
-      expect(complex?.complexLink).toBe('/komplexe?zentral=cu2&liganden=nh3:4,h2o:2');
+      expect(complex?.complexLink).toBe('/werkbank?modus=komplexe&zentral=cu2&liganden=nh3:4,h2o:2');
+      expect(complex?.complex?.formula).toBe('[Cu(NH3)4(H2O)2]2+');
     });
 
     it('färbt Eisen(III)-chlorid mit Thiocyanat blutrot', () => {

@@ -50,6 +50,8 @@ export interface Ligand {
   abbreviation?: string;
   /** Donoratom(e) */
   donor: string;
+  /** Name im Komplexnamen in Klammern setzen (organische Liganden: tetrakis(methylamin)) */
+  enclose?: boolean;
 }
 
 const ion = (
@@ -79,6 +81,10 @@ export const CENTRAL_IONS: CentralIon[] = [
   ion('al3', 'Al', 3, 'Aluminium', 'Alumin', 0, 0, [6, 4]),
   ion('ca2', 'Ca', 2, 'Calcium', 'Calci', 0, 0, [6]),
   ion('mg2', 'Mg', 2, 'Magnesium', 'Magnesi', 0, 0, [6]),
+  ion('cd2', 'Cd', 2, 'Cadmium', 'Cadm', 10, 4, [4, 6]),
+  ion('pb2', 'Pb', 2, 'Blei', 'Plumb', 10, 0, [4, 6]),
+  ion('sn2', 'Sn', 2, 'Zinn', 'Stann', 10, 0, [4]),
+  ion('ba2', 'Ba', 2, 'Barium', 'Bari', 0, 0, [6]),
 ];
 
 const lig = (
@@ -103,7 +109,7 @@ export const LIGANDS: Ligand[] = [
   lig('edta', 'EDTA⁴⁻', 'C10H12N2O8', -4, 'ethylendiamintetraacetato', 6, 8.5, 'N, O', undefined, 'edta'),
   lig('scn', 'SCN⁻', 'NCS', -1, 'thiocyanato-κN', 1, 9, 'N', 1.02),
   lig('gly', 'gly⁻', 'C2H4NO2', -1, 'glycinato', 2, 9.5, 'N, O', undefined, 'gly'),
-  lig('py', 'py', 'C5H5N', 0, 'pyridin', 1, 10, 'N', 1.23, 'py'),
+  { ...lig('py', 'py', 'C5H5N', 0, 'pyridin', 1, 10, 'N', 1.23, 'py'), enclose: true },
   lig('nh3', 'NH₃', 'NH3', 0, 'ammin', 1, 11, 'N', 1.25),
   lig('en', 'en', 'C2H8N2', 0, 'ethylendiamin', 2, 12, 'N', 1.28, 'en'),
   lig('bipy', 'bipy', 'C10H8N2', 0, '2,2′-bipyridin', 2, 13, 'N', 1.33, 'bipy'),
@@ -111,6 +117,19 @@ export const LIGANDS: Ligand[] = [
   lig('no2', 'NO₂⁻', 'NO2', -1, 'nitrito-κN', 1, 15, 'N'),
   lig('cn', 'CN⁻', 'CN', -1, 'cyanido', 1, 16, 'C', 1.7),
   lig('co', 'CO', 'CO', 0, 'carbonyl', 1, 17, 'C'),
+  // Organische Liganden, die in der Werkbank aus Stoffen der Datenbank entstehen
+  { ...lig('tu', 'tu', 'CH4N2S', 0, 'thioharnstoff', 1, 3.5, 'S', undefined, 'tu'), enclose: true },
+  lig('phenolato', 'PhO⁻', 'C6H5O', -1, 'phenolato', 1, 5.5, 'O'),
+  lig('oac', 'OAc⁻', 'CH3COO', -1, 'acetato', 1, 6.5, 'O', undefined, 'OAc'),
+  lig('sal', 'sal²⁻', 'C7H4O3', -2, 'salicylato', 2, 6.8, 'O, O', undefined, 'sal'),
+  lig('tart', 'tart²⁻', 'C4H4O6', -2, 'tartrato', 2, 7.1, 'O, O', undefined, 'tart'),
+  lig('glyc', 'glyc²⁻', 'C3H6O3', -2, 'glycerolato', 2, 7.2, 'O, O', undefined, 'glyc'),
+  lig('acac', 'acac⁻', 'C5H7O2', -1, 'acetylacetonato', 2, 7.5, 'O, O', undefined, 'acac'),
+  lig('cit', 'cit³⁻', 'C6H5O7', -3, 'citrato', 3, 7.8, 'O, O, O', undefined, 'cit'),
+  lig('oxin', 'ox⁻', 'C9H6NO', -1, 'chinolin-8-olato', 2, 9.8, 'N, O', undefined, 'oxin'),
+  { ...lig('im', 'im', 'C3H4N2', 0, 'imidazol', 1, 10.5, 'N', undefined, 'im'), enclose: true },
+  lig('dmg', 'dmg⁻', 'C4H7N2O2', -1, 'dimethylglyoximato', 2, 12.5, 'N, N', undefined, 'dmg'),
+  { ...lig('pph3', 'PPh₃', 'C18H15P', 0, 'triphenylphosphan', 1, 15.5, 'P', undefined, 'PPh3'), enclose: true },
 ];
 
 export const CENTRAL_ION_BY_ID = new Map(CENTRAL_IONS.map((entry) => [entry.id, entry]));
@@ -187,8 +206,40 @@ const KNOWN: Record<string, KnownComplex> = {
   'pt2|cl:2,nh3:2': { color: 'gelb', swatch: '#e8c94a', trivialName: 'Cisplatin (cis-Isomer)', note: 'Nur das cis-Isomer wirkt als Krebsmedikament; das trans-Isomer ist unwirksam.' },
   'pt2|cl:4': { color: 'rot', swatch: '#b8323e', trivialName: 'Tetrachloridoplatinat' },
   'ca2|edta:1': { color: 'farblos', swatch: 'transparent', note: 'Grundlage der Wasserhärtebestimmung durch komplexometrische Titration.' },
+  'cu1|nh3:2': { color: 'farblos', swatch: 'transparent', note: 'An der Luft wird die farblose Lösung rasch blau: Sauerstoff oxidiert Kupfer(I) zum Tetraamminkupfer(II)-Ion.' },
+  'cu1|cn:4': { color: 'farblos', swatch: 'transparent' },
+  'cu2|acac:2': { color: 'blau', swatch: '#2f5fb3', note: 'Neutraler Chelatkomplex, löslich in organischen Lösungsmitteln.' },
+  'cu2|tart:2': { color: 'tiefblau', swatch: '#1f3fa8', trivialName: 'Fehlingsche Lösung', note: 'Das Tartrat hält Kupfer(II) auch in stark alkalischer Lösung gelöst – deshalb fällt bei der Fehling-Probe kein Kupferhydroxid aus.' },
+  'cu2|glyc:2': { color: 'tiefblau', swatch: '#243fb0', note: 'Frisch gefälltes Kupferhydroxid löst sich in alkalischer Glycerinlösung tiefblau – ein Nachweis für mehrwertige Alkohole.' },
+  'cu2|cit:2': { color: 'blau', swatch: '#3a6fcf', note: 'Grundlage der Benedict-Lösung, einer Variante der Fehling-Probe.' },
+  'fe3|acac:3': { color: 'rot', swatch: '#b3261e', note: 'Tiefrote Kristalle; Eisen(III) wird von Enolen generell intensiv gefärbt.' },
+  'fe3|h2o:4,sal:1': { color: 'violett', swatch: '#6a2c91', note: 'Die violette Färbung mit Eisen(III)-chlorid ist ein Nachweis für Salicylsäure und andere Phenole.' },
+  'fe3|phenolato:6': { color: 'violett', swatch: '#5e2a84', note: 'Eisen(III)-chlorid-Probe: Phenole färben die Lösung violett.' },
+  'ni2|dmg:2': { color: 'himbeerrot', swatch: '#c2185b', note: 'Tschugaeff-Reaktion: Der rote Niederschlag weist Nickel noch in sehr kleinen Mengen nach. Zwei Wasserstoffbrücken halten die beiden Liganden in einer Ebene.' },
+  'al3|oxin:3': { color: 'gelb', swatch: '#e6c229', note: 'Fluoresziert grün im UV-Licht – ein empfindlicher Aluminiumnachweis.' },
+  'co2|scn:4': { color: 'blau', swatch: '#1f4fd1', note: 'Vogel-Reaktion: Mit Thiocyanat in Aceton oder Amylalkohol wird die Lösung tiefblau – ein Nachweis für Cobalt(II).' },
+  'cd2|nh3:4': { color: 'farblos', swatch: 'transparent' },
+  'cu2|py:4': { color: 'tiefblau', swatch: '#2a4fb8' },
+  'co2|nh3:6': { color: 'gelbbraun', swatch: '#c9a15a', note: 'Luftsauerstoff oxidiert den Komplex rasch zum rotbraunen Cobalt(III)-Komplex.' },
+  'cd2|i:4': { color: 'farblos', swatch: 'transparent' },
+  'pb2|oh:4': { color: 'farblos', swatch: 'transparent', note: 'Bleihydroxid ist amphoter und löst sich im Laugenüberschuss.' },
+  'sn2|oh:4': { color: 'farblos', swatch: 'transparent', note: 'Zinn(II)-hydroxid ist amphoter und löst sich im Laugenüberschuss.' },
+  'cr3|oh:6': { color: 'grün', swatch: '#3c8d4f', note: 'Chrom(III)-hydroxid ist amphoter: Im Laugenüberschuss entsteht das grüne Hexahydroxidochromat(III).' },
+  'fe3|cl:4': { color: 'gelb', swatch: '#e2b227', note: 'Entsteht in konzentrierter Salzsäure; färbt die Lösung gelb.' },
+  'pd2|cl:2,pph3:2': { color: 'gelb', swatch: '#e8c43a', note: 'Bekannte Katalysatorvorstufe für Kreuzkupplungen.' },
+  'pt4|cl:6': { color: 'orangegelb', swatch: '#e59a2b', trivialName: 'Anion der Hexachloridoplatinsäure', note: 'Entsteht beim Lösen von Platin in Königswasser.' },
   'mg2|edta:1': { color: 'farblos', swatch: 'transparent' },
 };
+
+/** Hinterlegte Stabilitätskonstante lg β eines Komplexes (Wasserliganden zählen nicht mit). */
+export function stabilityConstant(metal: CentralIon, ligands: LigandCount[]): number | undefined {
+  const key = `${metal.id}|${ligands
+    .filter((entry) => entry.count > 0 && entry.ligand.id !== 'h2o')
+    .map((entry) => `${entry.ligand.id}:${entry.count}`)
+    .sort()
+    .join(',')}`;
+  return STABILITY[key];
+}
 
 /**
  * Bruttostabilitätskonstanten lg β für die Bildung aus dem Aquakomplex.
@@ -226,6 +277,37 @@ const STABILITY: Record<string, number> = {
   'ca2|edta:1': 10.7,
   'mg2|edta:1': 8.7,
   'hg2|edta:1': 21.7,
+  'hg2|cl:4': 15.1,
+  'hg2|i:4': 29.8,
+  'hg2|cn:4': 41.4,
+  'hg2|nh3:4': 19.3,
+  'cd2|nh3:4': 7.1,
+  'cd2|cn:4': 17.9,
+  'cd2|i:4': 5.4,
+  'cd2|en:3': 12.1,
+  'cd2|edta:1': 16.5,
+  'cu1|nh3:2': 10.9,
+  'cu1|cl:2': 5.5,
+  'cu1|cn:4': 30.3,
+  'cu2|ox:2': 10.3,
+  'cu2|acac:2': 14.9,
+  'zn2|oh:4': 15.5,
+  'zn2|en:3': 12.1,
+  'al3|oh:4': 33.0,
+  'al3|f:6': 19.8,
+  'al3|ox:3': 16.3,
+  'fe3|ox:3': 20.2,
+  'fe3|acac:3': 26.3,
+  'fe3|sal:1': 16.4,
+  'fe2|bipy:3': 17.4,
+  'ni2|bipy:3': 20.2,
+  'ni2|phen:3': 24.3,
+  'ni2|dmg:2': 17.2,
+  'co3|en:3': 48.7,
+  'ag1|py:2': 4.1,
+  'pb2|edta:1': 18.0,
+  'ba2|edta:1': 7.9,
+  'fe2|nh3:6': 3.7,
 };
 
 export interface OrbitalLevel {
@@ -300,7 +382,7 @@ export function complexKey(metal: CentralIon, ligands: LigandCount[]): string {
   return `${metal.id}|${parts.join(',')}`;
 }
 
-function chargeSuffix(charge: number): string {
+export function chargeSuffix(charge: number): string {
   if (charge === 0) return '';
   const magnitude = Math.abs(charge);
   return `${magnitude === 1 ? '' : magnitude}${charge > 0 ? '+' : '-'}`;
@@ -333,8 +415,9 @@ function prettify(formula: string): string {
 
 function complexName(metal: CentralIon, ligands: LigandCount[], charge: number): string {
   const parts = sortedByName(ligands).map((entry) => {
-    const complicated = entry.ligand.denticity > 1 || /[\d′κ-]/.test(entry.ligand.name);
-    if (entry.count === 1) return /[\d′κ-]/.test(entry.ligand.name) ? `(${entry.ligand.name})` : entry.ligand.name;
+    const special = /[\d′κ-]/.test(entry.ligand.name) || Boolean(entry.ligand.enclose);
+    const complicated = entry.ligand.denticity > 1 || special;
+    if (entry.count === 1) return special ? `(${entry.ligand.name})` : entry.ligand.name;
     return complicated ? `${GREEK_COMPLEX[entry.count]}(${entry.ligand.name})` : `${GREEK[entry.count]}${entry.ligand.name}`;
   });
   const center = charge < 0 ? `${metal.stem.toLowerCase()}at` : metal.element.toLowerCase();
@@ -651,6 +734,33 @@ export function analyseComplex(metal: CentralIon, rawLigands: LigandCount[]): Co
 
 function prettifyCharge(charge: number): string {
   return chargeSuffix(charge).split('').map((character) => SUPERSCRIPT[character] ?? character).join('');
+}
+
+function subscriptDigits(text: string): string {
+  return text.replace(/([A-Za-z)\]])(\d+)/g, (_, before: string, digits: string) =>
+    before + digits.split('').map((digit) => SUBSCRIPT[digit]).join(''),
+  );
+}
+
+function superscriptCharge(text: string): string {
+  return text.split('').map((character) => SUPERSCRIPT[character] ?? character).join('');
+}
+
+/**
+ * Schreibt eine Teilchenformel mit tief- und hochgestellten Zeichen.
+ * Mit «^» ist die Ladung eindeutig: «SO4^2-» → «SO₄²⁻»; ohne gelten die
+ * Regeln des Formelparsers: «Fe3+» → «Fe³⁺», «NH4+» → «NH₄⁺», «[Cu(NH3)4]2+» → «[Cu(NH₃)₄]²⁺».
+ */
+export function prettySpecies(term: string): string {
+  const caret = term.indexOf('^');
+  if (caret >= 0) return subscriptDigits(term.slice(0, caret)) + superscriptCharge(term.slice(caret + 1));
+  const bracket = term.match(/^(.*\])(\d*[+-])$/);
+  if (bracket) return subscriptDigits(bracket[1]) + superscriptCharge(bracket[2]);
+  const monatomic = term.match(/^([A-Z][a-z]?)(\d*[+-])$/);
+  if (monatomic) return monatomic[1] + superscriptCharge(monatomic[2]);
+  const polyatomic = term.match(/^(.*?)([+-]+)$/);
+  if (polyatomic) return subscriptDigits(polyatomic[1]) + superscriptCharge(polyatomic[2]);
+  return subscriptDigits(term);
 }
 
 function prettifyTerm(term: string): string {

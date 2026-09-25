@@ -5,8 +5,8 @@ chemische Synthesen und Reaktionen vorschlägt – mit Reaktionsgleichung,
 Reaktionsmechanismus, vollständiger Arbeitsanleitung, Sicherheitshinweisen und
 elektrochemischen Kennzahlen. Dazu eine **Werkbank**, in der sich Stoffe
 zusammengeben lassen und die jedes Ergebnis mit **100 000 belegten Reaktionen aus
-der Patentliteratur** abgleicht, eine **Komplex-Werkbank** und ein Katalog aus
-**7215 berechneten Synthesen**.
+der Patentliteratur** abgleicht und Komplexe gleich mit Farbe, räumlichem Bau
+und Orbitalschema zeigt, dazu ein Katalog aus **7280 berechneten Synthesen**.
 
 ![Werkbank](docs/bilder/werkbank.png)
 
@@ -15,7 +15,7 @@ der Patentliteratur** abgleicht, eine **Komplex-Werkbank** und ein Katalog aus
 ## Was die App kann
 
 **Werkbank: Stoffe zusammengeben und sehen, was entsteht.**
-Im Chemikalienschrank stehen 747 Stoffe bereit. Bis zu vier davon wandern ins
+Im Chemikalienschrank stehen 754 Stoffe bereit. Bis zu vier davon wandern ins
 Reaktionsgefäß, dazu lassen sich Bedingungen einstellen – kühlen oder erhitzen,
 **säure- oder basenkatalysiert**, Metall- oder Lewis-Säure-Katalyse, wässrige
 Lösung, UV-Licht oder Elektrolyse. Erkannt werden Neutralisation, Fällung,
@@ -58,16 +58,31 @@ Reaktionen, die so im Datensatz stehen. Der Datensatz wurde automatisch aus
 Patenttexten gewonnen; offensichtliche Zuordnungsfehler filtert die App heraus,
 einzelne fehlerhafte Einträge können trotzdem vorkommen.
 
-**Komplex-Werkbank: mit Komplexen spielen.**
-Zentralion wählen (20 Ionen von Cu²⁺ bis Pt⁴⁺), Liganden hinzufügen (19 Liganden
-von I⁻ bis CO, auch en, EDTA, bipy) – und die App zeigt sofort Formel und
-IUPAC-Namen, Koordinationszahl und räumliche Gestalt, das Aufspaltungsschema der
-d-Orbitale mit High- oder Low-Spin-Besetzung, magnetisches Moment,
-Ligandenfeld-Stabilisierung, die zu erwartende Farbe, mögliche Isomere, die
-Bildungsgleichung und die Stabilitätskonstante. Aus der Werkbank führt ein Link
-direkt zum entstandenen Komplex.
+**Komplexe direkt in der Werkbank.**
+Gibt man eine Metallquelle und einen Komplexbildner ins Gefäß, erscheint der
+entstehende Komplex mit Formel, IUPAC-Namen, Farbe, räumlichem Bau,
+d-Orbital-Schema, Magnetismus und Stabilitätskonstante. Das funktioniert mit
+allen Stoffen der Datenbank:
 
-**Synthesekatalog: 7215 Wege zu 2561 Stoffen.**
+- **Metallquellen:** gelöste Salze, schwer lösliche Salze, Hydroxide und Oxide
+  (AgCl löst sich in Ammoniak, AgI nicht – berechnet aus lg β und
+  Löslichkeitsprodukt) sowie Metalle, sobald etwas im Gefäß sie löst
+  (Gold in Königswasser, Zink und Aluminium in Natronlauge, Kupfer in Ammoniak).
+- **Liganden:** Anionen von Salzen und Säuren, bekannte Komplexbildner (Ammoniak,
+  EDTA, en, Phenanthrolin, Dimethylglyoxim, Oxin, Acetylaceton …) und über die
+  Struktur ganze Stoffklassen – Amine, Diamine, Aminosäuren, Pyridine, Phenole,
+  Brenzcatechine, 1,3-Dicarbonyle.
+- **Chemisch ehrlich:** Redoxreaktionen verhindern Komplexe (Cu²⁺ + I⁻ ergibt
+  CuI und Iod), Ammoniak fällt Al³⁺ und Fe³⁺ als Hydroxid, amphotere Hydroxide
+  lösen sich im Laugenüberschuss, Chloridokomplexe brauchen konzentrierte Säure,
+  und konkurrieren mehrere Liganden, nennt die App den stärksten.
+- **Gekennzeichnet:** Bekannte Komplexe gelten als Lehrbuchreaktion, alle anderen
+  – nach dem HSAB-Prinzip abgeschätzt – als Vorhersage.
+
+Im Modus **«Komplexe bauen»** der Werkbank lassen sich Komplexe außerdem frei
+zusammenstellen: 24 Zentralionen, 31 Liganden, 16 bekannte Vorlagen.
+
+**Synthesekatalog: 7280 Wege zu 2584 Stoffen.**
 Für jeden Stoff nachschlagen, wie er hergestellt wird. Der Katalog ist nicht
 abgeschrieben, sondern gerechnet: Jede der 83 Reaktionsvorlagen wird auf alle
 passenden Stoffe der Datenbank angewendet und das Produkt mit RDKit bestimmt;
@@ -116,13 +131,13 @@ Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen.
 |---|---|
 | belegte Reaktionen (Patentliteratur) | 100 000 |
 | davon allein mit Stoffen aus der Datenbank nachstellbar | 2406 |
-| berechnete Synthesen (Vorhersagen) | 7215 |
-| davon organisch / anorganisch | 4963 / 2252 |
-| verschiedene Zielstoffe | 2561 |
+| berechnete Synthesen (Vorhersagen) | 7280 |
+| davon organisch / anorganisch | 4996 / 2284 |
+| verschiedene Zielstoffe | 2584 |
 | Reaktionstypen mit Mechanismus | 96 |
 | davon elektrochemisch | 15 |
-| Stoffe offline verfügbar | 747 |
-| Zentralionen / Liganden der Komplex-Werkbank | 20 / 19 |
+| Stoffe offline verfügbar | 754 |
+| Zentralionen / Liganden für Komplexe | 24 / 31 |
 | Standardpotentiale | 61 |
 | erkannte funktionelle Gruppen | 34 |
 | Elemente mit Atommassen | 118 |
@@ -164,7 +179,7 @@ Dafür werden [Rust](https://rustup.rs/) und die
 ```bash
 npm install
 npm run dev        # Entwicklungsserver auf http://localhost:5173
-npm test           # 20 764 Tests, davon je über 1000 pro Werkzeug (rund 90 s)
+npm test           # über 40 000 Tests, davon je über 1000 pro Werkzeug (rund 90 s)
 npm run test:massen  # nur die Massentests (src/__tests__/massentests)
 npm run lint       # Typprüfung
 npm run catalog    # Synthesekatalog neu berechnen (rund 13 s)
@@ -197,7 +212,8 @@ src/
     workbench.ts      Werkbank: Was entsteht aus diesen Stoffen?
     organicAcidBase.ts Säure-Base-Reaktionen organischer Stoffe
     specialReactions.ts Nachweise, Komplexbildung, technische Verfahren
-    complexes.ts      Komplex-Werkbank: Namen, Ligandenfeld, Farbe, Stabilität
+    complexes.ts      Komplexe: Namen, Ligandenfeld, Farbe, Stabilität
+    complexFormation.ts Welche Komplexe entstehen in der Werkbank?
     reactionKeys.ts   Strukturschlüssel für den Abgleich mit belegten Reaktionen
     substanceStructures.ts Strukturen auch für Salze und Säuren ohne SMILES
     rdkit.ts          Anbindung der RDKit-WebAssembly-Bibliothek
@@ -215,7 +231,7 @@ src/
     documentedReactions.ts Laden der belegten Reaktionen (nur benötigte Teile)
   services/       PubChem-Anbindung mit Ratenbegrenzung und Cache
   components/     Wiederverwendbare Bausteine der Oberfläche
-  pages/          Die zehn Seiten der App
+  pages/          Die Seiten der App
   __tests__/massentests/  Je über 1000 Tests pro Werkzeug
 public/reaktionen/ 100 000 belegte Reaktionen in 2 × 256 Teildateien (gzip, 9 MB)
 scripts/

@@ -478,4 +478,9 @@ N-Iodsuccinimid|NIS|C4H4INO2|O=C1CCC(=O)N1I|||Reagenz|Iodierungsmittel
 (Trifluormethyl)trimethylsilan|Ruppert-Prakash-Reagenz;TMSCF3|C4H9F3Si|C[Si](C)(C)C(F)(F)F|||Reagenz|Überträgt die Trifluormethylgruppe
 Schwefelkohlenstoff|Kohlenstoffdisulfid|CS2|S=C=S|||Lösungsmittel|Leicht entzündliches Lösungsmittel, Baustein für Dithiocarbamate
 Acrylsäureethylester|Ethylacrylat|C5H8O2|C=CC(=O)OCC|||Ester|Michael-Akzeptor und Monomer
+2,2′-Bipyridin|bipy;2,2′-Dipyridyl|C10H8N2|c1ccc(-c2ccccn2)nc1|||Heteroaromat|Zweizähniger Chelatligand; bildet mit Eisen(II) einen roten Komplex
+1,10-Phenanthrolin|phen|C12H8N2|c1cnc2c(c1)ccc1cccnc12|||Heteroaromat|Zweizähniger Chelatligand; mit Eisen(II) entsteht der Redoxindikator Ferroin
+Dimethylglyoxim|Diacetyldioxim;Tschugaeffs Reagenz|C4H8N2O2|CC(=NO)C(C)=NO|||Reagenz|Nachweisreagenz für Nickel: himbeerroter Niederschlag
+8-Hydroxychinolin|Oxin;Chinolin-8-ol|C9H7NO|Oc1cccc2cccnc12|||Heteroaromat|Chelatbildner für die Fällung und Bestimmung von Metall-Ionen
+Kaliumnatriumtartrat|Seignettesalz|C4H4KNaO6|O=C([O-])C(O)C(O)C(=O)[O-].[K+].[Na+]|||Salz|Hält in der Fehlingschen Lösung Kupfer(II) als Tartratkomplex gelöst
 `.trim();

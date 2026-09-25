@@ -111,6 +111,7 @@ describe('Ionenmodell', () => {
         'Cu2(OH)2CO3',
         'K4[Fe(CN)6]',
         'K3[Fe(CN)6]',
+        'PdCl2',
       ].sort(),
     );
   });
