@@ -21,7 +21,7 @@ RDLogger.DisableLog('rdApp.*')
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 Q = os.path.join(ROOT, '.cache/quellen')
 BATCH = int(os.environ.get('MAP_BATCH', '16'))
-MIN_CONFIDENCE = float(os.environ.get('MAP_MIN_CONFIDENCE', '0.2'))
+MIN_CONFIDENCE = float(os.environ.get('MAP_MIN_CONFIDENCE', '0.1'))
 MAX_LENGTH = 400  # Zeichen; längere Reaktionen überschreiten die 512 Token des Modells
 
 
