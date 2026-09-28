@@ -391,6 +391,24 @@ sie trotzdem, aber mit einer Liste dessen, was fehlt. Das ist Absicht: Ein
 Lernender soll sehen, dass die Reaktion grundsätzlich möglich ist, und was ihr
 noch fehlt.
 
+**Reaktionsenthalpie.** Am Ende von `mix()` bekommt jede gezeigte Reaktion
+und jedes Lösen eines Salzes in Wasser ein `enthalpy`-Feld
+(`src/chem/reactionEnthalpy.ts`). Reihenfolge: erst die Gleichung als
+Summenformeln (`enthalpyOfEquation`, in Wasser mit Ionen), dann die
+Ionengleichung, zuletzt die Strukturen der Beteiligten und Produkte
+(`enthalpyFromStructures`). Stoffe im Gefäß dienen als Hinweise, damit eine
+Summenformel wie C₂H₆O als Ethanol und nicht als Dimethylether gelesen wird.
+Scheitert die Rechnung an einem fehlenden Wert, steht in `enthalpyMissing`,
+welcher Stoff fehlt – die Oberfläche zeigt das an.
+
+Neue Werte gehören in `src/data/thermoData.ts`: eine Zeile «Formel Zustand
+Wert» (anorganisch, Ionen mit `^`, etwa `SO4^2- aq -909.3`) oder «SMILES Zustand
+Wert» (organisch). Der erste Eintrag einer Formel ist ihr Standardzustand.
+Bitte nur belegte Tabellenwerte eintragen und die Quelle im Kommentar nennen,
+wenn sie von NBS/CRC abweicht. `src/chem/__tests__/thermo.test.ts` prüft
+Referenzreaktionen; der Werkbank-Massentest prüft, dass jede berechnete
+Gleichung ausgeglichen ist und ΔrH° zu den Termen passt.
+
 **Mehrere mögliche Produkte.** Eine Vorschrift kann an mehreren Stellen eines
 Moleküls greifen. `pickProductSet()` bevorzugt den Satz, dessen Produkte in der
 Stoffdatenbank bekannt sind – das ist in aller Regel das gemeinte Produkt.

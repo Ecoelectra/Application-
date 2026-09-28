@@ -46,7 +46,7 @@ export function AiPage() {
     }
     setRunning(true);
     const timer = window.setTimeout(() => {
-      const knowledge = predictFromKnowledge(substances, { temperatureC: temperature });
+      const knowledge = predictFromKnowledge(substances, { temperatureC: temperature, rdkit });
       const learned = model ? predictWithModel(rdkit, model, substances, { temperatureC: temperature, limit: 5 }) : [];
       setProposals([...knowledge, ...learned]);
       setRunning(false);

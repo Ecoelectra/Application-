@@ -11,6 +11,8 @@ import { Callout } from '../components/Callout';
 import { GhsPictograms } from '../components/GhsPictograms';
 import { StoichiometryPanel } from '../components/StoichiometryPanel';
 import { ElectrolysisPanel } from '../components/ElectrolysisPanel';
+import { EnthalpyPanel } from '../components/EnthalpyPanel';
+import { enthalpyFromStructures, enthalpyOfEquation } from '../chem/thermo';
 
 type Tab = 'uebersicht' | 'anleitung' | 'mechanismus' | 'sicherheit' | 'elektro';
 
@@ -31,6 +33,22 @@ export function ReactionPage() {
     }
     return null;
   }, [rule, rdkit, substrate]);
+
+  // Reaktionsenthalpie: aus der festen Gleichung oder aus dem Beispiel (Reaktions-SMILES)
+  const enthalpy = useMemo(() => {
+    if (!rule) return null;
+    if (rule.fixedEquation) {
+      const result = enthalpyOfEquation(rdkit, rule.fixedEquation.balanced);
+      if (result?.ok) return result.enthalpy;
+    }
+    if (rdkit && rule.example?.rxnSmiles) {
+      const [left, , right] = rule.example.rxnSmiles.split('>');
+      const species = (part: string) => part.split('.').filter(Boolean).map((smiles) => ({ formula: '', smiles }));
+      const result = enthalpyFromStructures(rdkit, species(left), species(right));
+      if (result?.ok) return result.enthalpy;
+    }
+    return null;
+  }, [rule, rdkit]);
 
   if (!rule) {
     return (
@@ -82,6 +100,10 @@ export function ReactionPage() {
           text={rule.fixedEquation?.balanced ?? rule.generalEquation}
           caption={rule.example?.caption}
         />
+        <EnthalpyPanel enthalpy={enthalpy} />
+        {enthalpy && rule.example && !rule.fixedEquation && (
+          <p className="small subtle" style={{ marginBottom: 0 }}>Berechnet für das Beispiel oben.</p>
+        )}
       </div>
 
       {substrate && (

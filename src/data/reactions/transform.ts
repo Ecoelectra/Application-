@@ -1029,15 +1029,15 @@ export const TRANSFORM_REACTIONS: ReactionRule[] = [
     reactionType: 'Umlagerung',
     summary:
       'Ein Oxim lagert sich im Sauren zum Amid um. Technisch entsteht so aus Cyclohexanonoxim das Caprolactam – der Baustein für Nylon-6.',
-    smirks: '[CX3:1](=[NX2][OX2H1])[#6:2]>>[NX3H1:1][CX3:2]=[OX1]',
+    smirks: '[CX3:1](=[NX2:3][OX2H1:4])[#6:2]>>[CX3:1](=[OX1:4])[NX3H1:3][#6:2]',
     reactantDefaults: ['CC(=NO)C'],
     substrateSlots: [0],
     functionalGroups: ['imin'],
     generalEquation: 'R₂C=N–OH → R–CO–NH–R′',
     example: {
       substrate: 'CC(=NO)C',
-      rxnSmiles: 'CC(=NO)C>>CNC=O',
-      caption: 'Acetonoxim lagert sich zu N-Methylformamid um.',
+      rxnSmiles: 'CC(=NO)C>>CNC(C)=O',
+      caption: 'Acetonoxim lagert sich zu N-Methylacetamid um.',
     },
     reagents: [
       { name: 'Oxim', role: 'Reagenz', equivalents: '1,0 Äq.' },

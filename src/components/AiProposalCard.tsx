@@ -7,6 +7,7 @@ import type { Catalysis } from '../data/workbenchSpecs';
 import { CATALYSIS_LABELS } from '../data/workbenchSpecs';
 import { Callout } from './Callout';
 import { EnergyDiagram } from './EnergyDiagram';
+import { EnthalpyPanel } from './EnthalpyPanel';
 import { MoleculeStructure } from './MoleculeStructure';
 
 interface Props {
@@ -102,6 +103,7 @@ export function AiProposalCard({ proposal, rdkit, temperatureC, onAddSubstance, 
               catalystName={energy.catalystName}
               reachable={reachable}
               requiresCatalyst={energy.requiresCatalyst}
+              deltaH={proposal.enthalpy?.deltaH}
             />
             <div>
               <p className="small" style={{ marginTop: 0 }}>{energyText(energy, temperatureC)}</p>
@@ -117,6 +119,8 @@ export function AiProposalCard({ proposal, rdkit, temperatureC, onAddSubstance, 
           </div>
         </>
       )}
+
+      <EnthalpyPanel enthalpy={proposal.enthalpy} compact />
 
       {proposal.catalysts.length > 0 && (
         <>

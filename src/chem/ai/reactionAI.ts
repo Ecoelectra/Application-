@@ -27,6 +27,7 @@ import { forward } from './network';
 import { canonicalSmiles, molecularFormula } from '../rdkit';
 import { structureKey } from '../reactionKeys';
 import { isPublishableProduct } from '../safety';
+import { enthalpyFromStructures, enthalpyOfEquation, type ReactionEnthalpy } from '../thermo';
 import { structureOf } from '../substanceStructures';
 import { CATALYZED_PROCESSES, processesFor, type CatalyzedProcess } from '../../data/catalysis';
 import { SUBSTANCES, substanceById } from '../../data/substances';
@@ -102,6 +103,8 @@ export interface AiProposal {
   exampleSource?: string;
   catalysts: CatalystSuggestion[];
   energy: EnergyProfile | null;
+  /** Reaktionsenthalpie ΔrH° (Satz von Hess), falls berechenbar */
+  enthalpy?: ReactionEnthalpy | null;
   explanation: string;
   hazards: string[];
   conditions?: string;
@@ -113,6 +116,8 @@ export interface PredictionOptions {
   /** weitere Stoffe im Gefäß (Katalysatoren, Lösungsmittel) */
   others?: Substance[];
   limit?: number;
+  /** für die Reaktionsenthalpie organischer Stoffe der Wissensbasis */
+  rdkit?: MainModule | null;
 }
 
 export const CATALYSIS_CATEGORIES: Record<Catalysis, string[]> = {
@@ -454,6 +459,11 @@ export function predictWithModel(
       const product = describeProduct(rdkit, candidate.product);
       const { reactants, reagent } = candidate.best.hypothesis;
       const equation = `${reactants.map((entry) => entry.name).join(' + ')}${reagent && reactants.length === 1 ? ` (mit ${reagent.name})` : ''} → ${product.name}`;
+      const enthalpy = enthalpyFromStructures(
+        rdkit,
+        reactants.map((entry) => ({ formula: entry.formula, smiles: entry.smiles, label: entry.name })),
+        [{ formula: product.formula ?? '', smiles: product.smiles, label: product.name }],
+      );
       return {
         id: `ki-${reactants.map((entry) => entry.id).join('-')}-${rank}-${candidate.product.length}`,
         source: 'ki' as const,
@@ -470,6 +480,7 @@ export function predictWithModel(
         exampleSource: template.q,
         catalysts,
         energy,
+        enthalpy: enthalpy?.ok ? enthalpy.enthalpy : null,
         explanation: explain(family, template, energy, catalysts),
         hazards: [],
       };
@@ -711,10 +722,17 @@ function knowledgeProposal(process: CatalyzedProcess, vessel: Substance[], optio
     confidence: 0.9,
     catalysts,
     energy,
+    enthalpy: knowledgeEnthalpy(process, vessel, options.rdkit ?? null),
     explanation: `${process.explanation} ${temperatureNote}`.trim(),
     hazards: process.hazards ?? [],
     conditions: process.conditions,
   };
+}
+
+function knowledgeEnthalpy(process: CatalyzedProcess, vessel: Substance[], rdkit: MainModule | null): ReactionEnthalpy | null {
+  const hints = vessel.map((entry) => ({ formula: entry.formula, smiles: entry.smiles, name: entry.name }));
+  const result = enthalpyOfEquation(rdkit, process.equation, { hints });
+  return result?.ok ? result.enthalpy : null;
 }
 
 /** SMILES eines Produkts gültig? Für Tests. */

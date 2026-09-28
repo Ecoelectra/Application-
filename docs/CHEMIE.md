@@ -222,6 +222,63 @@ der Elektronenzahlen kombiniert:
 5 Fe²⁺ + MnO4⁻ + 8 H⁺  →  5 Fe³⁺ + Mn²⁺ + 4 H₂O
 ```
 
+### 3.5 Reaktionsenthalpie nach Hess
+
+Die Enthalpie ist eine Zustandsfunktion. Deshalb lässt sich jede
+Reaktionsenthalpie aus den Standardbildungsenthalpien der beteiligten Stoffe
+zusammensetzen – egal, über welchen Weg die Reaktion tatsächlich läuft:
+
+```
+ΔrH° = Σ ν · ΔfH°(Produkte) − Σ ν · ΔfH°(Edukte)
+
+CH₄(g) + 2 O₂(g) → CO₂(g) + 2 H₂O(l)
+ΔrH° = (−393,5) + 2·(−285,8) − (−74,6) − 2·0 = −890,3 kJ/mol
+```
+
+Elemente in ihrem Standardzustand haben ΔfH° = 0. Die Werte stehen in
+`src/data/thermoData.ts` (NBS-Tabellen, CRC Handbook; 25 °C, 1 bar).
+
+**Aggregatzustände.** H₂O(l) und H₂O(g) unterscheiden sich um die
+Verdampfungsenthalpie (44 kJ/mol). Ohne Angabe rechnet die App mit dem Zustand
+bei 25 °C; in Gleichungen können Zustände als `(s)`, `(l)`, `(g)`, `(aq)`
+angehängt werden.
+
+**Ionen in Lösung.** Gelöste Ionen haben Bildungsenthalpien relativ zu
+H⁺(aq) = 0. In wässriger Lösung zerlegt die App starke Säuren, starke Basen und
+lösliche Salze in ihre Ionen. Die Zuschauer-Ionen heben sich dann heraus, und
+jede Neutralisation starker Säuren und Basen ergibt dasselbe:
+
+```
+H⁺(aq) + OH⁻(aq) → H₂O(l)      ΔrH° = −285,8 − 0 − (−230,0) = −55,8 kJ/mol
+```
+
+Organische Ionen schätzt die App aus dem neutralen Stoff: Die Ionisierung einer
+Carbonsäure ist nahezu thermoneutral (Essigsäure −485,8 → Acetat −486,0
+kJ/mol), die Protonierung eines Amins entspricht NH₃(aq) → NH₄⁺(aq), also
+−52,2 kJ/mol. Aqua-Komplexe wie [Cu(H₂O)₆]²⁺ zählen nach Konvention als
+hydratisiertes Ion plus sechs Wasser.
+
+**Lösungsenthalpie.** Beim Lösen eines Salzes ist ΔlösH° = ΔfH°(Ionen, aq) −
+ΔfH°(Salz, s): Natriumhydroxid −44,5 kJ/mol (die Lösung wird heiß),
+Ammoniumnitrat +28,1 kJ/mol (Kältepack).
+
+**Joback-Schätzung.** Für organische Stoffe ohne Tabellenwert zerlegt die App
+das Molekül in Gruppen (CH₃, CH₂, OH, C=O, Ringatome …) und summiert deren
+Beiträge zur Bildungsenthalpie des Gases (Joback und Reid 1987, Konstante
+68,29 kJ/mol). Für Flüssigkeiten zieht sie die Verdampfungsenthalpie nach
+Pictet-Trouton ab (ΔHv ≈ 88 J/(mol·K) · Tb, bei Wasserstoffbrücken 109), für
+Feststoffe zusätzlich die Schmelzenthalpie nach Walden (≈ 55 J/(mol·K) · Tm).
+An den Tabellenwerten gemessen liegt die Schätzung im Mittel rund 20 kJ/mol
+daneben (Median 7 kJ/mol, einzelne Ausreißer über 50); das Ergebnis heißt
+deshalb «geschätzt».
+
+**Nebenprodukte und formale Reagenzien.** Aus Strukturen kennt die App oft nur
+Edukte und Hauptprodukt. Sie probiert kleine Nebenprodukte (H₂O, HCl, HBr, CO₂,
+NH₃, Methanol, Ethanol, Essigsäure …) und nimmt die einfachste ausgeglichene
+Gleichung. Oxidationen rechnet sie formal mit O₂, Reduktionen mit H₂ – der Wert
+gilt dann für genau diese Gleichung; mit Permanganat oder Natriumborhydrid
+ändert er sich um deren Beitrag.
+
 ---
 
 ## 4. Elektrochemie

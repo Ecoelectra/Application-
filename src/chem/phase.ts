@@ -59,6 +59,20 @@ interface JsonBond { bo?: number; atoms: [number, number] }
  * Metallverbindungen und Elemente, die die Methode nicht abdeckt.
  */
 export function jobackEstimate(rdkit: MainModule, smiles: string): { mp: number; bp: number; hydrogenBonded: boolean } | null {
+  const result = jobackGroups(rdkit, smiles);
+  if (!result) return null;
+  const { groups, hydrogenBonded } = result;
+  const sum = (position: 0 | 1) => groups.reduce((total, group) => total + (JOBACK[group]?.[position] ?? 0), 0);
+  const bp = 198 + sum(0) - 273.15;
+  const mp = Math.min(122.5 + sum(1) - 273.15, bp - 1);
+  return { mp: Math.round(mp) || 0, bp: Math.round(bp) || 0, hydrogenBonded };
+}
+
+/**
+ * Zerlegt ein Molekül in die Strukturgruppen der Joback-Methode, z. B.
+ * Ethanol → CH3, CH2, OH. Null für Stoffe außerhalb der Methode.
+ */
+export function jobackGroups(rdkit: MainModule, smiles: string): { groups: string[]; hydrogenBonded: boolean } | null {
   if (smiles.includes('.')) return null;
   return withMol(rdkit, smiles, (mol) => {
     const json = JSON.parse(mol.get_json()) as {
@@ -170,10 +184,7 @@ export function jobackEstimate(rdkit: MainModule, smiles: string): { mp: number;
       }
     });
 
-    const sum = (position: 0 | 1) => groups.reduce((total, group) => total + (JOBACK[group]?.[position] ?? 0), 0);
-    const bp = 198 + sum(0) - 273.15;
-    const mp = Math.min(122.5 + sum(1) - 273.15, bp - 1);
-    return { mp: Math.round(mp) || 0, bp: Math.round(bp) || 0, hydrogenBonded };
+    return { groups, hydrogenBonded };
   });
 }
 

@@ -29,6 +29,7 @@ import { AiProposalCard } from '../components/AiProposalCard';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
 import { useReactionModel } from '../hooks/useReactionModel';
 import type { MainModule } from '@rdkit/rdkit';
+import { EnthalpyPanel } from '../components/EnthalpyPanel';
 import { Callout } from '../components/Callout';
 import { SUBSTANCES, searchSubstances, substanceById } from '../data/substances';
 import type { Substance } from '../data/types';
@@ -272,7 +273,7 @@ export function WorkbenchPage() {
       setAiResults(
         groups.map((group) => {
           const others = selected.filter((substance) => !group.includes(substance));
-          const knowledge = predictFromKnowledge(group, { ...options, others });
+          const knowledge = predictFromKnowledge(group, { ...options, others, rdkit });
           const learned = aiModel ? predictWithModel(rdkit, aiModel, group, { ...options, others, limit: 3 }) : [];
           return { key: group.map((entry) => entry.id).join('+'), substances: group, proposals: [...knowledge, ...learned] };
         }),
@@ -956,6 +957,8 @@ function ReactionResult({
           {reaction.observation}
         </div>
       </div>
+
+      <EnthalpyPanel enthalpy={reaction.enthalpy} missing={reaction.enthalpyMissing} />
 
       {reaction.products.some((product) => product.smiles) && (
         <div className="row" style={{ marginTop: 12, alignItems: 'flex-start' }}>

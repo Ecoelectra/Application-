@@ -84,7 +84,7 @@ const ERWARTETE_PRODUKTE: Array<[string, string]> = [
   ['olefinmetathese', 'CCCCC=CCCCC'],
   ['lindlar-hydrierung', 'CC=CC'],
   ['baeyer-villiger', 'COC(=O)c1ccccc1'],
-  ['beckmann-umlagerung', 'CNC=O'],
+  ['beckmann-umlagerung', 'CNC(C)=O'],
   ['gabriel-synthese', 'CCCN1C(=O)c2ccccc2C1=O'],
   ['wolff-kishner', 'CCc1ccccc1'],
   ['oximbildung', 'CC(C)=NO'],

@@ -128,6 +128,20 @@ Die KI steht als eigenes Werkzeug unter **KI-Vorhersage** bereit und läuft in d
 und sagt, mit welchem Katalysator sie gelingt, wenn die Aktivierungsenergie zu
 hoch ist. Das Modell (rund 1 MB) arbeitet offline im Gerät.
 
+**Reaktionsenthalpie für jede Reaktion.** Zu jeder Reaktion in der Werkbank,
+zu jedem KI-Vorschlag und auf den Reaktionsseiten berechnet die App ΔrH° nach
+dem Satz von Hess aus Standardbildungsenthalpien (NBS-Tabellen, CRC Handbook;
+rund 340 Stoffe und Ionen) – mit Einordnung als exotherm oder endotherm und
+aufklappbarer Rechnung. In wässriger Lösung rechnet sie mit Ionen, so ergibt
+jede Neutralisation −55,8 kJ/mol; beim Lösen von Salzen zeigt sie die
+Lösungsenthalpie (Ammoniumnitrat kühlt, Natriumhydroxid wärmt). Fehlt ein
+organischer Tabellenwert, schätzt sie ihn nach der Gruppenbeitragsmethode von
+Joback und kennzeichnet das Ergebnis als geschätzt; Nebenprodukte wie Wasser
+oder HCl ergänzt sie selbst, Oxidationen und Reduktionen rechnet sie formal mit
+O₂ bzw. H₂. Im Energiediagramm der KI liegen die Produkte auf der berechneten
+Höhe. Unter **Werkzeuge → Reaktionsenthalpie** gibt es zusätzlich einen Rechner
+für eigene Gleichungen mit Zustandsangaben wie `H2O(l)` oder `Na+(aq)`.
+
 **Synthesekatalog: 7280 Wege zu 2584 Stoffen.**
 Für jeden Stoff nachschlagen, wie er hergestellt wird. Der Katalog ist nicht
 abgeschrieben, sondern gerechnet: Jede der 83 Reaktionsvorlagen wird auf alle
@@ -169,7 +183,8 @@ spezifischer Energiebedarf.
 **Werkzeuge.** Reaktionsgleichungen ausgleichen (auch Ionengleichungen mit
 Ladungsbilanz), Redoxgleichungen nach der Halbreaktionsmethode in saurem und
 basischem Milieu, Oxidationszahlen, Molmassen, Elementaranalyse,
-Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen.
+Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen, Reaktionsenthalpien
+nach Hess.
 
 ## Datenbestand
 
@@ -185,6 +200,7 @@ Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen.
 | Reaktions-KI: trainiert auf / Vorlagen | 320.335 / 1.615 |
 | Reaktions-KI: richtiges Produkt auf Platz 1 / unter den ersten 3 | 69 % / 77 % |
 | Katalysierte Prozesse in der Wissensbasis | 27 |
+| Standardbildungsenthalpien (anorganisch inkl. Ionen / organisch) | 252 / 85 |
 | Stoffe offline verfügbar | 1544 |
 | davon von Hand geprüft / systematisch erzeugt | 754 / 790 |
 | Zentralionen / Liganden für Komplexe | 24 / 31 |
@@ -270,6 +286,8 @@ src/
     complexFormation.ts Welche Komplexe entstehen in der Werkbank?
     prediction.ts     Vorhersage für Stoffpaare ohne hinterlegte Reaktion
     phase.ts          Aggregatzustände, Siedepunkt und Druck, RGT-Regel
+    thermo.ts         Reaktionsenthalpie nach Hess, Joback-Schätzung, Ionen in Lösung
+    reactionEnthalpy.ts ΔrH° für Werkbank-Reaktionen und Lösungsenthalpien
     conditionEffects.ts Wirkung von Temperatur- und Druckregler
     externalSubstances.ts Stoffe aus PubChem und SMILES für die Werkbank
     ai/               Reaktions-KI: Vorlagen, Netz, Hilfsstoffe, Aktivierungsenergie
@@ -283,6 +301,7 @@ src/
     substanceTables/  Erweiterte Stofftabellen (generated.ts: erzeugte Stoffe)
     physicalData.ts   Schmelz-, Siede- und Zersetzungstemperaturen
     catalysis.ts      Katalysierte Prozesse mit Aktivierungsenergien
+    thermoData.ts     Standardbildungsenthalpien ΔfH° (25 °C, 1 bar)
     generated/        Erzeugter Synthesekatalog (catalog.json)
     functionalGroups.ts  SMARTS-Muster der funktionellen Gruppen
     substances.ts     Offline-Stoffdatenbank
@@ -359,6 +378,14 @@ wie hoch die Ausbeute ist oder welche Nebenprodukte entstehen. Die
 Aktivierungsenergien sind Richtwerte der Reaktionsfamilie (± 10–20 kJ/mol), die
 Halbwertszeiten Abschätzungen nach Arrhenius. Alles, was die KI liefert, ist als
 Vorhersage gekennzeichnet.
+
+Die Reaktionsenthalpie gilt für Standardbedingungen (25 °C, 1 bar) und je
+Formelumsatz der angezeigten Gleichung. Tabellenwerte sind auf wenige kJ/mol
+genau; nach Joback geschätzte Werte weichen meist um weniger als 10, im Mittel um
+etwa 20 kJ/mol ab.
+Wo die App Oxidations- oder Reduktionsmittel formal durch O₂ bzw. H₂ ersetzt,
+sagt sie das dazu – mit dem echten Reagenz ändert sich der Wert. Für Komplexe
+und manche Salze fehlen Tabellenwerte; dann steht dort, welcher Wert fehlt.
 
 Der Synthesekatalog enthält zu jedem Produkt die Wege, die sich aus den
 hinterlegten Vorlagen ergeben. Er ist damit vollständig in Bezug auf diese

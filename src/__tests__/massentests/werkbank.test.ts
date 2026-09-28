@@ -69,6 +69,8 @@ function pruefbar(equation: string): boolean {
 }
 
 let geprueft = 0;
+let mitReaktion = 0;
+let mitEnthalpie = 0;
 
 /** Gleichung ohne Rücksicht auf die Reihenfolge der Teilchen je Seite. */
 function stoffumsatz(reaction: { equation: string }): string {
@@ -125,6 +127,28 @@ describe('Massentest Werkbank', () => {
       if (reaction.ionicEquation && pruefbar(reaction.ionicEquation)) {
         expect(gleichungsFehler(reaction.ionicEquation), reaction.ionicEquation).toEqual([]);
       }
+
+      // Reaktionsenthalpie: endlich, plausibel groß und nach Hess aus den Termen
+      mitReaktion++;
+      if (reaction.enthalpy) {
+        mitEnthalpie++;
+        const { deltaH, terms } = reaction.enthalpy;
+        expect(Number.isFinite(deltaH)).toBe(true);
+        expect(Math.abs(deltaH), reaction.enthalpy.equation).toBeLessThan(10_000);
+        const hess = terms.reduce((sum, term) => sum + (term.side === 'produkt' ? 1 : -1) * term.coefficient * term.value, 0);
+        expect(deltaH).toBeCloseTo(hess, 0);
+        // Die gerechnete Gleichung ist ausgeglichen (Atome und Ladung)
+        const bilanz = new Map<string, number>();
+        for (const term of terms) {
+          const parsed = parseFormula(term.formula);
+          const sign = term.side === 'produkt' ? -1 : 1;
+          for (const [element, count] of Object.entries(parsed.counts)) bilanz.set(element, (bilanz.get(element) ?? 0) + sign * count * term.coefficient);
+          bilanz.set('Ladung', (bilanz.get('Ladung') ?? 0) + sign * parsed.charge * term.coefficient);
+        }
+        for (const [element, rest] of bilanz) expect(Math.abs(rest), `${element} in ${reaction.enthalpy.equation}`).toBeLessThan(1e-9);
+      } else {
+        expect(reaction.enthalpy === null || reaction.enthalpy === undefined).toBe(true);
+      }
     }
 
     // Für jedes Stoffpaar gibt es eine Aussage: Reaktion, Vorhersage oder «keine Reaktion»
@@ -156,5 +180,9 @@ describe('Massentest Werkbank', () => {
 
   it('hat viele Gleichungen auf Ausgleich geprüft', () => {
     expect(geprueft).toBeGreaterThan(50);
+  });
+
+  it('berechnet für die meisten Reaktionen die Reaktionsenthalpie', () => {
+    expect(mitEnthalpie / mitReaktion).toBeGreaterThan(0.8);
   });
 });

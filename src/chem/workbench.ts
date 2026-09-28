@@ -31,6 +31,8 @@ import { complexChemistry } from './complexFormation';
 import { predictPair, type Confidence, type PairPrediction } from './prediction';
 import { conditionNotes, pressureNote } from './conditionEffects';
 import type { ComplexAnalysis } from './complexes';
+import { reactionEnthalpy } from './reactionEnthalpy';
+import type { ReactionEnthalpy } from './thermo';
 import { structureKey, substanceKeys } from './reactionKeys';
 import { ionStructures, saltFormula, structuresOf } from './substanceStructures';
 import type { Ion } from './ions';
@@ -117,6 +119,10 @@ export interface WorkbenchReaction {
   participants?: string[];
   /** bei Vorhersagen: wie verlässlich */
   confidence?: Confidence;
+  /** Reaktionsenthalpie ΔrH° bei Standardbedingungen (Satz von Hess) */
+  enthalpy?: ReactionEnthalpy | null;
+  /** Stoffe ohne bekannte Bildungsenthalpie, falls ΔrH° nicht berechnet werden konnte */
+  enthalpyMissing?: string[];
 }
 
 /**
@@ -777,6 +783,13 @@ export function mix(
     conditions.temperatureC !== undefined || conditions.pressureBar !== undefined
       ? conditionNotes(rdkit, substances, temperature, pressure, complete.length > 0)
       : [];
+
+  // Reaktionsenthalpie für jede gezeigte Reaktion und jedes Lösen
+  for (const reaction of [...shown, ...pairOutcomes]) {
+    const outcome = reactionEnthalpy(rdkit, reaction, substances, conditions.aqueous);
+    reaction.enthalpy = outcome.enthalpy;
+    if (outcome.missing?.length) reaction.enthalpyMissing = outcome.missing;
+  }
 
   const extraHints = [...negativeHints, ...complexes.hints];
   return {

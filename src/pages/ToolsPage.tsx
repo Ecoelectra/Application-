@@ -5,8 +5,11 @@ import { elementalComposition, molarMass } from '../chem/formula';
 import { dilutionVolume, limitingReagent, massForSolution, percentYield } from '../chem/stoichiometry';
 import { Callout } from '../components/Callout';
 import { formatNumber } from '../chem/format';
+import { enthalpyOfEquation } from '../chem/thermo';
+import { EnthalpyPanel, prettySpecies } from '../components/EnthalpyPanel';
+import { useRDKit } from '../hooks/useRDKit';
 
-type Tab = 'ausgleichen' | 'redox' | 'molmasse' | 'stoechiometrie';
+type Tab = 'ausgleichen' | 'redox' | 'molmasse' | 'stoechiometrie' | 'enthalpie';
 
 const num = (value: string): number => Number(value.replace(',', '.'));
 
@@ -18,8 +21,8 @@ export function ToolsPage() {
       <header className="page-header">
         <h1>Werkzeuge</h1>
         <p>
-          Gleichungen ausgleichen, Redoxreaktionen über Halbreaktionen aufstellen, Molmassen und
-          Ansätze berechnen – alles offline verfügbar.
+          Gleichungen ausgleichen, Redoxreaktionen über Halbreaktionen aufstellen, Molmassen,
+          Ansätze und Reaktionsenthalpien berechnen – alles offline verfügbar.
         </p>
       </header>
 
@@ -29,6 +32,7 @@ export function ToolsPage() {
           ['redox', 'Redoxgleichungen'],
           ['molmasse', 'Molmasse & Analyse'],
           ['stoechiometrie', 'Stöchiometrie'],
+          ['enthalpie', 'Reaktionsenthalpie'],
         ] as Array<[Tab, string]>).map(([id, label]) => (
           <button
             key={id}
@@ -47,6 +51,7 @@ export function ToolsPage() {
       {tab === 'redox' && <RedoxBalancer />}
       {tab === 'molmasse' && <MolarMassTool />}
       {tab === 'stoechiometrie' && <StoichiometryTools />}
+      {tab === 'enthalpie' && <EnthalpyTool />}
     </main>
   );
 }
@@ -61,6 +66,7 @@ const EXAMPLES = [
 
 function EquationBalancer() {
   const [input, setInput] = useState('C3H8 + O2 -> CO2 + H2O');
+  const { rdkit } = useRDKit();
 
   const result = useMemo(() => {
     try {
@@ -69,6 +75,11 @@ function EquationBalancer() {
       return { error: (error as Error).message };
     }
   }, [input]);
+  const enthalpy = useMemo(() => {
+    if ('error' in result) return null;
+    const computed = enthalpyOfEquation(rdkit, result.value.equation);
+    return computed?.ok ? computed.enthalpy : null;
+  }, [result, rdkit]);
 
   return (
     <div className="stack">
@@ -107,6 +118,7 @@ function EquationBalancer() {
               <div className="equation-scroll">
                 <div className="equation-text">{result.value.equation}</div>
               </div>
+              <EnthalpyPanel enthalpy={enthalpy} compact />
               {result.value.warnings.map((warning) => (
                 <div key={warning} style={{ marginTop: 10 }}>
                   <Callout variant="info">{warning}</Callout>
@@ -524,6 +536,81 @@ function StoichiometryTools() {
             <span className="muted">Formel konnte nicht gelesen werden.</span>
           )}
         </p>
+      </div>
+    </div>
+  );
+}
+
+const ENTHALPY_EXAMPLES: Array<{ label: string; equation: string; aqueous?: boolean }> = [
+  { label: 'Knallgas', equation: '2 H2(g) + O2(g) -> 2 H2O(l)' },
+  { label: 'Methan verbrennen', equation: 'CH4 + 2 O2 -> CO2 + 2 H2O' },
+  { label: 'Neutralisation', equation: 'HCl + NaOH -> NaCl + H2O', aqueous: true },
+  { label: 'Fällung AgCl', equation: 'Ag+ + Cl- -> AgCl(s)' },
+  { label: 'Kalkbrennen', equation: 'CaCO3 -> CaO + CO2' },
+  { label: 'Haber-Bosch', equation: 'N2 + 3 H2 -> 2 NH3' },
+  { label: 'Thermit', equation: 'Fe2O3 + 2 Al -> Al2O3 + 2 Fe' },
+  { label: 'Fotosynthese', equation: '6 CO2 + 6 H2O -> C6H12O6 + 6 O2' },
+];
+
+/** Reaktionsenthalpie aus Standardbildungsenthalpien (Satz von Hess). */
+function EnthalpyTool() {
+  const { rdkit } = useRDKit();
+  const [input, setInput] = useState('CH4 + 2 O2 -> CO2 + 2 H2O');
+  const [aqueous, setAqueous] = useState(false);
+
+  const result = useMemo(() => enthalpyOfEquation(rdkit, input, { aqueous }), [rdkit, input, aqueous]);
+
+  return (
+    <div className="stack">
+      <div className="card">
+        <h3>Reaktionsenthalpie berechnen</h3>
+        <p className="muted small">
+          ΔrH° = Σ ν·ΔfH°(Produkte) − Σ ν·ΔfH°(Edukte) bei 25 °C und 1 bar. Zustände kannst du anhängen –{' '}
+          <code>H2O(l)</code>, <code>H2O(g)</code>, <code>NaCl(s)</code>, <code>Na+(aq)</code> –, sonst gilt der
+          Standardzustand. Unausgeglichene Gleichungen werden automatisch ausgeglichen. Organische Stoffe als
+          Summenformel (etwa <code>C2H6O</code> = Ethanol); fehlt ein Tabellenwert, schätzt die App ihn nach Joback.
+        </p>
+        <input
+          className="input"
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          aria-label="Reaktionsgleichung für die Enthalpie"
+          spellCheck={false}
+        />
+        <label className="row small" style={{ marginTop: 10, gap: 8 }}>
+          <input type="checkbox" checked={aqueous} onChange={(event) => setAqueous(event.target.checked)} />
+          in wässriger Lösung (Salze, starke Säuren und Basen als Ionen)
+        </label>
+        <div className="row" style={{ marginTop: 10 }}>
+          <span className="subtle">Beispiele:</span>
+          {ENTHALPY_EXAMPLES.map((example) => (
+            <button
+              key={example.label}
+              type="button"
+              className="chip"
+              onClick={() => {
+                setInput(example.equation);
+                setAqueous(Boolean(example.aqueous));
+              }}
+            >
+              {example.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ marginTop: 16 }}>
+          {!result ? (
+            <Callout variant="warning" title="Gleichung nicht lesbar">
+              Bitte Summenformeln mit «+» und «-&gt;» schreiben, etwa <code>N2 + 3 H2 -&gt; 2 NH3</code>. Allgemeine
+              Gleichungen mit R-Resten lassen sich nicht berechnen.
+            </Callout>
+          ) : result.ok ? (
+            <EnthalpyPanel enthalpy={result.enthalpy} />
+          ) : (
+            <Callout variant="warning" title="Wert fehlt">
+              Für {result.missing.map(prettySpecies).join(', ')} ist keine Standardbildungsenthalpie hinterlegt.
+            </Callout>
+          )}
+        </div>
       </div>
     </div>
   );
