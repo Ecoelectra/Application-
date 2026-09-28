@@ -23,19 +23,22 @@ import type { BondChange } from '../../src/chem/ai/templates';
 import { runReaction } from '../../src/chem/rdkit';
 import { structureKey } from '../../src/chem/reactionKeys';
 import { assessSubstance } from '../../src/chem/safety';
+import { evaluateCases, formatMetrics, type Metrics, type TestCase } from './evaluation';
 
 const ROOT = resolve(import.meta.dirname ?? __dirname, '../..');
 const CACHE = resolve(ROOT, '.cache/ki');
 const OUT = resolve(ROOT, 'public/ki');
 
 const MIN_COUNT = Number(process.env.KI_MIN ?? 25);
+/** Kleinere Schwelle für Vorlagen aus Nicht-Patent-Quellen, damit kleine Quellen nicht untergehen */
+const MIN_COUNT_SMALL = Number(process.env.KI_MIN_KLEIN ?? 8);
 const HIDDEN = Number(process.env.KI_HIDDEN ?? 256);
 const EPOCHS = Number(process.env.KI_EPOCHS ?? 6);
 const BATCH = 512;
 const CATEGORY_WEIGHT = 0.3;
 const THREADS = Math.max(1, Math.min(4, cpus().length));
 
-type Row = [split: string, smarts: string, reactants: string[], agents: string[], product: string, changes: BondChange[], source: string];
+type Row = [split: string, smarts: string, reactants: string[], agents: string[], product: string, changes: BondChange[], id: string, source?: string];
 
 const rdkit = (await (initRDKitModule as unknown as () => Promise<MainModule>)()) as MainModule;
 const started = Date.now();
@@ -55,6 +58,59 @@ if (!records.length) throw new Error('Keine Vorlagen gefunden – zuerst scripts
 log(`${records.length} geprüfte Reaktionen eingelesen`);
 
 // ---------------------------------------------------------------------
+// 1b. Quellen: Dubletten entfernen, Trainings- und Testdaten trennen
+// ---------------------------------------------------------------------
+
+const sourceOf = (record: Row) => record[7] ?? 'uspto-mit';
+const PATENTS = new Set(['uspto-mit', 'uspto-full', 'uspto-stereo']);
+const PRIORITY = ['uspto-mit', 'enzymemap', 'uspto-full', 'uspto-stereo', 'ecreact-brenda', 'ecreact-rhea', 'ecreact-pathbank', 'ecreact-metanetx', 'hte-suzuki', 'hte-buchwald'];
+const priority = (source: string) => (PRIORITY.indexOf(source) + PRIORITY.length + 1) % (PRIORITY.length + 1);
+records.sort((a, b) => priority(sourceOf(a)) - priority(sourceOf(b)) || (a[0] === 'train' ? 0 : 1) - (b[0] === 'train' ? 0 : 1));
+
+/** Einfacher, stabiler Hash (FNV-1a) für die Aufteilung */
+function hash(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) / 0xffffffff;
+}
+
+const reactionKey = (record: Row) => `${[...record[2]].sort().join('.')}>>${record[4]}`;
+const seenKeys = new Map<string, string>();
+const sourceStats: Record<string, { extracted: number; unique: number; duplicateOf: Record<string, number>; train: number; valid: number; test: number }> = {};
+const unique: Row[] = [];
+for (const record of records) {
+  const source = sourceOf(record);
+  const stat = (sourceStats[source] ??= { extracted: 0, unique: 0, duplicateOf: {}, train: 0, valid: 0, test: 0 });
+  stat.extracted++;
+  const key = reactionKey(record);
+  const first = seenKeys.get(key);
+  if (first) {
+    stat.duplicateOf[first] = (stat.duplicateOf[first] ?? 0) + 1;
+    continue;
+  }
+  seenKeys.set(key, source);
+  stat.unique++;
+  if (source !== 'uspto-mit') {
+    // Patente: 1 % Validierung, 1 % Test; kleinere Quellen: 5 % und 10 %
+    const x = hash(key);
+    const [valid, test] = PATENTS.has(source) ? [0.01, 0.01] : [0.05, 0.1];
+    record[0] = x < test ? 'test' : x < test + valid ? 'valid' : 'train';
+  }
+  stat[record[0] as 'train' | 'valid' | 'test']++;
+  unique.push(record);
+}
+records.length = 0;
+records.push(...unique);
+seenKeys.clear();
+log(`${records.length} verschiedene Reaktionen nach Dublettenprüfung`);
+for (const [source, stat] of Object.entries(sourceStats)) {
+  log(`  ${source}: ${stat.extracted} geprüft, ${stat.unique} neu (Training ${stat.train}, Validierung ${stat.valid}, Test ${stat.test})`);
+}
+
+// ---------------------------------------------------------------------
 // 2. Vorlagen auswählen
 // ---------------------------------------------------------------------
 
@@ -69,12 +125,14 @@ for (const threshold of [3, 5, 10, 25, 50, 100]) {
 
 // Gesperrte Produkte (Sprengstoffe, Kampfstoffe …) filtert die App bei jeder
 // Vorhersage; hier werden nur die Beispielreaktionen geprüft (siehe unten).
+const smallSource = new Set<string>();
+for (const record of records) if (record[0] === 'train' && !PATENTS.has(sourceOf(record))) smallSource.add(record[1]);
 const templates = [...trainCounts.entries()]
-  .filter(([, count]) => count >= MIN_COUNT)
+  .filter(([smarts, count]) => count >= MIN_COUNT || (count >= MIN_COUNT_SMALL && smallSource.has(smarts)))
   .sort((a, b) => b[1] - a[1])
   .map(([smarts]) => smarts);
 const templateIndex = new Map(templates.map((smarts, index) => [smarts, index]));
-log(`${templates.length} Vorlagen ausgewählt (≥ ${MIN_COUNT} Fundstellen)`);
+log(`${templates.length} Vorlagen ausgewählt (≥ ${MIN_COUNT} Fundstellen, aus kleinen Quellen ≥ ${MIN_COUNT_SMALL})`);
 
 // ---------------------------------------------------------------------
 // 3. Hilfsstoffe einordnen
@@ -285,6 +343,7 @@ function evaluate(list: Sample[], net: Network, limit = 5000): { top1: number; t
 
 const netView = (): Network => ({ inputs: I, hidden: H, templates: T, categories: C, ...weights });
 
+const curve: Array<{ epoch: number; loss: number; trainTop1: number; validTop1: number; validTop5: number; seconds: number }> = [];
 for (let epoch = 1; epoch <= EPOCHS; epoch++) {
   // Mischen
   for (let i = order.length - 1; i > 0; i--) {
@@ -334,6 +393,7 @@ for (let epoch = 1; epoch <= EPOCHS; epoch++) {
     }
   }
   const valid = evaluate(samples.valid, netView(), 3000);
+  curve.push({ epoch, loss: loss / order.length, trainTop1: correct / order.length, validTop1: valid.top1, validTop5: valid.top5, seconds: Math.round((Date.now() - started) / 1000) });
   log(
     `Epoche ${epoch}: Verlust ${(loss / order.length).toFixed(3)}, Trainingstreffer ${((correct / order.length) * 100).toFixed(1)} %,`,
     `Validierung top-1 ${(valid.top1 * 100).toFixed(1)} %, top-5 ${(valid.top5 * 100).toFixed(1)} %, top-10 ${(valid.top10 * 100).toFixed(1)} %`,
@@ -351,46 +411,30 @@ const encoded = encodeNetwork(netView());
 mkdirSync(OUT, { recursive: true });
 writeFileSync(resolve(OUT, 'netz.bin.gz'), gzipSync(encoded, { level: 9 }));
 const net = decodeNetwork(encoded);
-const templateTest = evaluate(samples.test, net, samples.test.length);
-log(`Test (Vorlage): top-1 ${(templateTest.top1 * 100).toFixed(1)} %, top-5 ${(templateTest.top5 * 100).toFixed(1)} %, top-10 ${(templateTest.top10 * 100).toFixed(1)} %`);
+const templateTest = evaluate(samples.test.filter((sample) => sourceOf(sample.record) === 'uspto-mit'), net, samples.test.length);
+log(`Test USPTO-MIT (Vorlage): top-1 ${(templateTest.top1 * 100).toFixed(1)} %, top-5 ${(templateTest.top5 * 100).toFixed(1)} %, top-10 ${(templateTest.top10 * 100).toFixed(1)} %`);
 
-// Produktvorhersage: Vorlagen der Reihe nach anwenden, Produkte nach Wahrscheinlichkeit ordnen
-const PRODUCT_SAMPLE = 3000;
-let productTop1 = 0;
-let productTop3 = 0;
-let productTop5 = 0;
-let catalystHits = 0;
-let catalystCases = 0;
-const testSubset = samples.test.slice(0, PRODUCT_SAMPLE);
-for (const sample of testSubset) {
-  const out = forward(net, sample.bits);
-  const ranked = [...out.templates.keys()].sort((a, b) => out.templates[b] - out.templates[a]).slice(0, 30);
-  const scores = new Map<string, number>();
-  for (const t of ranked) {
-    const arity = templates[t].split('>>')[0].split('.').length;
-    if (arity !== sample.record[2].length) continue;
-    const sets = runReaction(rdkit, templates[t], sample.record[2], 20);
-    for (const set of sets) {
-      const product = set.map((smiles) => structureKey(rdkit, smiles)).sort((a, b) => (b?.length ?? 0) - (a?.length ?? 0))[0];
-      if (product) scores.set(product, (scores.get(product) ?? 0) + out.templates[t]);
-    }
-  }
-  const products = [...scores.entries()].sort((a, b) => b[1] - a[1]).map(([product]) => product);
-  const rank = products.indexOf(sample.record[4]);
-  if (rank === 0) productTop1++;
-  if (rank >= 0 && rank < 3) productTop3++;
-  if (rank >= 0 && rank < 5) productTop5++;
-  // Katalysator: stimmt die wahrscheinlichste Katalysator-Kategorie?
-  const catalystIds = categories
-    .map((id, c) => ({ id, c, role: AGENT_CATEGORIES[c].role }))
-    .filter((entry) => entry.role === 'Katalysator');
-  const truth = catalystIds.filter(({ c }) => (sample.mask >>> c) & 1);
-  if (truth.length) {
-    catalystCases++;
-    const best = catalystIds.sort((a, b) => out.categories[b.c] - out.categories[a.c])[0];
-    if (truth.some((entry) => entry.c === best.c)) catalystHits++;
-  }
+// Produktvorhersage und Katalysator je Quelle, auf zurückgehaltenen Reaktionen
+const PER_SOURCE = Number(process.env.KI_TEST_JE_QUELLE ?? 2000);
+const categoryIdsOf = (mask: number) => categories.filter((_, c) => (mask >>> c) & 1);
+const testCases: TestCase[] = [];
+const bySource = new Map<string, TestCase[]>();
+for (const sample of samples.test) {
+  const source = sourceOf(sample.record);
+  const list = bySource.get(source) ?? [];
+  if (list.length >= PER_SOURCE) continue;
+  const entry: TestCase = { source, reactants: sample.record[2], product: sample.record[4], categories: categoryIdsOf(sample.mask), bits: sample.bits, template: sample.record[1] };
+  list.push(entry);
+  bySource.set(source, list);
+  testCases.push(entry);
 }
+const model = { net, templates, categories };
+const perSource: Record<string, Metrics> = {};
+for (const [source, cases] of bySource) {
+  perSource[source] = evaluateCases(rdkit, model, cases);
+  log(`Test ${source}: ${formatMetrics(perSource[source])}`);
+}
+const mit = perSource['uspto-mit'];
 const metrics = {
   trainingReactions: samples.train.length,
   templates: T,
@@ -398,14 +442,54 @@ const metrics = {
   templateTop1: templateTest.top1,
   templateTop5: templateTest.top5,
   templateTop10: templateTest.top10,
-  productSample: testSubset.length,
-  productTop1: productTop1 / testSubset.length,
-  productTop3: productTop3 / testSubset.length,
-  productTop5: productTop5 / testSubset.length,
-  catalystCases,
-  catalystTop1: catalystCases ? catalystHits / catalystCases : 0,
+  productSample: mit?.cases ?? 0,
+  productTop1: mit?.productTop1 ?? 0,
+  productTop3: mit?.productTop3 ?? 0,
+  productTop5: mit?.productTop5 ?? 0,
+  catalystCases: mit?.catalystCases ?? 0,
+  catalystTop1: mit?.catalystTop1 ?? 0,
 };
 log('Testergebnis:', metrics);
+
+// Testfälle und Bericht für den Vergleich mit anderen Modellen (scripts/ki/evaluate.ts)
+writeFileSync(
+  resolve(CACHE, 'testfaelle.jsonl'),
+  testCases.map((entry) => JSON.stringify({ source: entry.source, reactants: entry.reactants, product: entry.product, categories: entry.categories, template: entry.template })).join('\n'),
+);
+const extraction = readdirSync(CACHE)
+  .filter((name) => /^extraktion-\d+\.json$/.test(name))
+  .map((name) => JSON.parse(readFileSync(resolve(CACHE, name), 'utf8')) as { total: number; kept: number; reasons: Record<string, number>; perSource: Record<string, { read: number; kept: number }> });
+const extractionSummary = { total: 0, kept: 0, reasons: {} as Record<string, number>, perSource: {} as Record<string, { read: number; kept: number }> };
+for (const entry of extraction) {
+  extractionSummary.total += entry.total;
+  extractionSummary.kept += entry.kept;
+  for (const [reason, count] of Object.entries(entry.reasons)) extractionSummary.reasons[reason] = (extractionSummary.reasons[reason] ?? 0) + count;
+  for (const [source, stat] of Object.entries(entry.perSource ?? {})) {
+    const target = (extractionSummary.perSource[source] ??= { read: 0, kept: 0 });
+    target.read += stat.read;
+    target.kept += stat.kept;
+  }
+}
+writeFileSync(
+  resolve(CACHE, 'bericht.json'),
+  JSON.stringify(
+    {
+      created: new Date().toISOString(),
+      settings: { minCount: MIN_COUNT, minCountSmall: MIN_COUNT_SMALL, hidden: H, epochs: EPOCHS, batch: BATCH },
+      extraction: extractionSummary,
+      sources: sourceStats,
+      samples: { train: samples.train.length, valid: samples.valid.length, test: samples.test.length },
+      templates: T,
+      trainedTemplateCoverage: samples.train.length / Math.max(1, records.filter((record) => record[0] === 'train').length),
+      curve,
+      test: perSource,
+      metrics,
+      seconds: Math.round((Date.now() - started) / 1000),
+    },
+    null,
+    1,
+  ),
+);
 
 // ---------------------------------------------------------------------
 // 8. Schreiben
@@ -445,7 +529,10 @@ writeFileSync(
   gzipSync(
     JSON.stringify({
       version: 1,
-      source: 'USPTO-MIT (Lowe 2012; Jin et al. 2017), Reaktionen aus US-Patenten 1976–2016',
+      source: Object.keys(sourceStats).length > 1
+        ? `${Object.keys(sourceStats).length} Quellen: US-Patente 1976–2016 (Lowe 2017; USPTO-MIT, Jin et al. 2017; USPTO-STEREO, Schwaller et al. 2019), Enzymreaktionen (EnzymeMap/BRENDA; ECREACT: BRENDA, Rhea, PathBank, MetaNetX), Hochdurchsatz-Experimente (Perera et al. 2018; Ahneman et al. 2018)`
+        : 'USPTO-MIT (Lowe 2012; Jin et al. 2017), Reaktionen aus US-Patenten 1976–2016',
+      sources: Object.fromEntries(Object.entries(sourceStats).map(([source, stat]) => [source, stat.unique])),
       created: new Date().toISOString().slice(0, 10),
       categories,
       metrics,

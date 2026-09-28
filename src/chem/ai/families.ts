@@ -185,6 +185,11 @@ export const FAMILIES: ReactionFamily[] = [
     bimolecular: true,
   },
   {
+    id: 'biokatalyse', name: 'Enzymatische Umsetzung', description: 'Ein Enzym setzt den Stoff in Wasser bei milden Bedingungen um – so wie im Stoffwechsel.',
+    eaUncatalyzed: 125, eaCatalyzed: 55, requiresCatalyst: false, catalysts: ['enzym'],
+    effect: 'Das Enzym bindet das Substrat in seiner aktiven Tasche, richtet es passend aus und stabilisiert den Übergangszustand – die Barriere sinkt um 50 bis 80 kJ/mol.', bimolecular: true,
+  },
+  {
     id: 'sonstige', name: 'Sonstige Umsetzung', description: 'Eine seltenere Reaktionsart ohne eigene Familie.',
     eaUncatalyzed: 110, eaCatalyzed: 90, requiresCatalyst: false, catalysts: [],
     effect: 'Welche Hilfsstoffe die Barriere senken, zeigen die Patentdaten dieser Vorlage.', bimolecular: true,
@@ -212,6 +217,9 @@ export function classifyFamily(changes: BondChange[], agentShare: Record<string,
   const any = (list: BondChange[], x: (label: string) => boolean, y: (label: string) => boolean) => list.some((change) => pair(change, x, y));
 
   const leavingHalogenOrSulfonate = (x: (label: string) => boolean) => any(broken, x, (label) => HALOGEN.has(label) || label === 'OS');
+
+  // Reaktionen aus Enzymdatenbanken: Katalysator ist das Enzym
+  if ((agentShare.enzym ?? 0) >= 0.5) return 'biokatalyse';
 
   // Nitrogruppe als Abgangsgruppe am Aromaten (SNAr)
   if (any(formed, is('c'), is('N', 'n', 'O', 'S')) && any(broken, is('c'), is('N+O'))) return 'snar';

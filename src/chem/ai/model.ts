@@ -46,8 +46,24 @@ export interface ReactionModel {
   categories: string[];
   metrics: ModelMetrics;
   source: string;
+  /** verschiedene Reaktionen je Quelle (ab dem Training mit mehreren Quellen) */
+  sources?: Record<string, number>;
   created: string;
 }
+
+/** Lesbare Namen der Trainingsquellen */
+export const SOURCE_LABELS: Record<string, string> = {
+  'uspto-mit': 'US-Patente (USPTO-MIT)',
+  'uspto-full': 'US-Patente 1976–2016 (Lowe)',
+  'uspto-stereo': 'US-Patente (USPTO-STEREO)',
+  enzymemap: 'Enzymreaktionen aus BRENDA (EnzymeMap)',
+  'ecreact-brenda': 'Enzymreaktionen aus BRENDA (ECREACT)',
+  'ecreact-rhea': 'Biochemische Reaktionen aus Rhea',
+  'ecreact-pathbank': 'Stoffwechselwege aus PathBank',
+  'ecreact-metanetx': 'Stoffwechselnetze aus MetaNetX',
+  'hte-suzuki': 'Suzuki-Hochdurchsatzversuche (Pfizer)',
+  'hte-buchwald': 'Buchwald-Hartwig-Hochdurchsatzversuche (Merck)',
+};
 
 export type ModelFileLoader = (file: string) => Promise<Uint8Array | null>;
 
@@ -90,6 +106,7 @@ export function loadReactionModel(): Promise<ReactionModel | null> {
           categories: string[];
           metrics: ModelMetrics;
           source: string;
+          sources?: Record<string, number>;
           created: string;
         };
         if (data.templates.length !== network.templates) throw new Error('Netz und Vorlagen passen nicht zusammen');

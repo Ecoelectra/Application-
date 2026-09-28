@@ -57,7 +57,25 @@ export const AGENT_CATEGORIES: AgentCategory[] = [
   { id: 'ligand', label: 'Phosphanligand', role: 'Ligand', purpose: 'Stabilisiert das Metall und steuert seine Reaktivität.', substanceIds: ['triphenylphosphin'] },
   { id: 'phasentransfer', label: 'Phasentransferkatalysator', role: 'Katalysator', purpose: 'Schleust Anionen aus der Wasser- in die organische Phase.', substanceIds: [] },
   { id: 'loesungsmittel', label: 'Lösungsmittel', role: 'Lösungsmittel', purpose: 'Löst die Edukte und bestimmt Polarität und Temperatur.', substanceIds: [] },
+  { id: 'enzym', label: 'Enzym (Biokatalysator)', role: 'Katalysator', purpose: 'Ein Enzym bindet die Edukte in seiner Tasche und senkt die Aktivierungsenergie so weit, dass die Reaktion bei Raum- oder Körpertemperatur in Wasser abläuft – oft nur für ein Enantiomer.', substanceIds: [] },
 ];
+
+/** Hauptklassen der Enzyme nach EC-Nummer */
+const ENZYME_CLASSES: Record<string, string> = {
+  '1': 'Oxidoreduktase',
+  '2': 'Transferase',
+  '3': 'Hydrolase',
+  '4': 'Lyase',
+  '5': 'Isomerase',
+  '6': 'Ligase',
+  '7': 'Translokase',
+};
+
+/** «EC:3.1.1.3» → «Hydrolase (EC 3.1.1.3)» */
+export function enzymeName(token: string): string {
+  const ec = token.replace(/^EC:/, '');
+  return `${ENZYME_CLASSES[ec.split('.')[0]] ?? 'Enzym'} (EC ${ec})`;
+}
 
 export const AGENT_CATEGORY_BY_ID: ReadonlyMap<string, AgentCategory> = new Map(AGENT_CATEGORIES.map((entry) => [entry.id, entry]));
 
@@ -176,6 +194,8 @@ function known(rdkit: MainModule): Map<string, AgentInfo> {
  * Gegenion. Salze aus mehreren Ionen werden Ion für Ion eingeordnet.
  */
 export function classifyAgent(rdkit: MainModule, smiles: string): AgentInfo | null {
+  // Enzyme stehen in den Trainingsdaten als EC-Nummer, nicht als Struktur
+  if (smiles.startsWith('EC:')) return { category: 'enzym', name: enzymeName(smiles) };
   const canonical = canonicalSmiles(rdkit, smiles) ?? smiles;
   const entry = known(rdkit).get(canonical);
   if (entry) return entry;

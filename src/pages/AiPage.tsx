@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { maximumBarrier } from '../chem/ai/activation';
+import { SOURCE_LABELS } from '../chem/ai/model';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
 import { AiProposalCard } from '../components/AiProposalCard';
 import { Callout } from '../components/Callout';
@@ -62,8 +63,8 @@ export function AiPage() {
         <h1>Reaktions-KI</h1>
         <p>
           Ein neuronales Netz sagt vorher, was aus zwei Stoffen entsteht und welcher Katalysator dafür nötig ist. Es hat an
-          {model ? ` ${model.metrics.trainingReactions.toLocaleString('de-DE')} ` : ' fast 400 000 '}
-          Reaktionen aus US-Patenten gelernt. Dazu kommt eine Abschätzung der Aktivierungsenergie: Läuft die Reaktion bei der
+          {model ? ` ${model.metrics.trainingReactions.toLocaleString('de-DE')} ` : ' rund einer Million '}
+          Reaktionen gelernt{model?.sources && Object.keys(model.sources).length > 1 ? ` aus ${Object.keys(model.sources).length} Quellen – US-Patente, Enzymdatenbanken und Hochdurchsatzversuche` : ' aus US-Patenten'}. Dazu kommt eine Abschätzung der Aktivierungsenergie: Läuft die Reaktion bei der
           eingestellten Temperatur, oder braucht es einen Katalysator?
         </p>
       </header>
@@ -161,9 +162,9 @@ export function AiPage() {
         <h2>So arbeitet die KI</h2>
         <ol>
           <li>
-            <strong>Reaktionsvorlagen lernen.</strong> Aus {model ? model.metrics.trainingReactions.toLocaleString('de-DE') : 'rund 400 000'} Patentreaktionen
+            <strong>Reaktionsvorlagen lernen.</strong> Aus {model ? model.metrics.trainingReactions.toLocaleString('de-DE') : 'rund einer Million'} Reaktionen
             wurde jeweils das Reaktionszentrum herausgeschnitten – die Atome, deren Bindungen sich ändern, mit ihren Nachbarn.
-            {model ? ` ${model.templates.length.toLocaleString('de-DE')} Vorlagen` : ' Die Vorlagen'}, die mindestens 25-mal vorkommen, kennt das Netz.
+            {model ? ` ${model.templates.length.toLocaleString('de-DE')} Vorlagen` : ' Die Vorlagen'}, die mindestens 25-mal vorkommen (aus den kleineren Quellen 8-mal), kennt das Netz.
           </li>
           <li>
             <strong>Neuronales Netz.</strong> Es liest den molekularen Fingerabdruck der Edukte (2048 Bit, Morgan-Radius 2) und
@@ -181,11 +182,37 @@ export function AiPage() {
             gibt es eine eigene Wissensbasis mit Lehrbuchwerten.
           </li>
         </ol>
+        {model?.sources && Object.keys(model.sources).length > 1 && (
+          <>
+            <h3>Woher die Reaktionen stammen</h3>
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>Quelle</th>
+                    <th className="num">verschiedene Reaktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(model.sources)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([id, count]) => (
+                      <tr key={id}>
+                        <td>{SOURCE_LABELS[id] ?? id}</td>
+                        <td className="num">{count.toLocaleString('de-DE')}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
         {model && (
           <>
             <h3>Wie gut ist sie?</h3>
             <p className="small">
-              Geprüft an {model.metrics.testReactions.toLocaleString('de-DE')} Patentreaktionen, die das Netz beim Lernen nicht gesehen hat:
+              Geprüft an Patentreaktionen des USPTO-MIT-Testsatzes, die das Netz beim Lernen nicht gesehen hat
+              ({model.metrics.productSample.toLocaleString('de-DE')} Stichproben):
             </p>
             <div className="grid grid-3">
               <div className="stat">
@@ -205,7 +232,8 @@ export function AiPage() {
         )}
         <Callout variant="warning" title="Grenzen">
           <p style={{ margin: 0 }}>
-            Die KI kennt nur, was in Patenten der organischen Synthese häufig vorkommt. Sie sagt, was chemisch naheliegt – nicht,
+            Die KI kennt vor allem, was in Patenten der organischen Synthese häufig vorkommt; Enzym- und Stoffwechselreaktionen
+            machen nur einen kleinen Teil der Trainingsdaten aus. Sie sagt, was chemisch naheliegt – nicht,
             ob es im Einzelfall klappt, wie hoch die Ausbeute ist oder welche Nebenprodukte entstehen. Die Aktivierungsenergien sind
             Richtwerte der Reaktionsfamilie (± 10–20 kJ/mol). Jedes Ergebnis ist deshalb als Vorhersage gekennzeichnet.
           </p>
