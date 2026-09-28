@@ -206,6 +206,7 @@ Aminosäure wie Glycin …).
 | `complexes.test.ts` | Komplexe: Namen, Geometrie, Spin, Isomere, Stabilität |
 | `complexFormation.test.ts` | Komplexbildung in der Werkbank: Nachweiskomplexe, Löslichkeit, Hydroxidfällung, Redox-Ausschlüsse |
 | `documentedReactions.test.ts` | Datenbank belegter Reaktionen, Plausibilitätsfilter, Kennzeichnung in der Werkbank |
+| `reactionAI.test.ts` | Reaktions-KI: Vorlagen herausschneiden und anwenden, Hilfsstoffe, Netz speichern und laden, Arrhenius, Katalyse-Wissensbasis |
 | `conditions.test.ts` | Aggregatzustände, Siedepunkt und Druck, Temperatur- und Druckbedingungen, Vorhersagen für Stoffpaare |
 | `externalSubstances.test.ts` | Stoffe aus PubChem und SMILES: Abgleich mit der Datenbank, Formeln, Sperren |
 
@@ -228,6 +229,7 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 | `komplexbildung.test.ts` | 105 240 | jede Metallquelle der Stoffdatenbank mit jeder Ligandenquelle: gültige Komplexe, ausgeglichene Gleichungen, keine Komplexe bei Redox- und Fällungspaaren, Herkunftsangabe |
 | `komplexe.test.ts` | 5505 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
+| `ki.test.ts` | 1005 | 1000 zufällige Stoffpaare durch die Reaktions-KI: gültige und zulässige Produkte, stimmige Energieangaben, Reihenfolge egal; dazu Amidkupplung, Suzuki-Kupplung, Nitroreduktion und Katalysator im Gefäß |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
 
 `npm run test:massen` führt nur diese Tests aus.
@@ -296,6 +298,59 @@ npm run catalog    # neu berechnen, rund 13 s
 Der Katalog ist eingecheckt, damit die App auch ohne diesen Schritt läuft. Nach
 Änderungen an Reaktionsvorlagen oder Stoffdaten muss er neu erzeugt werden – der
 Build tut das automatisch.
+
+## Reaktions-KI
+
+Die KI sagt vorher, welches Produkt aus zwei Stoffen entsteht und welcher
+Katalysator dafür nötig ist. Sie besteht aus drei Teilen:
+
+1. **Reaktionsvorlagen** (`src/chem/ai/templates.ts`). Der USPTO-MIT-Datensatz
+   liefert zu jeder Reaktion die Atomzuordnung und die geänderten Bindungen.
+   Daraus wird wie bei rdchiral (Coley et al.) das Reaktionszentrum mit seinen
+   direkten Nachbarn als Reaktions-SMARTS herausgeschnitten und kanonisch
+   geschrieben. Jede Vorlage wird sofort geprüft: Angewendet auf die Edukte
+   muss sie genau das Patentprodukt liefern. `src/chem/ai/mappedSmiles.ts`
+   liest die SMILES mit Zuordnungsnummern, weil RDKit sie im Browser nicht
+   herausgibt.
+2. **Neuronales Netz** (`src/chem/ai/network.ts`). Eingabe ist der
+   Morgan-Fingerabdruck der Edukte (Radius 2, 2048 Bit, `features.ts`), dann
+   eine verdeckte Schicht mit 256 ReLU-Neuronen und zwei Ausgänge: Softmax über
+   alle Vorlagen und Sigmoid je Hilfsstoff-Kategorie (`agents.ts`: Palladium,
+   Säure, Kupplungsreagenz, Hydrid …). Gespeichert wird mit 8-Bit-Gewichten.
+3. **Aktivierungsenergie** (`families.ts`, `activation.ts`). Jede Vorlage wird
+   anhand ihrer Bindungsänderungen einer Reaktionsfamilie zugeordnet, die
+   Richtwerte für die Barriere mit und ohne Katalysator trägt. Die Werte sind
+   so abgeglichen, dass die Abschätzung die üblichen Laborbedingungen trifft
+   (Suzuki-Kupplung einige Stunden bei 80 °C, Boc-Abspaltung mit TFA bei
+   Raumtemperatur); stark aktivierte Aromaten bekommen eine niedrigere
+   Barriere. Nach Änderungen an Familien oder Hilfsstoffnamen genügt
+   `vite-node scripts/ki/families.ts` – ohne neues Training. Über Arrhenius
+   (Stoßfaktor 10¹¹ L/(mol·s) bimolekular, 10¹³ s⁻¹ monomolekular) folgt die
+   Halbwertszeit bei der eingestellten Temperatur. Als «machbar» gilt eine
+   Halbwertszeit bis eine Stunde.
+
+`src/chem/ai/reactionAI.ts` verbindet alles: Für ein Stoffpaar werden drei
+Annahmen geprüft (beide Stoffe sind Edukte; Stoff A ist Edukt und B Reagenz;
+umgekehrt). Die 50 wahrscheinlichsten passenden Vorlagen je Annahme werden mit
+RDKit angewendet, gleiche Produkte zusammengezählt, gesperrte Produkte
+verworfen. Ist der zweite Stoff ein Reagenz, zählt, wie gut seine Kategorie zu
+den Hilfsstoffen der Vorlage passt.
+
+Anorganische und technische Katalyse (Haber-Bosch, Kontaktverfahren,
+H2O2-Zerfall, Abgaskatalysator …) kommt in den Patenten der organischen
+Synthese nicht vor. Dafür gibt es `src/data/catalysis.ts` mit Lehrbuchwerten
+(Tabellenwert oder Größenordnung; wo kein Einzelwert sinnvoll ist, die
+Starttemperatur).
+
+**Neu trainieren:** `npm run ki` (setzt die USPTO-Daten aus `npm run reaktionen`
+voraus). `scripts/ki/extract.ts` schneidet die Vorlagen in vier Prozessen
+heraus (etwa 7 Minuten), `scripts/ki/train.ts` wählt die Vorlagen mit
+mindestens 25 Fundstellen, ordnet die Hilfsstoffe ein, trainiert sechs Epochen
+mit Adam in vier Threads (`train-worker.mjs`, etwa 20 Minuten) und bewertet auf
+dem Testteil des Datensatzes. Ergebnis: `public/ki/netz.bin.gz` und
+`public/ki/vorlagen.json.gz` (Vorlagen mit Familie, Hilfsstoff-Anteilen,
+häufigsten Hilfsstoffen und einer Beispielreaktion). Stellschrauben über
+Umgebungsvariablen: `KI_MIN`, `KI_HIDDEN`, `KI_EPOCHS`.
 
 ## Die Werkbank
 

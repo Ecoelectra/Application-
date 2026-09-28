@@ -108,6 +108,17 @@ export function HomePage() {
         </div>
 
         <div className="card">
+          <h3>Reaktions-KI</h3>
+          <p className="muted small">
+            Ein neuronales Netz, trainiert auf Reaktionen aus US-Patenten, sagt vorher, was aus zwei Stoffen entsteht,
+            welcher Katalysator nötig ist und ob die Aktivierungsenergie bei deiner Temperatur überwunden wird.
+          </p>
+          <a className="button button-secondary button-small" href="#/ki">
+            KI fragen
+          </a>
+        </div>
+
+        <div className="card">
           <h3>Über 7000 berechnete Synthesen</h3>
           <p className="muted small">
             Für jeden Stoff nachschlagen, wie er hergestellt wird. Alle Wege sind aus den

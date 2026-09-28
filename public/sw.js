@@ -4,7 +4,8 @@
  * Strategie:
  *  - Navigationsanfragen: zuerst das Netz, bei Fehlschlag die zwischengespeicherte Startseite.
  *  - Eigene Dateien (JS, CSS, Icons): zuerst der Cache, im Hintergrund wird aktualisiert.
- *  - RDKit-WebAssembly: dauerhaft im Cache, damit Strukturformeln offline funktionieren.
+ *  - RDKit-WebAssembly und das Modell der Reaktions-KI: dauerhaft im Cache, damit
+ *    Strukturformeln und KI-Vorhersagen offline funktionieren.
  *  - PubChem: niemals über den Service Worker cachen (die App hat dafür einen eigenen Speicher).
  */
 const VERSION = 'v1';
@@ -20,8 +21,8 @@ const SHELL_FILES = [
   './icons/icon-512.png',
 ];
 
-// Die großen RDKit-Dateien werden nachgeladen, ohne die Installation aufzuhalten.
-const HEAVY_FILES = ['./rdkit/RDKit_minimal.js', './rdkit/RDKit_minimal.wasm'];
+// Die großen Dateien (RDKit, Modell der Reaktions-KI) werden nachgeladen, ohne die Installation aufzuhalten.
+const HEAVY_FILES = ['./rdkit/RDKit_minimal.js', './rdkit/RDKit_minimal.wasm', './ki/netz.bin.gz', './ki/vorlagen.json.gz'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

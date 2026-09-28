@@ -25,6 +25,9 @@ import { physicalProperties, stateAt } from '../chem/phase';
 import { substanceFromCompound, substanceFromSmiles } from '../chem/externalSubstances';
 import { compoundByCid } from '../services/pubchem';
 import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
+import { AiProposalCard } from '../components/AiProposalCard';
+import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
+import { useReactionModel } from '../hooks/useReactionModel';
 import type { MainModule } from '@rdkit/rdkit';
 import { Callout } from '../components/Callout';
 import { SUBSTANCES, searchSubstances, substanceById } from '../data/substances';
@@ -249,6 +252,35 @@ export function WorkbenchPage() {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rdkit, selected, conditions, documentedReady, documented]);
+
+  // Reaktions-KI: für jedes Stoffpaar einen Vorschlag mit Katalysator
+  const { model: aiModel, status: aiStatus } = useReactionModel();
+  const [aiResults, setAiResults] = useState<Array<{ key: string; substances: Substance[]; proposals: AiProposal[] }> | null>(null);
+  const [aiRunning, setAiRunning] = useState(false);
+  useEffect(() => {
+    const partners = selected.filter((substance) => substance.category !== 'Nachweisreagenz');
+    if (!rdkit || !partners.length) {
+      setAiResults(null);
+      return;
+    }
+    setAiRunning(true);
+    const timer = window.setTimeout(() => {
+      const groups: Substance[][] = [];
+      if (partners.length === 1) groups.push(partners);
+      for (let i = 0; i < partners.length; i++) for (let j = i + 1; j < partners.length; j++) groups.push([partners[i], partners[j]]);
+      const options = { temperatureC, catalysis: conditions.catalysis };
+      setAiResults(
+        groups.map((group) => {
+          const others = selected.filter((substance) => !group.includes(substance));
+          const knowledge = predictFromKnowledge(group, { ...options, others });
+          const learned = aiModel ? predictWithModel(rdkit, aiModel, group, { ...options, others, limit: 3 }) : [];
+          return { key: group.map((entry) => entry.id).join('+'), substances: group, proposals: [...knowledge, ...learned] };
+        }),
+      );
+      setAiRunning(false);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [rdkit, aiModel, selected, temperatureC, conditions.catalysis]);
 
   const addSubstance = (substance: Substance): void => {
     setSelected((current) => {
@@ -670,6 +702,20 @@ export function WorkbenchPage() {
               />
             ))}
 
+          {!running && result?.outcome !== 'gesperrt' && selected.length > 0 && (
+            <AiSection
+              ruleReactions={result?.outcome === 'reaktion' ? result.reactions.filter((reaction) => !reaction.missing.length) : []}
+              results={aiResults}
+              running={aiRunning}
+              modelStatus={aiStatus}
+              rdkit={rdkit}
+              temperatureC={temperatureC}
+              onAddSubstance={addSubstance}
+              onSetCatalysis={(catalysis) => setConditions((c) => ({ ...c, catalysis }))}
+              onSetTemperature={setTemperature}
+            />
+          )}
+
           {!running && suggestions.length > 0 && (
             <DocumentedPanel
               suggestions={suggestions}
@@ -698,6 +744,112 @@ export function WorkbenchPage() {
       )}
     </main>
   );
+}
+
+/** KI-Vorschläge je Stoffpaar: immer eine Aussage, mit Katalysator, falls die Barriere zu hoch ist. */
+function AiSection({
+  ruleReactions,
+  results,
+  running,
+  modelStatus,
+  rdkit,
+  temperatureC,
+  onAddSubstance,
+  onSetCatalysis,
+  onSetTemperature,
+}: {
+  ruleReactions: WorkbenchReaction[];
+  results: Array<{ key: string; substances: Substance[]; proposals: AiProposal[] }> | null;
+  running: boolean;
+  modelStatus: 'laden' | 'bereit' | 'fehlt';
+  rdkit: MainModule | null;
+  temperatureC: number;
+  onAddSubstance: (substance: Substance) => void;
+  onSetCatalysis: (catalysis: WorkbenchConditions['catalysis']) => void;
+  onSetTemperature: (value: number) => void;
+}) {
+  return (
+    <section className="stack">
+      <div className="row-between">
+        <h2 style={{ margin: 0 }}>🤖 Vorschlag der Reaktions-KI</h2>
+        <Link className="small" to={`/ki?${new URLSearchParams({ stoffe: (results?.[0]?.substances ?? []).map((entry) => entry.id).join(',') }).toString()}`}>
+          Im KI-Werkzeug öffnen
+        </Link>
+      </div>
+      <p className="small subtle" style={{ margin: 0 }}>
+        Ein neuronales Netz, trainiert auf Reaktionen aus US-Patenten, schlägt für jedes Stoffpaar die wahrscheinlichste Reaktion
+        vor – mit dem nötigen Katalysator, falls die Aktivierungsenergie bei {Math.round(temperatureC)} °C zu hoch ist.
+        Alles hier ist Vorhersage.
+      </p>
+      {(running || modelStatus === 'laden') && (
+        <div className="row">
+          <span className="spinner" /> <span className="muted">{modelStatus === 'laden' ? 'KI-Modell wird geladen …' : 'Die KI rechnet …'}</span>
+        </div>
+      )}
+      {!running &&
+        results?.map(({ key, substances, proposals }) => {
+          const [best, ...rest] = proposals;
+          const label = substances.map((entry) => entry.name).join(' + ');
+          return (
+            <div key={key} className="ai-pair">
+              {results.length > 1 && <h3 style={{ margin: '4px 0 8px' }}>{label}</h3>}
+              {!best && ruleMatch(ruleReactions, substances) ? (
+                <Callout variant="success" title={`${label}: ${ruleMatch(ruleReactions, substances)?.reactionType ?? 'Reaktion bekannt'}`}>
+                  <p style={{ margin: 0 }}>
+                    Diese Reaktion kennen schon die Regeln der Werkbank (oben).{' '}
+                    {ruleMatch(ruleReactions, substances)?.kind === 'anorganisch'
+                      ? 'Reaktionen zwischen Ionen in Lösung – Neutralisation, Fällung, Gasentwicklung – haben praktisch keine Aktivierungsenergie: Sie laufen sofort ab, ein Katalysator ist nicht nötig.'
+                      : 'Die KI hat dazu nichts Zusätzliches vorzuschlagen.'}
+                  </p>
+                </Callout>
+              ) : best ? (
+                <AiProposalCard
+                  proposal={best}
+                  rdkit={rdkit}
+                  temperatureC={temperatureC}
+                  onAddSubstance={onAddSubstance}
+                  onSetCatalysis={onSetCatalysis}
+                  onSetTemperature={onSetTemperature}
+                  compact
+                />
+              ) : (
+                <Callout variant="info" title={`${label}: kein Reaktionsvorschlag`}>
+                  <p style={{ margin: 0 }}>
+                    {modelStatus === 'fehlt'
+                      ? 'Das KI-Modell ist nicht geladen; die Wissensbasis kennt für diese Stoffe keine katalysierte Reaktion.'
+                      : 'Weder das neuronale Netz noch die Katalyse-Wissensbasis kennen eine Umsetzung dieser Stoffe. Ein Katalysator hilft hier nicht – er beschleunigt nur Reaktionen, die grundsätzlich möglich sind.'}
+                  </p>
+                </Callout>
+              )}
+              {rest.length > 0 && (
+                <details className="ai-more">
+                  <summary>Weitere Vorschläge ({rest.length})</summary>
+                  <div className="stack" style={{ marginTop: 8 }}>
+                    {rest.map((proposal) => (
+                      <AiProposalCard
+                        key={proposal.id}
+                        proposal={proposal}
+                        rdkit={rdkit}
+                        temperatureC={temperatureC}
+                        onAddSubstance={onAddSubstance}
+                        onSetCatalysis={onSetCatalysis}
+                        onSetTemperature={onSetTemperature}
+                        compact
+                      />
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          );
+        })}
+    </section>
+  );
+}
+
+/** Regelreaktion, an der beide Stoffe beteiligt sind. */
+function ruleMatch(reactions: WorkbenchReaction[], substances: Substance[]): WorkbenchReaction | undefined {
+  return reactions.find((reaction) => substances.every((substance) => reaction.participants?.includes(substance.id)));
 }
 
 /** Kennung aus der Adresse: Datenbank-ID, pubchem-CID oder smiles:… */

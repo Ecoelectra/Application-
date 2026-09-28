@@ -102,6 +102,32 @@ allen Stoffen der Datenbank:
 Im Modus **«Komplexe bauen»** der Werkbank lassen sich Komplexe außerdem frei
 zusammenstellen: 24 Zentralionen, 31 Liganden, 16 bekannte Vorlagen.
 
+**Reaktions-KI: Was entsteht – und mit welchem Katalysator?**
+Ein neuronales Netz, trainiert auf 320.335 Reaktionen aus
+US-Patenten, sagt vorher, was aus zwei Stoffen entsteht und welcher Katalysator,
+welche Base oder welches Reagenz dafür nötig ist. Es kennt 1.615
+Reaktionsvorlagen, die es selbst aus den Patentdaten herausgeschnitten hat, und
+prüft jedes Produkt mit RDKit. An 39.831 Reaktionen, die es beim
+Lernen nie gesehen hat, liegt das richtige Produkt in 69 % der
+Fälle auf Platz 1 und in 77 % unter den ersten drei; die
+Katalysatorart trifft es in 74 % der Fälle.
+
+Dazu kommt die **Aktivierungsenergie**: Jede Reaktion gehört zu einer Familie mit
+Richtwerten für die Barriere ohne und mit Katalysator. Über die
+Arrhenius-Gleichung zeigt die App, ob die Reaktion bei der eingestellten
+Temperatur abläuft, wie lange man warten müsste und ab welcher Temperatur es
+ohne Katalysator ginge – samt Energiediagramm. Ist die Barriere zu hoch, nennt
+sie den Katalysator, der die Reaktion möglich macht, und gibt ihn auf Wunsch
+direkt ins Gefäß. Für anorganische und technische Katalyse (Haber-Bosch,
+Kontaktverfahren, Ostwald-Verfahren, Wasserstoffperoxid-Zerfall mit Braunstein,
+Abgaskatalysator, Enzyme wie Katalase und Urease …) gibt es eine eigene
+Wissensbasis mit Lehrbuchwerten.
+
+Die KI steht als eigenes Werkzeug unter **KI-Vorhersage** bereit und läuft in der
+**Werkbank** für jedes Stoffpaar mit: Dort schlägt sie immer eine Reaktion vor
+und sagt, mit welchem Katalysator sie gelingt, wenn die Aktivierungsenergie zu
+hoch ist. Das Modell (rund 1 MB) arbeitet offline im Gerät.
+
 **Synthesekatalog: 7280 Wege zu 2584 Stoffen.**
 Für jeden Stoff nachschlagen, wie er hergestellt wird. Der Katalog ist nicht
 abgeschrieben, sondern gerechnet: Jede der 83 Reaktionsvorlagen wird auf alle
@@ -156,6 +182,9 @@ Unterschussreagenz, Ausbeute, Verdünnungen und Maßlösungen.
 | verschiedene Zielstoffe | 2584 |
 | Reaktionstypen mit Mechanismus | 96 |
 | davon elektrochemisch | 15 |
+| Reaktions-KI: trainiert auf / Vorlagen | 320.335 / 1.615 |
+| Reaktions-KI: richtiges Produkt auf Platz 1 / unter den ersten 3 | 69 % / 77 % |
+| Katalysierte Prozesse in der Wissensbasis | 27 |
 | Stoffe offline verfügbar | 1544 |
 | davon von Hand geprüft / systematisch erzeugt | 754 / 790 |
 | Zentralionen / Liganden für Komplexe | 24 / 31 |
@@ -243,6 +272,7 @@ src/
     phase.ts          Aggregatzustände, Siedepunkt und Druck, RGT-Regel
     conditionEffects.ts Wirkung von Temperatur- und Druckregler
     externalSubstances.ts Stoffe aus PubChem und SMILES für die Werkbank
+    ai/               Reaktions-KI: Vorlagen, Netz, Hilfsstoffe, Aktivierungsenergie
     reactionKeys.ts   Strukturschlüssel für den Abgleich mit belegten Reaktionen
     substanceStructures.ts Strukturen auch für Salze und Säuren ohne SMILES
     rdkit.ts          Anbindung der RDKit-WebAssembly-Bibliothek
@@ -252,6 +282,7 @@ src/
     reactions/        Reaktionen nach Stoffklassen getrennt
     substanceTables/  Erweiterte Stofftabellen (generated.ts: erzeugte Stoffe)
     physicalData.ts   Schmelz-, Siede- und Zersetzungstemperaturen
+    catalysis.ts      Katalysierte Prozesse mit Aktivierungsenergien
     generated/        Erzeugter Synthesekatalog (catalog.json)
     functionalGroups.ts  SMARTS-Muster der funktionellen Gruppen
     substances.ts     Offline-Stoffdatenbank
@@ -264,10 +295,12 @@ src/
   pages/          Die Seiten der App
   __tests__/massentests/  Je über 1000 Tests pro Werkzeug
 public/reaktionen/ 100 000 belegte Reaktionen in 2 × 256 Teildateien (gzip, 9 MB)
+public/ki/        Modell der Reaktions-KI (Netz und Vorlagen, gzip)
 scripts/
   build-catalog.ts  Erzeugt den Synthesekatalog
   build-reactions.ts Erzeugt die Datenbank belegter Reaktionen
   build-substances.ts Erzeugt die erweiterte Stoffdatenbank
+  ki/               Training der Reaktions-KI (npm run ki)
 src-tauri/        Windows-Anwendung (Tauri v2)
 docs/             Fachliche Grundlagen und Entwicklungshinweise
 ```
@@ -319,6 +352,13 @@ Reaktion thermodynamisch möglich ist, nicht, ob sie schnell genug abläuft.
 Stoffe aus PubChem tragen deren (meist englische) Namen. Umgekehrt bedeutet ein angezeigtes Produkt nicht, dass
 die Reaktion unter beliebigen Bedingungen abläuft; deshalb nennt die App, was an
 Wärme, Katalysator oder Apparatur noch fehlt.
+
+Die Reaktions-KI kennt, was in Patenten der organischen Synthese häufig
+vorkommt. Sie sagt, was chemisch naheliegt – nicht, ob es im Einzelfall klappt,
+wie hoch die Ausbeute ist oder welche Nebenprodukte entstehen. Die
+Aktivierungsenergien sind Richtwerte der Reaktionsfamilie (± 10–20 kJ/mol), die
+Halbwertszeiten Abschätzungen nach Arrhenius. Alles, was die KI liefert, ist als
+Vorhersage gekennzeichnet.
 
 Der Synthesekatalog enthält zu jedem Produkt die Wege, die sich aus den
 hinterlegten Vorlagen ergeben. Er ist damit vollständig in Bezug auf diese
