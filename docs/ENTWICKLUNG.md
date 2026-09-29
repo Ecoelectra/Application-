@@ -401,6 +401,14 @@ Acetylierung von Anilin ohne zusätzliche Base. Bei Palladiumkupplungen
 (Suzuki, Heck, Buchwald) senkt nur ein Metall die Barriere, eine Base allein
 nicht. Rangfolge der Herkunft: belegt, Lehrbuch, KI, Vorhersage.
 Ohne Modell (Tests, Laden fehlgeschlagen) rechnet die Werkbank wie zuvor.
+Oben im Ergebnis fasst `AiForecast` (WorkbenchPage) je Stoffpaar zusammen:
+laufende KI-Reaktion (eigene oder bestätigte), sonst KI-Reaktion mit dem, was
+fehlt, sonst die Regelreaktion, sonst das Ergebnis ohne Reaktion. Schlägt die KI
+für ein Paar die Umsetzung nur eines Stoffes vor und spielt der Partner dabei
+keine Rolle (keine seiner Kategorien unter den Hilfsstoffen), zählt das nicht als
+Reaktion des Paares. Der Service Worker fragt die Startseite immer beim Server
+nach (`cache: 'no-cache'`), und `main.tsx` lädt die Seite einmal neu, sobald eine
+neue Version aktiv wird – so kommen Updates auf dem iPad sofort an.
 Eine eigene KI-Seite gibt es nicht mehr: `#/ki` (auch mit `?stoffe=`) leitet zur
 Werkbank weiter (`AiRedirect` in `App.tsx`); Arbeitsweise, Datenquellen und Güte
 des Netzes zeigt dort `AiInfoPanel.tsx`.

@@ -12,7 +12,7 @@
  */
 import type { MainModule } from '@rdkit/rdkit';
 import type { ReactionModel } from './model';
-import { predictWithModel, type AiProposal } from './reactionAI';
+import { predictWithModel, substanceCategory, type AiProposal } from './reactionAI';
 import {
   evaluateProposal,
   formatBar,
@@ -218,6 +218,11 @@ export function aiReactions(
     const involves = (reaction: WorkbenchReaction) => group.every((entry) => reaction.participants?.includes(entry.id));
     const settled = known.some((reaction) => !reaction.missing.length && involves(reaction));
     proposals.forEach((proposal, rank) => {
+      // Umsetzung eines Stoffes, bei der der Partner keine Rolle spielt, ist keine Reaktion des Paares
+      if (group.length > 1 && proposal.reactants.length === 1 && proposal.reagent) {
+        const role = substanceCategory(rdkit, proposal.reagent);
+        if (!role || !proposal.catalysts.some((entry) => entry.category === role)) return;
+      }
       const product = proposal.products[0]?.smiles;
       const key = product ? structureKey(rdkit, product) : null;
       if (!key) return;

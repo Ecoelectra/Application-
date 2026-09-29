@@ -1242,3 +1242,10 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
 .ai-info > summary { cursor: pointer; line-height: 1.5; }
 .ai-info[open] > summary { margin-bottom: 4px; }
 .ai-info h3 { margin-top: 16px; }
+
+/* KI-Vorhersage oben im Ergebnis der Werkbank */
+.ai-forecast { border: 2px solid color-mix(in srgb, var(--electro) 45%, transparent); background: color-mix(in srgb, var(--electro-soft) 55%, var(--surface, transparent)); }
+.ai-forecast-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.ai-forecast-list li { display: flex; gap: 10px; align-items: flex-start; }
+.ai-forecast-icon { font-size: 1.3rem; line-height: 1.3; flex: none; }
+.link-button { background: none; border: 0; padding: 0; margin-top: 2px; color: var(--accent); cursor: pointer; text-decoration: underline; font: inherit; }

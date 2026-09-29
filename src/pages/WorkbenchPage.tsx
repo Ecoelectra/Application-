@@ -630,6 +630,10 @@ export function WorkbenchPage() {
             </Callout>
           )}
 
+          {!running && result && result.outcome !== 'gesperrt' && selected.length > 0 && (
+            <AiForecast result={result} substances={selected} modelStatus={aiStatus} temperatureC={temperatureC} pressureBar={pressureBar} />
+          )}
+
           {!running && result?.notes && result.notes.length > 0 && (
             <Callout variant="neutral" title={`Bei ${formatTemperature(temperatureC)} und ${formatPressure(pressureBar)}`}>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -747,6 +751,141 @@ export function WorkbenchPage() {
       </div>
       )}
     </main>
+  );
+}
+
+interface ForecastLine {
+  key: string;
+  label: string;
+  icon: string;
+  text: string;
+  detail?: string;
+  target?: string;
+}
+
+/** Was die KI für ein Stoffpaar (oder einen einzelnen Stoff) vorhersagt – in einem Satz. */
+function forecastFor(group: Substance[], result: MixResult, modelReady: boolean): ForecastLine {
+  const label = group.map((entry) => entry.name).join(' + ');
+  const key = group.map((entry) => entry.id).join('+');
+  const involves = (reaction: WorkbenchReaction) => group.every((entry) => reaction.participants?.includes(entry.id));
+  const reactions = result.reactions.filter(involves);
+  const productText = (reaction: WorkbenchReaction) =>
+    reaction.products
+      .map((product) => product.name ?? product.formula)
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', ');
+  const percentOf = (reaction: WorkbenchReaction) => Math.max(1, Math.round((reaction.ai?.confidence ?? 0) * 100));
+
+  // 1. Das neuronale Netz sagt eine Reaktion voraus, die jetzt läuft (eigene oder bestätigte)
+  const running = reactions.find((reaction) => reaction.ai && !reaction.missing.length);
+  if (running) {
+    const own = running.evidence === 'ki';
+    return {
+      key,
+      label,
+      icon: '🤖',
+      text: `Es entsteht ${productText(running) || 'ein neues Produkt'} – ${running.ai?.title ?? running.reactionType}.`,
+      detail: own
+        ? `${running.reactor?.summary ?? ''} Sicherheit der KI: ${percentOf(running)} %.`
+        : `Die KI bestätigt die ${running.evidence === 'belegt' ? 'belegte ' : ''}Reaktion der Werkbank (Sicherheit ${percentOf(running)} %).`,
+      target: running.id,
+    };
+  }
+  // 2. Die KI kennt eine Reaktion, aber unter diesen Bedingungen läuft sie nicht
+  const waiting = reactions.find((reaction) => reaction.ai);
+  if (waiting) {
+    return {
+      key,
+      label,
+      icon: '⏳',
+      text: `Möglich wäre ${productText(waiting) || 'eine Reaktion'} (${waiting.ai?.title ?? waiting.reactionType}) – so passiert aber noch nichts.`,
+      detail: `Dafür fehlt: ${waiting.missing.join('; ')}`,
+      target: waiting.id,
+    };
+  }
+  // 3. Das Netz hat nichts, die Regeln der Werkbank kennen die Reaktion
+  const rule = reactions.find((reaction) => !reaction.missing.length);
+  if (rule) {
+    return {
+      key,
+      label,
+      icon: '⚗',
+      text: `${rule.title}: ${rule.observation}`,
+      detail: modelReady
+        ? 'Das neuronale Netz kennt vor allem organische Reaktionen; diese Vorhersage stammt aus den Regeln und Belegen der Werkbank.'
+        : undefined,
+      target: rule.id,
+    };
+  }
+  const blocked = reactions[0];
+  if (blocked) {
+    return { key, label, icon: '⏳', text: `Möglich wäre: ${blocked.title} – so passiert aber noch nichts.`, detail: `Dafür fehlt: ${blocked.missing.join('; ')}`, target: blocked.id };
+  }
+  // 4. Keine chemische Reaktion: was stattdessen passiert
+  const outcome = result.pairOutcomes?.find(involves);
+  return {
+    key,
+    label,
+    icon: '💧',
+    text: outcome ? `Keine chemische Reaktion. ${outcome.observation}` : 'Keine chemische Reaktion erwartet.',
+    target: outcome?.id,
+  };
+}
+
+/** Oben im Ergebnis: Was die KI für jede Kombination im Gefäß vorhersagt. */
+function AiForecast({
+  result,
+  substances,
+  modelStatus,
+  temperatureC,
+  pressureBar,
+}: {
+  result: MixResult;
+  substances: Substance[];
+  modelStatus: 'laden' | 'bereit' | 'fehlt';
+  temperatureC: number;
+  pressureBar: number;
+}) {
+  const partners = substances.filter((substance) => substance.category !== 'Nachweisreagenz');
+  const groups: Substance[][] = [];
+  if (partners.length === 1) groups.push(partners);
+  for (let i = 0; i < partners.length; i++) for (let j = i + 1; j < partners.length; j++) groups.push([partners[i], partners[j]]);
+  const lines = groups.map((group) => forecastFor(group, result, modelStatus === 'bereit'));
+  return (
+    <section className="card ai-forecast" aria-live="polite">
+      <h2 style={{ marginBottom: 4 }}>🤖 KI-Vorhersage: Was passiert?</h2>
+      <p className="small subtle" style={{ marginTop: 0 }}>
+        {modelStatus === 'bereit'
+          ? `Das neuronale Netz rechnet bei ${formatTemperature(temperatureC)} und ${formatPressure(pressureBar)} mit – mit Katalysator, Wärme und Druck, die du einstellst.`
+          : modelStatus === 'laden'
+            ? 'Das neuronale Netz wird geladen (einmalig, danach offline) – gleich rechnet es mit.'
+            : 'Das neuronale Netz ließ sich nicht laden; die Vorhersage stammt aus den Regeln der Werkbank.'}
+      </p>
+      <ul className="ai-forecast-list">
+        {lines.map((line) => (
+          <li key={line.key}>
+            <span className="ai-forecast-icon" aria-hidden="true">
+              {line.icon}
+            </span>
+            <div>
+              {lines.length > 1 && <strong>{line.label}: </strong>}
+              {line.text}
+              {line.detail && <div className="small subtle">{line.detail}</div>}
+              {line.target && (
+                <button
+                  type="button"
+                  className="link-button small"
+                  onClick={() => document.getElementById(`reaktion-${line.target}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                >
+                  Einzelheiten ↓
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -938,7 +1077,7 @@ function ReactionResult({
 }) {
   const confirmed = reaction.evidence !== 'ki' && reaction.ai;
   return (
-    <article className="card reaction-result">
+    <article className="card reaction-result" id={`reaktion-${reaction.id}`}>
       <div className="card-title">
         <div>
           <h2 style={{ marginBottom: 2 }}>{reaction.title}</h2>

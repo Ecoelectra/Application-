@@ -148,7 +148,11 @@ Hilfsstoffen, übernimmt die Bedingungen und lässt die Werkbank die Reaktion
 nachrechnen. Auch von jeder Stoffseite aus erreichbar («Mit KI herstellen»).
 Für gesperrte Stoffe plant die App keine Synthese.
 
-**Die Werkbank rechnet mit dem neuronalen Netz.** Beim Mischen sagt die KI für
+**Die Werkbank rechnet mit dem neuronalen Netz.** Ganz oben im Ergebnis steht
+«🤖 KI-Vorhersage: Was passiert?» – für jede Kombination im Gefäß ein Satz: was
+entsteht und ob es bei den eingestellten Bedingungen schon läuft, sonst was noch
+fehlt (bei rein anorganischen Mischungen, die das Netz kaum kennt, mit der
+Vorhersage der Werkbank-Regeln und diesem Hinweis). Beim Mischen sagt die KI für
 jedes Stoffpaar im Gefäß die wahrscheinlichsten Produkte voraus, und diese
 erscheinen als vollwertige Reaktionen im Ergebnis (🤖 «KI-Vorhersage») – mit
 Gleichung, Struktur, Reaktionsenthalpie und Sicherheit der KI. Jede davon wird

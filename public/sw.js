@@ -8,7 +8,7 @@
  *    Strukturformeln und KI-Vorhersagen offline funktionieren.
  *  - PubChem: niemals über den Service Worker cachen (die App hat dafür einen eigenen Speicher).
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = `syntheseplaner-shell-${VERSION}`;
 const ASSET_CACHE = `syntheseplaner-assets-${VERSION}`;
 
@@ -67,7 +67,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         try {
-          return await fetch(request);
+          // Startseite immer beim Server nachfragen, damit neue Versionen sofort ankommen
+          return await fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' });
         } catch {
           const cache = await caches.open(SHELL_CACHE);
           return (await cache.match('./index.html')) ?? Response.error();
