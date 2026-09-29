@@ -27,6 +27,7 @@ import { compoundByCid } from '../services/pubchem';
 import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
 import { AiProposalCard } from '../components/AiProposalCard';
 import { SynthesisPlanner } from '../components/SynthesisPlanner';
+import { CatalysisControl, PRESSURE_LOG_MIN, PressureControl, TEMPERATURE_MAX, TEMPERATURE_MIN, TemperatureControl } from '../components/ReactorControls';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
 import { useReactionModel } from '../hooks/useReactionModel';
 import type { MainModule } from '@rdkit/rdkit';
@@ -95,29 +96,8 @@ const FAVOURITES = [
 
 const MAX_SLOTS = 4;
 
-/** Schnellwahl für den Temperaturregler. */
-const TEMPERATURE_PRESETS: Array<{ value: number; label: string; icon: string }> = [
-  { value: -78, label: 'Trockeneis', icon: '🧊' },
-  { value: 0, label: 'Eisbad', icon: '❄' },
-  { value: 20, label: 'Raum', icon: '🌡' },
-  { value: 80, label: 'Wasserbad', icon: '♨' },
-  { value: 300, label: 'Brenner', icon: '🔥' },
-  { value: 900, label: 'Glühen', icon: '☀' },
-];
 
-/** Schnellwahl für den Druckregler (bar). */
-const PRESSURE_PRESETS: Array<{ value: number; label: string }> = [
-  { value: 0.02, label: 'Vakuum' },
-  { value: 1.013, label: 'Normaldruck' },
-  { value: 10, label: 'Druckgefäß' },
-  { value: 200, label: 'Hochdruck' },
-];
 
-const TEMPERATURE_MIN = -100;
-const TEMPERATURE_MAX = 1200;
-/** Druckregler in Zehnerpotenzen: 1 mbar bis 300 bar */
-const PRESSURE_LOG_MIN = -3;
-const PRESSURE_LOG_MAX = Math.log10(300);
 
 const ORIGIN_LABELS: Record<NonNullable<Substance['origin']>, { label: string; hint: string } | undefined> = {
   pubchem: { label: 'PubChem', hint: 'Aus PubChem geladen; Name und Daten stammen von dort' },
@@ -129,13 +109,6 @@ const STATE_ICONS: Record<string, string> = {
   fest: '▪', flüssig: '💧', gasförmig: '💨', gelöst: '🫧', zersetzt: '⚠', unbekannt: '?',
 };
 
-const CATALYSES: Array<{ id: WorkbenchConditions['catalysis']; label: string; icon: string; hint: string }> = [
-  { id: 'keine', label: 'Ohne Katalysator', icon: '○', hint: 'Nichts zusetzen' },
-  { id: 'sauer', label: 'Säurekatalysiert (H⁺)', icon: '🟥', hint: 'Einige Tropfen konzentrierte Schwefelsäure oder p-Toluolsulfonsäure' },
-  { id: 'basisch', label: 'Basenkatalysiert (OH⁻)', icon: '🟦', hint: 'Natronlauge, Alkoholat oder eine Aminbase' },
-  { id: 'metall', label: 'Metallkatalysator', icon: '⬡', hint: 'Palladium, Platin oder Nickel' },
-  { id: 'lewis', label: 'Lewis-Säure', icon: '◆', hint: 'Aluminiumchlorid oder Eisen(III)-bromid' },
-];
 
 export function WorkbenchPage() {
   const { rdkit, status } = useRDKit();
@@ -163,9 +136,12 @@ export function WorkbenchPage() {
   const [running, setRunning] = useState(false);
   const [journal, setJournal] = useState<Array<{ educts: string; outcome: string }>>([]);
   const [params, setParams] = useSearchParams();
-  const mode = params.get('modus') === 'komplexe' ? 'komplexe' : 'mischen';
-  const switchMode = (next: 'mischen' | 'komplexe'): void => {
-    const nextParams = new URLSearchParams(next === 'komplexe' ? { modus: 'komplexe' } : {});
+  type Mode = 'mischen' | 'synthese' | 'komplexe';
+  const modus = params.get('modus');
+  // Ein Zielstoff in der Adresse öffnet die KI-Synthese
+  const mode: Mode = modus === 'komplexe' ? 'komplexe' : modus === 'synthese' || (!modus && params.has('ziel')) ? 'synthese' : 'mischen';
+  const switchMode = (next: Mode): void => {
+    const nextParams = new URLSearchParams(next === 'mischen' ? {} : { modus: next });
     setParams(nextParams, { replace: true });
   };
   const [database, setDatabase] = useState<ReactionDatabaseIndex | null>(null);
@@ -308,12 +284,20 @@ export function WorkbenchPage() {
   };
 
   /** Stufe aus der KI-Synthese ansetzen: Gefäß neu befüllen, Katalyse und Temperatur einstellen */
-  const setUpStep = (substances: Substance[], catalysis: Exclude<WorkbenchConditions['catalysis'], 'keine'> | null, temperature: number | null): void => {
+  const setUpStep = (
+    substances: Substance[],
+    catalysis: Exclude<WorkbenchConditions['catalysis'], 'keine'> | null,
+    temperature: number,
+    pressure: number,
+  ): void => {
     const unique = substances.filter((entry, index) => substances.findIndex((other) => other.id === entry.id) === index);
     setSelected(unique.slice(0, MAX_SLOTS));
-    if (catalysis) setConditions((current) => ({ ...current, catalysis }));
-    if (temperature !== null) setTemperature(temperature);
-    window.setTimeout(() => document.getElementById('reaktionsgefaess')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    setConditions((current) => ({ ...current, catalysis: catalysis ?? 'keine' }));
+    setTemperature(temperature);
+    setPressure(pressure);
+    // Zum Mischen wechseln: Die Werkbank rechnet die Stufe nach
+    switchMode('mischen');
+    window.setTimeout(() => document.getElementById('reaktionsgefaess')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
   };
 
   const removeSubstance = (id: string): void => {
@@ -365,6 +349,15 @@ export function WorkbenchPage() {
             <button
               type="button"
               role="tab"
+              aria-selected={mode === 'synthese'}
+              className={`chip${mode === 'synthese' ? ' active' : ''}`}
+              onClick={() => switchMode('synthese')}
+            >
+              🎯 KI-Synthese
+            </button>
+            <button
+              type="button"
+              role="tab"
               aria-selected={mode === 'komplexe'}
               className={`chip${mode === 'komplexe' ? ' active' : ''}`}
               onClick={() => switchMode('komplexe')}
@@ -381,6 +374,13 @@ export function WorkbenchPage() {
             Orbitalschema.
           </p>
         )}
+        {mode === 'synthese' && (
+          <p className="lead">
+            Zielstoff wählen und die Reaktions-KI planen lassen, wie er entsteht. Mit Temperatur, Druck und Katalysator
+            steuerst du den Reaktor: Jede Stufe zeigt sofort, ob sie abläuft, wie schnell und worauf zu achten ist. Mit
+            «Stufe ansetzen» geht es direkt ins Reaktionsgefäß.
+          </p>
+        )}
         {mode === 'mischen' && (
         <p className="small muted" style={{ marginTop: 6 }}>
           Jedes Ergebnis ist gekennzeichnet: <EvidenceBadge evidence="belegt" /> in der Literatur beschrieben
@@ -393,19 +393,22 @@ export function WorkbenchPage() {
 
       {mode === 'komplexe' && <ComplexBuilder />}
 
-      {mode === 'mischen' && (
+      {/* KI-Synthese bleibt beim Umschalten erhalten, damit die Wege nicht neu geplant werden müssen */}
+      <div hidden={mode !== 'synthese'}>
         <SynthesisPlanner
           rdkit={rdkit}
           model={aiModel}
           modelStatus={aiStatus}
           temperatureC={temperatureC}
+          pressureBar={pressureBar}
+          onSetTemperature={setTemperature}
+          onSetPressure={setPressure}
           initialTarget={planTarget}
           onSetUp={setUpStep}
           onAddSubstance={addSubstance}
           onSetCatalysis={(catalysis) => setConditions((c) => ({ ...c, catalysis }))}
-          onSetTemperature={setTemperature}
         />
-      )}
+      </div>
 
       {mode === 'mischen' && (
       <div className="workbench">
@@ -542,105 +545,9 @@ export function WorkbenchPage() {
               )}
             </div>
 
-            <h3 style={{ marginTop: 16 }}>
-              <label htmlFor="temperatur-regler">Temperatur</label>
-            </h3>
-            <div className="regler">
-              <input
-                id="temperatur-regler"
-                type="range"
-                min={TEMPERATURE_MIN}
-                max={TEMPERATURE_MAX}
-                step={1}
-                value={temperatureC}
-                onChange={(event) => setTemperature(Number(event.target.value))}
-                aria-valuetext={formatTemperature(temperatureC)}
-              />
-              <div className="regler-wert">
-                <input
-                  className="input"
-                  type="number"
-                  inputMode="decimal"
-                  min={TEMPERATURE_MIN}
-                  max={TEMPERATURE_MAX}
-                  value={temperatureC}
-                  aria-label="Temperatur in Grad Celsius"
-                  onChange={(event) => setTemperature(Number(event.target.value))}
-                />
-                <span>°C</span>
-              </div>
-            </div>
-            <div className="row" style={{ marginTop: 6 }}>
-              {TEMPERATURE_PRESETS.map((entry) => (
-                <button
-                  key={entry.value}
-                  type="button"
-                  className={`chip chip-small${temperatureC === entry.value ? ' active' : ''}`}
-                  onClick={() => setTemperature(entry.value)}
-                >
-                  <span aria-hidden="true">{entry.icon}</span> {entry.label} {formatTemperature(entry.value)}
-                </button>
-              ))}
-            </div>
-
-            <h3 style={{ marginTop: 14 }}>
-              <label htmlFor="druck-regler">Druck</label>
-            </h3>
-            <div className="regler">
-              <input
-                id="druck-regler"
-                type="range"
-                min={PRESSURE_LOG_MIN}
-                max={PRESSURE_LOG_MAX}
-                step={0.01}
-                value={Math.log10(pressureBar)}
-                onChange={(event) => setPressure(10 ** Number(event.target.value))}
-                aria-valuetext={formatPressure(pressureBar)}
-              />
-              <div className="regler-wert">
-                <input
-                  className="input"
-                  type="number"
-                  inputMode="decimal"
-                  min={0.001}
-                  max={300}
-                  step="any"
-                  value={pressureBar}
-                  aria-label="Druck in bar"
-                  onChange={(event) => setPressure(Number(event.target.value))}
-                />
-                <span>bar</span>
-              </div>
-            </div>
-            <div className="row" style={{ marginTop: 6 }}>
-              {PRESSURE_PRESETS.map((entry) => (
-                <button
-                  key={entry.value}
-                  type="button"
-                  className={`chip chip-small${Math.abs(pressureBar - entry.value) < entry.value * 0.02 ? ' active' : ''}`}
-                  onClick={() => setPressure(entry.value)}
-                >
-                  {entry.label} {formatPressure(entry.value)}
-                </button>
-              ))}
-            </div>
-
-            <h3 style={{ marginTop: 14 }}>Katalyse</h3>
-            <div className="row" role="radiogroup" aria-label="Katalyse">
-              {CATALYSES.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={conditions.catalysis === entry.id}
-                  className={`chip${conditions.catalysis === entry.id ? ' active' : ''}`}
-                  title={entry.hint}
-                  onClick={() => setConditions((c) => ({ ...c, catalysis: entry.id }))}
-                >
-                  <span aria-hidden="true">{entry.icon}</span> {entry.label}
-                </button>
-              ))}
-            </div>
+            <TemperatureControl id="temperatur-regler" value={temperatureC} onChange={setTemperature} />
+            <PressureControl id="druck-regler" value={pressureBar} onChange={setPressure} />
+            <CatalysisControl value={conditions.catalysis} onChange={(catalysis) => setConditions((c) => ({ ...c, catalysis }))} />
 
             <h3 style={{ marginTop: 14 }}>Weitere Bedingungen</h3>
             <div className="row">

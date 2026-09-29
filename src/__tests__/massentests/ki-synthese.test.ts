@@ -5,7 +5,9 @@
  * Schritt in der Werkbank). Die Planung
  * darf nie abstürzen und jeder gezeigte Weg muss stimmen: Die Vorwärts-
  * vorhersage liefert den Zielstoff, Ausgangsstoffe sind neutral, zulässig und
- * vom Zielstoff verschieden.
+ * vom Zielstoff verschieden. Dazu die Bewertung im Reaktor: Mehr Wärme, der
+ * empfohlene Katalysator und mehr Druck machen eine Stufe nie langsamer, und
+ * bei den empfohlenen Bedingungen läuft sie (sofern unter 300 °C machbar).
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -14,6 +16,7 @@ import type { MainModule } from '@rdkit/rdkit';
 import initRDKitModule from '@rdkit/rdkit';
 import { loadReactionModel, setModelFileLoader, type ReactionModel } from '../../chem/ai/model';
 import { planSynthesis } from '../../chem/ai/retrosynthesis';
+import { evaluateStep, recommendedCatalyst } from '../../chem/ai/synthesisConditions';
 import { structureKey } from '../../chem/reactionKeys';
 import { assessSubstance, isPublishableProduct } from '../../chem/safety';
 import { SUBSTANCES } from '../../data/substances';
@@ -82,6 +85,24 @@ describe('Massentest KI-Synthese', () => {
         expect(precursor.smiles).not.toBe(targetKey);
         expect(isPublishableProduct(precursor.smiles, rdkit)).toBe(true);
         if (!precursor.available) expect(netCharge(precursor.smiles), precursor.smiles).toBe(0);
+      }
+
+      // Reaktor: Temperatur, Katalysator und Druck wirken in die richtige Richtung
+      const best = recommendedCatalyst(step);
+      const base = evaluateStep(rdkit, step, { temperatureC: 20, pressureBar: 1.013, catalyst: best });
+      const warmer = evaluateStep(rdkit, step, { temperatureC: 70, pressureBar: 1.013, catalyst: best });
+      const without = evaluateStep(rdkit, step, { temperatureC: 20, pressureBar: 1.013, catalyst: null });
+      const pressed = evaluateStep(rdkit, step, { temperatureC: 20, pressureBar: 10, catalyst: best });
+      expect(Number.isFinite(base.halfLife)).toBe(true);
+      expect(warmer.halfLife).toBeLessThanOrEqual(base.halfLife);
+      expect(base.halfLife).toBeLessThanOrEqual(without.halfLife);
+      expect(pressed.halfLife).toBeLessThanOrEqual(base.halfLife);
+      const { recommended } = base;
+      expect(recommended.temperatureC).toBeGreaterThanOrEqual(20);
+      expect(recommended.pressureBar).toBeGreaterThan(0);
+      if (recommended.temperatureC < 300) {
+        const atRecommended = evaluateStep(rdkit, step, recommended);
+        expect(['läuft', 'problem'], `${target.name}: ${atRecommended.summary}`).toContain(atRecommended.verdict);
       }
     }
   }, 60_000);

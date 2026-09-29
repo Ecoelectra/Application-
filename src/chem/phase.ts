@@ -231,6 +231,18 @@ export function boilingPointAt(normalBoilingPoint: number, pressureBar: number, 
   return 1 / inverse - 273.15;
 }
 
+/**
+ * Dampfdruck in bar bei Temperatur T (°C) aus dem Normalsiedepunkt – die
+ * Umkehrung von boilingPointAt. So viel Druck braucht es mindestens, damit der
+ * Stoff bei T flüssig bleibt.
+ */
+export function vaporPressureAt(normalBoilingPoint: number, temperature: number, hydrogenBonded = false): number {
+  const tb = normalBoilingPoint + 273.15;
+  const t = temperature + 273.15;
+  const entropy = hydrogenBonded ? 109 : 88;
+  return NORMAL_PRESSURE * Math.exp(((entropy * tb) / R) * (1 / tb - 1 / t));
+}
+
 export interface StateDescription {
   state: PhaseState;
   /** Siedepunkt beim eingestellten Druck, falls bekannt */

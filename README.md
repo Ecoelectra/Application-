@@ -126,17 +126,27 @@ Kontaktverfahren, Ostwald-Verfahren, Wasserstoffperoxid-Zerfall mit Braunstein,
 Abgaskatalysator, Enzyme wie Katalase und Urease …) gibt es eine eigene
 Wissensbasis mit Lehrbuchwerten.
 
-**KI-Synthese: Zielstoff herstellen.** In der Werkbank wählst du, was entstehen
-soll – etwa Paracetamol, Biphenyl oder Zimtsäure –, und die KI plant rückwärts,
-wie es sich herstellen lässt. Sie wendet ihre gelernten Vorlagen vom Produkt zu
-den Edukten an, lässt nur chemisch sinnvolle Ausgangsstoffe zu, bewertet jeden
-Vorschlag mit dem Vorwärtsnetz und behält nur Wege, bei denen die
-Vorwärtsvorhersage wieder genau den Zielstoff liefert. Zu jeder Stufe nennt sie
-Katalysator, Temperatur und Reaktionsenthalpie; fehlt ein Ausgangsstoff im
-Chemikalienschrank, plant sie eine Vorstufe dazu (bis zu zwei Stufen). Mit
-«Stufe ansetzen» kommen Ausgangsstoffe und Katalysator ins Gefäß, und die
-Werkbank rechnet die Reaktion nach. Auch von jeder Stoffseite aus erreichbar
-(«Mit KI herstellen»). Für gesperrte Stoffe plant die App keine Synthese.
+**KI-Synthese: Zielstoff herstellen.** Ein eigener Bereich der Werkbank
+(«🎯 KI-Synthese»): Du wählst, was entstehen soll – etwa Paracetamol, Biphenyl
+oder Zimtsäure –, und die KI plant rückwärts, wie es sich herstellen lässt. Sie
+wendet ihre gelernten Vorlagen vom Produkt zu den Edukten an, lässt nur
+chemisch sinnvolle Ausgangsstoffe zu und behält nur Wege, bei denen die
+Vorwärtsvorhersage wieder genau den Zielstoff liefert; fehlt ein Ausgangsstoff
+im Chemikalienschrank, plant sie eine Vorstufe dazu (bis zu zwei Stufen).
+
+Wie beim Mischen steuerst du dabei einen **Reaktor**: Temperatur- und
+Druckregler und den Katalysator – für alle Stufen die KI-Empfehlung oder ohne,
+und bei jeder Stufe einzeln umstellbar. Jede Stufe wird sofort unter diesen
+Bedingungen bewertet: Läuft sie (mit Halbwertszeit nach Arrhenius), ist sie zu
+langsam, fehlt ein Katalysator, siedet ein Edukt aus dem offenen Gefäß (mit
+dem nötigen Druck oder dem Hinweis auf den Rückflusskühler), beschleunigt
+Überdruck ein gasförmiges Reagenz wie Wasserstoff, oder zersetzen sich die
+Stoffe? Dazu kommen Hinweise nach Le Chatelier aus Reaktionsenthalpie und
+Gasbilanz. «Empfehlung einstellen» übernimmt Temperatur, Druck und Katalysator
+der KI; «Stufe ansetzen» füllt das Reaktionsgefäß mit Ausgangsstoffen und
+Hilfsstoffen, übernimmt die Bedingungen und lässt die Werkbank die Reaktion
+nachrechnen. Auch von jeder Stoffseite aus erreichbar («Mit KI herstellen»).
+Für gesperrte Stoffe plant die App keine Synthese.
 
 Die KI steht als eigenes Werkzeug unter **KI-Vorhersage** bereit und läuft in der
 **Werkbank** für jedes Stoffpaar mit: Dort schlägt sie immer eine Reaktion vor
@@ -306,7 +316,8 @@ src/
     conditionEffects.ts Wirkung von Temperatur- und Druckregler
     externalSubstances.ts Stoffe aus PubChem und SMILES für die Werkbank
     ai/               Reaktions-KI: Vorlagen, Netz, Hilfsstoffe, Aktivierungsenergie,
-                      Rückwärtssynthese (retrosynthesis.ts)
+                      Rückwärtssynthese (retrosynthesis.ts), Stufen im Reaktor
+                      (synthesisConditions.ts)
     reactionKeys.ts   Strukturschlüssel für den Abgleich mit belegten Reaktionen
     substanceStructures.ts Strukturen auch für Salze und Säuren ohne SMILES
     rdkit.ts          Anbindung der RDKit-WebAssembly-Bibliothek

@@ -229,7 +229,7 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 | `komplexbildung.test.ts` | 105 240 | jede Metallquelle der Stoffdatenbank mit jeder Ligandenquelle: gültige Komplexe, ausgeglichene Gleichungen, keine Komplexe bei Redox- und Fällungspaaren, Herkunftsangabe |
 | `komplexe.test.ts` | 5505 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
-| `ki-synthese.test.ts` | 1001 | 1000 Zielstoffe (alle 928 organischen Stoffe der Datenbank und 72 Katalogprodukte) rückwärts geplant: jeder Weg vorwärts bestätigt, Ausgangsstoffe neutral, zulässig und nicht der Zielstoff; gesperrte Stoffe ohne Synthese |
+| `ki-synthese.test.ts` | 1001 | 1000 Zielstoffe (alle 928 organischen Stoffe der Datenbank und 72 Katalogprodukte) rückwärts geplant: jeder Weg vorwärts bestätigt, Ausgangsstoffe neutral, zulässig und nicht der Zielstoff; gesperrte Stoffe ohne Synthese; im Reaktor machen Wärme, Katalysator und Druck eine Stufe nie langsamer, und bei der Empfehlung läuft sie |
 | `ki.test.ts` | 1005 | 1000 zufällige Stoffpaare durch die Reaktions-KI: gültige und zulässige Produkte, stimmige Energieangaben, Reihenfolge egal; dazu Amidkupplung, Suzuki-Kupplung, Nitroreduktion und Katalysator im Gefäß |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
 
@@ -358,9 +358,26 @@ Zielstoff vorhersagt («Rundlauf»), wird die Stufe gezeigt – mit Katalysator,
 Aktivierungsenergie und Reaktionsenthalpie aus dieser Vorhersage.
 `extendRoutes` plant für Ausgangsstoffe außerhalb der Stoffdatenbank eine
 Vorstufe; spätere Produkte dürfen dabei nicht als Ausgangsstoff auftauchen.
-Rangfolge: Sicherheit × (vorrätig ? 1 : 0,5) × 0,8 je weitere Stufe. Die
-Werkbank (`SynthesisPlanner.tsx`) zeigt zuerst die einstufigen Wege (≈ 1 s) und
-ergänzt die zweite Stufe danach. Aufruf auch über `#/werkbank?ziel=<Stoff>`.
+Rangfolge: Sicherheit × (vorrätig ? 1 : 0,5) × 0,8 je weitere Stufe.
+
+Die Werkbank hat dafür den Modus «KI-Synthese» (`?modus=synthese`, ein
+`?ziel=<Stoff>` öffnet ihn direkt). `SynthesisPlanner.tsx` zeigt zuerst die
+einstufigen Wege (≈ 1 s) und ergänzt die zweite Stufe danach; der Bereich
+bleibt beim Umschalten zum Mischen erhalten. Temperatur- und Druckregler sind
+dieselben Komponenten wie beim Mischen (`ReactorControls.tsx`) und teilen sich
+den Zustand mit dem Reaktionsgefäß. `src/chem/ai/synthesisConditions.ts`
+bewertet jede Stufe für Temperatur, Druck und gewählten Hilfsstoff:
+Aktivierungsenergie der Reaktionsfamilie (gesenkt, wenn der Hilfsstoff zu den
+Katalysatoren der Familie gehört oder die KI ihn mit ≥ 40 % vorschlägt),
+Halbwertszeit nach Arrhenius, bei gasförmigen Partnern (auch Wasserstoff bei
+Pd/Pt/Ni) geteilt durch den Druck in bar (Henry), Siedepunkte nach
+Clausius-Clapeyron mit dem nötigen Gegendruck (`vaporPressureAt` in
+`phase.ts`), Zersetzung und Pyrolyse, Le-Chatelier-Hinweise aus ΔrH° und
+Gasbilanz. Die Empfehlung ist die Temperatur, bei der die Stufe mit dem
+empfohlenen Hilfsstoff binnen einer Stunde umsetzt (höchstens 300 °C), und der
+Druck, bei dem gasförmige Partner genug gelöst sind (5 bar) bzw. flüssige nicht
+sieden. «Stufe ansetzen» überträgt Ausgangsstoffe, Hilfsstoff (bei Hydrierung
+mit Wasserstoff), Katalyse, Temperatur und Druck ins Gefäß.
 
 **Trainingsdaten aus mehreren Quellen.** Seit dem Training vom September 2026
 lernt die KI aus 1.030.272 verschiedenen, geprüften Reaktionen aus zehn

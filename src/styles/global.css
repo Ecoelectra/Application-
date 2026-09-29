@@ -1215,15 +1215,18 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
 .dh-caption { color: var(--danger); font-weight: 600; }
 
 /* KI-Synthese in der Werkbank */
-.planner { margin-bottom: 18px; }
-.planner-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin-top: 10px; }
-@media (max-width: 560px) { .planner-form { grid-template-columns: 1fr; } }
-.route-card {
-  padding: 12px 14px;
-  border: 1px solid var(--border);
+.step-verdict {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
+  background: var(--bg-sunken);
+  font-size: 0.92rem;
 }
+.step-verdict ul { margin: 6px 0; padding-left: 18px; }
+.step-verdict-success { border-left-color: var(--success); }
+.step-verdict-warning { border-left-color: var(--warning); }
+.step-verdict-danger { border-left-color: var(--danger); }
 .route-steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
 .route-step { padding-top: 10px; border-top: 1px dashed var(--border); }
 .route-step:first-child { border-top: none; padding-top: 0; }
