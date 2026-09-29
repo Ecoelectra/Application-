@@ -126,6 +126,18 @@ Kontaktverfahren, Ostwald-Verfahren, Wasserstoffperoxid-Zerfall mit Braunstein,
 Abgaskatalysator, Enzyme wie Katalase und Urease …) gibt es eine eigene
 Wissensbasis mit Lehrbuchwerten.
 
+**KI-Synthese: Zielstoff herstellen.** In der Werkbank wählst du, was entstehen
+soll – etwa Paracetamol, Biphenyl oder Zimtsäure –, und die KI plant rückwärts,
+wie es sich herstellen lässt. Sie wendet ihre gelernten Vorlagen vom Produkt zu
+den Edukten an, lässt nur chemisch sinnvolle Ausgangsstoffe zu, bewertet jeden
+Vorschlag mit dem Vorwärtsnetz und behält nur Wege, bei denen die
+Vorwärtsvorhersage wieder genau den Zielstoff liefert. Zu jeder Stufe nennt sie
+Katalysator, Temperatur und Reaktionsenthalpie; fehlt ein Ausgangsstoff im
+Chemikalienschrank, plant sie eine Vorstufe dazu (bis zu zwei Stufen). Mit
+«Stufe ansetzen» kommen Ausgangsstoffe und Katalysator ins Gefäß, und die
+Werkbank rechnet die Reaktion nach. Auch von jeder Stoffseite aus erreichbar
+(«Mit KI herstellen»). Für gesperrte Stoffe plant die App keine Synthese.
+
 Die KI steht als eigenes Werkzeug unter **KI-Vorhersage** bereit und läuft in der
 **Werkbank** für jedes Stoffpaar mit: Dort schlägt sie immer eine Reaktion vor
 und sagt, mit welchem Katalysator sie gelingt, wenn die Aktivierungsenergie zu
@@ -293,7 +305,8 @@ src/
     reactionEnthalpy.ts ΔrH° für Werkbank-Reaktionen und Lösungsenthalpien
     conditionEffects.ts Wirkung von Temperatur- und Druckregler
     externalSubstances.ts Stoffe aus PubChem und SMILES für die Werkbank
-    ai/               Reaktions-KI: Vorlagen, Netz, Hilfsstoffe, Aktivierungsenergie
+    ai/               Reaktions-KI: Vorlagen, Netz, Hilfsstoffe, Aktivierungsenergie,
+                      Rückwärtssynthese (retrosynthesis.ts)
     reactionKeys.ts   Strukturschlüssel für den Abgleich mit belegten Reaktionen
     substanceStructures.ts Strukturen auch für Salze und Säuren ohne SMILES
     rdkit.ts          Anbindung der RDKit-WebAssembly-Bibliothek

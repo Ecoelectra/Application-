@@ -1213,3 +1213,24 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
 .enthalpy-missing { margin-top: 10px; }
 .energy-diagram .dh-arrow { stroke: var(--danger); stroke-width: 1.5; }
 .dh-caption { color: var(--danger); font-weight: 600; }
+
+/* KI-Synthese in der Werkbank */
+.planner { margin-bottom: 18px; }
+.planner-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin-top: 10px; }
+@media (max-width: 560px) { .planner-form { grid-template-columns: 1fr; } }
+.route-card {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+.route-steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
+.route-step { padding-top: 10px; border-top: 1px dashed var(--border); }
+.route-step:first-child { border-top: none; padding-top: 0; }
+.route-equation { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.route-molecule { display: inline-flex; align-items: center; gap: 6px; }
+.route-molecule figure { margin: 0; text-align: center; max-width: 140px; }
+.route-molecule figcaption { overflow-wrap: anywhere; }
+.route-plus, .route-arrow { font-size: 1.2rem; color: var(--text-subtle); padding: 0 2px; }
+.route-details { flex: 1 1 100%; }
+.route-details > summary { cursor: pointer; margin: 4px 0; }

@@ -229,6 +229,7 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 | `komplexbildung.test.ts` | 105 240 | jede Metallquelle der Stoffdatenbank mit jeder Ligandenquelle: gültige Komplexe, ausgeglichene Gleichungen, keine Komplexe bei Redox- und Fällungspaaren, Herkunftsangabe |
 | `komplexe.test.ts` | 5505 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
+| `ki-synthese.test.ts` | 1001 | 1000 Zielstoffe (alle 928 organischen Stoffe der Datenbank und 72 Katalogprodukte) rückwärts geplant: jeder Weg vorwärts bestätigt, Ausgangsstoffe neutral, zulässig und nicht der Zielstoff; gesperrte Stoffe ohne Synthese |
 | `ki.test.ts` | 1005 | 1000 zufällige Stoffpaare durch die Reaktions-KI: gültige und zulässige Produkte, stimmige Energieangaben, Reihenfolge egal; dazu Amidkupplung, Suzuki-Kupplung, Nitroreduktion und Katalysator im Gefäß |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
 
@@ -342,6 +343,24 @@ H2O2-Zerfall, Abgaskatalysator …) kommt in den Patenten der organischen
 Synthese nicht vor. Dafür gibt es `src/data/catalysis.ts` mit Lehrbuchwerten
 (Tabellenwert oder Größenordnung; wo kein Einzelwert sinnvoll ist, die
 Starttemperatur).
+
+**KI-Synthese (Rückwärtsplanung).** `src/chem/ai/retrosynthesis.ts` dreht die
+gelernten Vorlagen um (Produktseite → Eduktseite) und wendet alle 5.953 auf den
+Zielstoff an; die RDKit-Reaktionsobjekte werden beim ersten Aufruf einmal gebaut
+(knapp 1 s) und je Modell zwischengespeichert. Ausgangsstoffe mit «nackten»
+Abgangsgruppen (B, Si, Sn, Mg, Zn mit Wasserstoff – die Vorlagen kennen nur den
+Rumpf der Gruppe), geladene Teilchen und gesperrte Stoffe fallen weg, es sei
+denn, der Stoff steht in der Datenbank. Die übrigen Zerlegungen bewertet das
+Vorwärtsnetz (Summe der Wahrscheinlichkeiten der passenden Vorlagen für genau
+diese Ausgangsstoffe). Für die besten wird die Vorlage vorwärts angewendet und
+dann `predictWithModel` aufgerufen; nur wenn die KI vorwärts wieder den
+Zielstoff vorhersagt («Rundlauf»), wird die Stufe gezeigt – mit Katalysator,
+Aktivierungsenergie und Reaktionsenthalpie aus dieser Vorhersage.
+`extendRoutes` plant für Ausgangsstoffe außerhalb der Stoffdatenbank eine
+Vorstufe; spätere Produkte dürfen dabei nicht als Ausgangsstoff auftauchen.
+Rangfolge: Sicherheit × (vorrätig ? 1 : 0,5) × 0,8 je weitere Stufe. Die
+Werkbank (`SynthesisPlanner.tsx`) zeigt zuerst die einstufigen Wege (≈ 1 s) und
+ergänzt die zweite Stufe danach. Aufruf auch über `#/werkbank?ziel=<Stoff>`.
 
 **Trainingsdaten aus mehreren Quellen.** Seit dem Training vom September 2026
 lernt die KI aus 1.030.272 verschiedenen, geprüften Reaktionen aus zehn

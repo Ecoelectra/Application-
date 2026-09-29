@@ -156,7 +156,8 @@ export function substanceCategory(rdkit: MainModule, substance: Substance): stri
 }
 
 let knownByKey: Map<string, Substance> | null = null;
-function knownProduct(rdkit: MainModule, key: string): Substance | undefined {
+/** Stoff der Datenbank mit dieser Struktur (Strukturschlüssel), falls vorhanden. */
+export function knownProduct(rdkit: MainModule, key: string): Substance | undefined {
   if (!knownByKey) {
     knownByKey = new Map();
     for (const substance of SUBSTANCES) {
@@ -168,7 +169,7 @@ function knownProduct(rdkit: MainModule, key: string): Substance | undefined {
   return knownByKey.get(key);
 }
 
-function describeProduct(rdkit: MainModule, smiles: string): AiProduct {
+export function describeProduct(rdkit: MainModule, smiles: string): AiProduct {
   const key = structureKey(rdkit, smiles) ?? smiles;
   const known = knownProduct(rdkit, key);
   const formula = molecularFormula(rdkit, smiles) ?? undefined;
@@ -299,7 +300,8 @@ function cachedMol(rdkit: MainModule, smiles: string): ReturnType<MainModule['ge
 }
 
 /** Wendet eine Vorlage an und liefert die Strukturschlüssel der Hauptprodukte. */
-function applyTemplate(rdkit: MainModule, smarts: string, reactants: string[]): string[] {
+/** Vorlage vorwärts anwenden; liefert die Strukturschlüssel der Hauptprodukte. */
+export function applyTemplate(rdkit: MainModule, smarts: string, reactants: string[]): string[] {
   if (!reactionObjects.has(smarts)) {
     let rxn: ReturnType<MainModule['get_rxn']> | null = null;
     try {

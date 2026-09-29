@@ -26,6 +26,7 @@ import { substanceFromCompound, substanceFromSmiles } from '../chem/externalSubs
 import { compoundByCid } from '../services/pubchem';
 import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
 import { AiProposalCard } from '../components/AiProposalCard';
+import { SynthesisPlanner } from '../components/SynthesisPlanner';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
 import { useReactionModel } from '../hooks/useReactionModel';
 import type { MainModule } from '@rdkit/rdkit';
@@ -191,6 +192,21 @@ export function WorkbenchPage() {
     };
   }, [stoffeParam, urlRdkit]);
 
+  // Zielstoff für die KI-Synthese aus der Adresse, z. B. #/werkbank?ziel=paracetamol
+  const zielParam = params.get('ziel') ?? '';
+  const [planTarget, setPlanTarget] = useState<Substance | null>(null);
+  const zielRdkit = zielParam && !substanceById(zielParam) ? rdkit : null;
+  useEffect(() => {
+    if (!zielParam || (!substanceById(zielParam) && !zielRdkit)) return;
+    let cancelled = false;
+    resolveSubstanceId(zielRdkit, zielParam).then((substance) => {
+      if (!cancelled) setPlanTarget(substance);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [zielParam, zielRdkit]);
+
   useEffect(() => {
     loadReactionIndex().then(setDatabase);
   }, []);
@@ -291,6 +307,15 @@ export function WorkbenchPage() {
     });
   };
 
+  /** Stufe aus der KI-Synthese ansetzen: Gefäß neu befüllen, Katalyse und Temperatur einstellen */
+  const setUpStep = (substances: Substance[], catalysis: Exclude<WorkbenchConditions['catalysis'], 'keine'> | null, temperature: number | null): void => {
+    const unique = substances.filter((entry, index) => substances.findIndex((other) => other.id === entry.id) === index);
+    setSelected(unique.slice(0, MAX_SLOTS));
+    if (catalysis) setConditions((current) => ({ ...current, catalysis }));
+    if (temperature !== null) setTemperature(temperature);
+    window.setTimeout(() => document.getElementById('reaktionsgefaess')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
+
   const removeSubstance = (id: string): void => {
     setSelected((current) => current.filter((entry) => entry.id !== id));
   };
@@ -367,6 +392,20 @@ export function WorkbenchPage() {
       </div>
 
       {mode === 'komplexe' && <ComplexBuilder />}
+
+      {mode === 'mischen' && (
+        <SynthesisPlanner
+          rdkit={rdkit}
+          model={aiModel}
+          modelStatus={aiStatus}
+          temperatureC={temperatureC}
+          initialTarget={planTarget}
+          onSetUp={setUpStep}
+          onAddSubstance={addSubstance}
+          onSetCatalysis={(catalysis) => setConditions((c) => ({ ...c, catalysis }))}
+          onSetTemperature={setTemperature}
+        />
+      )}
 
       {mode === 'mischen' && (
       <div className="workbench">
@@ -446,7 +485,7 @@ export function WorkbenchPage() {
 
         {/* ---------- Reaktionsgefäß ---------- */}
         <section className="stack">
-          <div className="card">
+          <div className="card" id="reaktionsgefaess">
             <div className="card-title">
               <h2>Reaktionsgefäß</h2>
               {selected.length > 0 && (

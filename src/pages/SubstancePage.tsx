@@ -290,6 +290,14 @@ export function SubstancePage() {
                     ⚗ In die Werkbank
                   </Link>
                 )}
+                {workbenchId && resolution.smiles && (
+                  <Link
+                    className="button button-secondary button-small no-print"
+                    to={`/werkbank?${new URLSearchParams({ ziel: workbenchId }).toString()}`}
+                  >
+                    🎯 Mit KI herstellen
+                  </Link>
+                )}
               </div>
 
               {resolution.smiles ? (
