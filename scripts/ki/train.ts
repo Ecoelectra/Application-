@@ -103,7 +103,7 @@ for (const record of records) {
   unique.push(record);
 }
 records.length = 0;
-records.push(...unique);
+for (const record of unique) records.push(record);
 seenKeys.clear();
 log(`${records.length} verschiedene Reaktionen nach Dublettenprüfung`);
 for (const [source, stat] of Object.entries(sourceStats)) {
