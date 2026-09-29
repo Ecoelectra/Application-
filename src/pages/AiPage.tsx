@@ -62,9 +62,11 @@ export function AiPage() {
       <header className="page-header">
         <h1>Reaktions-KI</h1>
         <p>
-          Ein neuronales Netz sagt vorher, was aus zwei Stoffen entsteht und welcher Katalysator dafür nötig ist. Es hat an
-          {model ? ` ${model.metrics.trainingReactions.toLocaleString('de-DE')} ` : ' rund einer Million '}
-          Reaktionen gelernt{model?.sources && Object.keys(model.sources).length > 1 ? ` aus ${Object.keys(model.sources).length} Quellen – US-Patente, Enzymdatenbanken und Hochdurchsatzversuche` : ' aus US-Patenten'}. Dazu kommt eine Abschätzung der Aktivierungsenergie: Läuft die Reaktion bei der
+          Ein neuronales Netz sagt vorher, was aus zwei Stoffen entsteht und welcher Katalysator dafür nötig ist.
+          {model?.sources && Object.keys(model.sources).length > 1
+            ? ` Es wurde mit ${Object.values(model.sources).reduce((sum, count) => sum + count, 0).toLocaleString('de-DE')} verschiedenen Reaktionen aus ${Object.keys(model.sources).length} Quellen trainiert – US-Patente, Enzymdatenbanken und Hochdurchsatzversuche.`
+            : ` Es hat an ${model ? model.metrics.trainingReactions.toLocaleString('de-DE') : 'rund 400 000'} Reaktionen aus US-Patenten gelernt.`}{' '}
+          Dazu kommt eine Abschätzung der Aktivierungsenergie: Läuft die Reaktion bei der
           eingestellten Temperatur, oder braucht es einen Katalysator?
         </p>
       </header>
