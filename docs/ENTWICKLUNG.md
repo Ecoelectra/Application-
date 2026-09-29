@@ -231,6 +231,7 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
 | `ki-synthese.test.ts` | 1001 | 1000 Zielstoffe (alle 928 organischen Stoffe der Datenbank und 72 Katalogprodukte) rückwärts geplant: jeder Weg vorwärts bestätigt, Ausgangsstoffe neutral, zulässig und nicht der Zielstoff; gesperrte Stoffe ohne Synthese; im Reaktor machen Wärme, Katalysator und Druck eine Stufe nie langsamer, und bei der Empfehlung läuft sie |
 | `werkbank-ki.test.ts` | 1001 | 1000 Zufallsmischungen aus zwei oder drei Stoffen mit der Reaktions-KI bei Zufallstemperatur, -druck und -katalyse: keine doppelten Reaktionen, vollständige zuerst, KI-Produkte zulässig, Beteiligte aus dem Gefäß, was nicht läuft nennt, was fehlt, mehr Wärme macht keine KI-Reaktion langsamer |
+| `pdf-ideen.test.ts` | 1060 | 1000 Stoffnamen der Datenbank in Sätzen versteckt: die Erkennung findet sie (allgemeine Wörter ausgenommen), CAS-Nummern eindeutig; 60 Zufallslisten durch die Ideensuche: nur Paare der Liste, keine gesperrten Mischungen, sortiert |
 | `ki.test.ts` | 1005 | 1000 zufällige Stoffpaare durch die Reaktions-KI: gültige und zulässige Produkte, stimmige Energieangaben, Reihenfolge egal; dazu Amidkupplung, Suzuki-Kupplung, Nitroreduktion und Katalysator im Gefäß |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
 
@@ -412,6 +413,23 @@ neue Version aktiv wird – so kommen Updates auf dem iPad sofort an.
 Eine eigene KI-Seite gibt es nicht mehr: `#/ki` (auch mit `?stoffe=`) leitet zur
 Werkbank weiter (`AiRedirect` in `App.tsx`); Arbeitsweise, Datenquellen und Güte
 des Netzes zeigt dort `AiInfoPanel.tsx`.
+
+**PDF-Ideen.** `src/services/pdfText.ts` liest den Text eines PDFs mit pdf.js
+(`pdfjs-dist`, erst beim ersten PDF nachgeladen, eigener Worker; höchstens 300
+Seiten, 50 MB). `extractText` nimmt die Bibliothek als Parameter, damit die Tests
+den Node-Build (`pdfjs-dist/legacy`) nutzen können. `src/chem/textSubstances.ts`
+erkennt Stoffe: Namen und Synonyme (≥ 4 Zeichen, allgemeine Wörter wie «Base»,
+«Salz», «Glas» ausgenommen) als längste Wortfolge bis fünf Wörter, gebeugte
+Formen und Darreichungsformen («-band», «-pulver», «-lösung»), Kürzel in
+Großbuchstaben nur exakt, CAS-Nummern mit Prüfziffer, Summenformeln nur bei genau
+einem passenden Stoff. `src/chem/pdfIdeas.ts` mischt alle Paare der (höchstens 24
+häufigsten) Stoffe mit `mix()` samt KI-Modell, in Portionen mit Pausen, damit die
+Oberfläche bedienbar bleibt. Bewertung: vollständig 10, nur Wärme/Katalysator
+fehlt 4, sonst 1; Herkunft (Lehrbuch 4, belegt 3, KI 2 + Sicherheit), Einstufung
+(Schulversuch 3 … Fachlabor −3), sichtbare Beobachtungen je 1,5; jede weitere
+Reaktion derselben Art −3 für Abwechslung. Synthesen: Katalogeinträge mit
+höchstens einem fehlenden Edukt, vollständige zuerst. `PdfIdeas.tsx` ist der
+Werkbank-Modus `?modus=pdf`; die Ergebnisse bleiben beim Umschalten erhalten.
 
 **Trainingsdaten aus mehreren Quellen.** Seit dem Training vom September 2026
 lernt die KI aus 1.030.272 verschiedenen, geprüften Reaktionen aus zehn

@@ -1249,3 +1249,10 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
 .ai-forecast-list li { display: flex; gap: 10px; align-items: flex-start; }
 .ai-forecast-icon { font-size: 1.3rem; line-height: 1.3; flex: none; }
 .link-button { background: none; border: 0; padding: 0; margin-top: 2px; color: var(--accent); cursor: pointer; text-decoration: underline; font: inherit; }
+
+/* PDF-Ideen in der Werkbank */
+.pdf-drop { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 12px; padding: 26px 16px; border: 2px dashed var(--border, #c8ccd4); border-radius: 14px; cursor: pointer; text-align: center; transition: border-color 0.15s, background 0.15s; }
+.pdf-drop:hover, .pdf-drop:focus-within, .pdf-drop-active { border-color: var(--accent); background: var(--accent-soft); }
+.pdf-drop input[type='file'] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.pdf-drop-icon { font-size: 2rem; }
+.idea-card h3 { margin-top: 0; }

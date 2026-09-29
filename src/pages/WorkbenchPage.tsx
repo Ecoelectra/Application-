@@ -27,6 +27,7 @@ import { compoundByCid } from '../services/pubchem';
 import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
 import { AiProposalCard } from '../components/AiProposalCard';
 import { AiInfoPanel } from '../components/AiInfoPanel';
+import { PdfIdeas } from '../components/PdfIdeas';
 import { SynthesisPlanner } from '../components/SynthesisPlanner';
 import { CatalysisControl, PRESSURE_LOG_MIN, PressureControl, TEMPERATURE_MAX, TEMPERATURE_MIN, TemperatureControl } from '../components/ReactorControls';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
@@ -150,10 +151,11 @@ export function WorkbenchPage() {
   const [running, setRunning] = useState(false);
   const [journal, setJournal] = useState<Array<{ educts: string; outcome: string }>>([]);
   const [params, setParams] = useSearchParams();
-  type Mode = 'mischen' | 'synthese' | 'komplexe';
+  type Mode = 'mischen' | 'synthese' | 'pdf' | 'komplexe';
   const modus = params.get('modus');
   // Ein Zielstoff in der Adresse öffnet die KI-Synthese
-  const mode: Mode = modus === 'komplexe' ? 'komplexe' : modus === 'synthese' || (!modus && params.has('ziel')) ? 'synthese' : 'mischen';
+  const mode: Mode =
+    modus === 'komplexe' ? 'komplexe' : modus === 'pdf' ? 'pdf' : modus === 'synthese' || (!modus && params.has('ziel')) ? 'synthese' : 'mischen';
   const switchMode = (next: Mode): void => {
     const nextParams = new URLSearchParams(next === 'mischen' ? {} : { modus: next });
     setParams(nextParams, { replace: true });
@@ -316,6 +318,14 @@ export function WorkbenchPage() {
     window.setTimeout(() => document.getElementById('reaktionsgefaess')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
   };
 
+  /** Stoffe aus den PDF-Ideen ins Gefäß geben und mischen */
+  const tryFromIdeas = (substances: Substance[]): void => {
+    const unique = substances.filter((entry, index) => substances.findIndex((other) => other.id === entry.id) === index);
+    setSelected(unique.slice(0, MAX_SLOTS));
+    switchMode('mischen');
+    window.setTimeout(() => document.getElementById('reaktionsgefaess')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  };
+
   const removeSubstance = (id: string): void => {
     setSelected((current) => current.filter((entry) => entry.id !== id));
   };
@@ -374,6 +384,15 @@ export function WorkbenchPage() {
             <button
               type="button"
               role="tab"
+              aria-selected={mode === 'pdf'}
+              className={`chip${mode === 'pdf' ? ' active' : ''}`}
+              onClick={() => switchMode('pdf')}
+            >
+              📄 PDF-Ideen
+            </button>
+            <button
+              type="button"
+              role="tab"
               aria-selected={mode === 'komplexe'}
               className={`chip${mode === 'komplexe' ? ' active' : ''}`}
               onClick={() => switchMode('komplexe')}
@@ -397,6 +416,12 @@ export function WorkbenchPage() {
             «Stufe ansetzen» geht es direkt ins Reaktionsgefäß.
           </p>
         )}
+        {mode === 'pdf' && (
+          <p className="lead">
+            PDF hochladen – die App findet alle Stoffe darin und schlägt vor, welche spannenden Reaktionen und Synthesen du
+            damit machen kannst. Mit einem Tipp kommen die Stoffe ins Reaktionsgefäß.
+          </p>
+        )}
         {mode === 'mischen' && (
         <p className="small muted" style={{ marginTop: 6 }}>
           Jedes Ergebnis ist gekennzeichnet: <EvidenceBadge evidence="belegt" /> in der Literatur beschrieben
@@ -415,6 +440,11 @@ export function WorkbenchPage() {
       </div>
 
       {mode === 'komplexe' && <ComplexBuilder />}
+
+      {/* Die Ideen aus dem PDF bleiben beim Umschalten erhalten */}
+      <div hidden={mode !== 'pdf'}>
+        <PdfIdeas rdkit={rdkit} model={aiModel} modelStatus={aiStatus} onTry={tryFromIdeas} />
+      </div>
 
       {/* KI-Synthese bleibt beim Umschalten erhalten, damit die Wege nicht neu geplant werden müssen */}
       <div hidden={mode !== 'synthese'}>

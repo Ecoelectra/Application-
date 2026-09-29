@@ -126,6 +126,21 @@ Kontaktverfahren, Ostwald-Verfahren, Wasserstoffperoxid-Zerfall mit Braunstein,
 Abgaskatalysator, Enzyme wie Katalase und Urease …) gibt es eine eigene
 Wissensbasis mit Lehrbuchwerten.
 
+**PDF-Ideen: Was kann ich mit diesen Stoffen machen?** Im Werkbank-Reiter
+«📄 PDF-Ideen» lädst du ein PDF hoch – etwa die Chemikalienliste der Schule, eine
+Versuchsanleitung oder ein Skript. Die App liest den Text im Gerät (pdf.js, nichts
+wird hochgeladen) und erkennt darin die Stoffe der Datenbank: über Namen und
+Synonyme (auch gebeugt, getrennt am Zeilenende oder als «Magnesiumband»),
+CAS-Nummern mit Prüfziffer und Summenformeln wie H2SO4. Dann mischt sie jedes
+Stoffpaar in der Werkbank (Regeln, Patentbelege, Reaktions-KI) und schlägt die
+spannendsten Reaktionen vor – mit sichtbarer Beobachtung (Farbe, Gas,
+Niederschlag, Licht), gut belegt und als Schulversuch machbar zuerst, dazu,
+was noch fehlt (Wärme, Katalysator). Außerdem Synthesen aus dem Katalog, deren
+Edukte alle oder bis auf eines in der Liste stehen. Ein Tipp gibt die Stoffe ins
+Reaktionsgefäß. Gefährliche Mischungen schlägt die App nie vor; eingescannte PDFs
+ohne Text kann sie nicht lesen (keine Texterkennung) – dafür lässt sich die Liste
+auch als Text einfügen.
+
 **KI-Synthese: Zielstoff herstellen.** Ein eigener Bereich der Werkbank
 («🎯 KI-Synthese»): Du wählst, was entstehen soll – etwa Paracetamol, Biphenyl
 oder Zimtsäure –, und die KI plant rückwärts, wie es sich herstellen lässt. Sie
