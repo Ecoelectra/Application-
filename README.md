@@ -103,14 +103,17 @@ Im Modus **«Komplexe bauen»** der Werkbank lassen sich Komplexe außerdem frei
 zusammenstellen: 24 Zentralionen, 31 Liganden, 16 bekannte Vorlagen.
 
 **Reaktions-KI: Was entsteht – und mit welchem Katalysator?**
-Ein neuronales Netz, trainiert auf 320.335 Reaktionen aus
-US-Patenten, sagt vorher, was aus zwei Stoffen entsteht und welcher Katalysator,
-welche Base oder welches Reagenz dafür nötig ist. Es kennt 1.615
-Reaktionsvorlagen, die es selbst aus den Patentdaten herausgeschnitten hat, und
-prüft jedes Produkt mit RDKit. An 39.831 Reaktionen, die es beim
-Lernen nie gesehen hat, liegt das richtige Produkt in 69 % der
-Fälle auf Platz 1 und in 77 % unter den ersten drei; die
-Katalysatorart trifft es in 74 % der Fälle.
+Ein neuronales Netz, trainiert auf **1.030.272 verschiedenen Reaktionen aus
+zehn Datensätzen** – US-Patente 1976–2016, Enzymreaktionen aus BRENDA,
+biochemische Reaktionen aus Rhea, PathBank und MetaNetX sowie
+Hochdurchsatz-Experimente –, sagt vorher, was aus zwei Stoffen entsteht und
+welcher Katalysator, welche Base, welches Reagenz oder welches Enzym dafür
+nötig ist. Es kennt 5.953 Reaktionsvorlagen, die es selbst aus den Daten
+herausgeschnitten hat, und prüft jedes Produkt mit RDKit. An zurückgehaltenen
+Patentreaktionen (USPTO-MIT-Testsatz) liegt das richtige Produkt in 72 % der
+Fälle auf Platz 1 und in 81 % unter den ersten drei, bei Enzymreaktionen aus
+BRENDA in 50 % bzw. 70 %. Wie das Training lief und wie gut das Netz je Quelle
+ist, steht im [Trainingsbericht](docs/KI-TRAININGSBERICHT.md).
 
 Dazu kommt die **Aktivierungsenergie**: Jede Reaktion gehört zu einer Familie mit
 Richtwerten für die Barriere ohne und mit Katalysator. Über die
@@ -126,7 +129,7 @@ Wissensbasis mit Lehrbuchwerten.
 Die KI steht als eigenes Werkzeug unter **KI-Vorhersage** bereit und läuft in der
 **Werkbank** für jedes Stoffpaar mit: Dort schlägt sie immer eine Reaktion vor
 und sagt, mit welchem Katalysator sie gelingt, wenn die Aktivierungsenergie zu
-hoch ist. Das Modell (rund 1 MB) arbeitet offline im Gerät.
+hoch ist. Das Modell (rund 2,4 MB) arbeitet offline im Gerät.
 
 **Reaktionsenthalpie für jede Reaktion.** Zu jeder Reaktion in der Werkbank,
 zu jedem KI-Vorschlag und auf den Reaktionsseiten berechnet die App ΔrH° nach
@@ -197,8 +200,8 @@ nach Hess.
 | verschiedene Zielstoffe | 2584 |
 | Reaktionstypen mit Mechanismus | 96 |
 | davon elektrochemisch | 15 |
-| Reaktions-KI: trainiert auf / Vorlagen | 320.335 / 1.615 |
-| Reaktions-KI: richtiges Produkt auf Platz 1 / unter den ersten 3 | 69 % / 77 % |
+| Reaktions-KI: verschiedene Reaktionen / Quellen / Vorlagen | 1.030.272 / 10 / 5.953 |
+| Reaktions-KI: richtiges Produkt auf Platz 1 / unter den ersten 3 (Patente) | 72 % / 81 % |
 | Katalysierte Prozesse in der Wissensbasis | 27 |
 | Standardbildungsenthalpien (anorganisch inkl. Ionen / organisch) | 252 / 85 |
 | Stoffe offline verfügbar | 1544 |
@@ -320,6 +323,7 @@ scripts/
   build-reactions.ts Erzeugt die Datenbank belegter Reaktionen
   build-substances.ts Erzeugt die erweiterte Stoffdatenbank
   ki/               Training der Reaktions-KI (npm run ki)
+  ki/quellen/       Reaktionsquellen laden, Dubletten entfernen, Atomzuordnung (RXNMapper)
 src-tauri/        Windows-Anwendung (Tauri v2)
 docs/             Fachliche Grundlagen und Entwicklungshinweise
 ```
@@ -343,6 +347,13 @@ Mehr dazu: [Fachliche Grundlagen](docs/CHEMIE.md) ·
   [github.com/wengong-jin/nips17-rexgen](https://github.com/wengong-jin/nips17-rexgen));
   Auswahl, Plausibilitätsprüfung und Sicherheitsfilter durch
   `scripts/build-reactions.ts`
+- **Trainingsdaten der Reaktions-KI:** zusätzlich US-Patenterteilungen
+  1976–2016 (D. M. Lowe, CC0; Spiegel von DeepChem), USPTO-STEREO (Schwaller
+  et al. 2019), EnzymeMap (Heid et al. 2023, Reaktionen aus BRENDA), ECREACT
+  (Probst et al. 2022: BRENDA, Rhea, PathBank, MetaNetX) sowie die
+  Hochdurchsatz-Datensätze von Perera et al. (Science 2018, Suzuki) und
+  Ahneman et al. (Science 2018, Buchwald-Hartwig); Atomzuordnung mit RXNMapper
+  (Schwaller et al. 2021)
 
 ## Sicherheit
 
@@ -372,8 +383,9 @@ Stoffe aus PubChem tragen deren (meist englische) Namen. Umgekehrt bedeutet ein 
 die Reaktion unter beliebigen Bedingungen abläuft; deshalb nennt die App, was an
 Wärme, Katalysator oder Apparatur noch fehlt.
 
-Die Reaktions-KI kennt, was in Patenten der organischen Synthese häufig
-vorkommt. Sie sagt, was chemisch naheliegt – nicht, ob es im Einzelfall klappt,
+Die Reaktions-KI kennt vor allem, was in Patenten der organischen Synthese
+häufig vorkommt – rund 96 % ihrer Trainingsreaktionen stammen aus US-Patenten,
+nur etwa 4 % aus Enzym- und Stoffwechseldatenbanken. Sie sagt, was chemisch naheliegt – nicht, ob es im Einzelfall klappt,
 wie hoch die Ausbeute ist oder welche Nebenprodukte entstehen. Die
 Aktivierungsenergien sind Richtwerte der Reaktionsfamilie (± 10–20 kJ/mol), die
 Halbwertszeiten Abschätzungen nach Arrhenius. Alles, was die KI liefert, ist als

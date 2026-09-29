@@ -8,8 +8,8 @@
  * die Extraktion die zugeordneten Reaktionen aus .cache/quellen.
  *
  * Dauer auf vier Kernen: nur USPTO-MIT etwa 7 Minuten Extraktion und 20–30
- * Minuten Training; mit allen Quellen (rund 1,7 Mio. Reaktionen) etwa
- * 2 Stunden Atomzuordnung, 30 Minuten Extraktion und 1–2 Stunden Training.
+ * Minuten Training; mit allen Quellen (1,31 Mio. Reaktionen) etwa 2–3 Stunden
+ * Atomzuordnung, 15 Minuten Extraktion und 70 Minuten Training.
  *
  * Mit KI_VERGLEICH=<Ordner> wird danach das neue Modell mit einem alten
  * (netz.bin.gz + vorlagen.json.gz) auf denselben Testreaktionen verglichen.

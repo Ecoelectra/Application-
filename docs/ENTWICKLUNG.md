@@ -304,8 +304,9 @@ Build tut das automatisch.
 Die KI sagt vorher, welches Produkt aus zwei Stoffen entsteht und welcher
 Katalysator dafür nötig ist. Sie besteht aus drei Teilen:
 
-1. **Reaktionsvorlagen** (`src/chem/ai/templates.ts`). Der USPTO-MIT-Datensatz
-   liefert zu jeder Reaktion die Atomzuordnung und die geänderten Bindungen.
+1. **Reaktionsvorlagen** (`src/chem/ai/templates.ts`). Zu jeder Reaktion
+   gehören Atomzuordnung und geänderte Bindungen – aus USPTO-MIT und EnzymeMap
+   direkt, für die übrigen Quellen berechnet mit RXNMapper.
    Daraus wird wie bei rdchiral (Coley et al.) das Reaktionszentrum mit seinen
    direkten Nachbarn als Reaktions-SMARTS herausgeschnitten und kanonisch
    geschrieben. Jede Vorlage wird sofort geprüft: Angewendet auf die Edukte
@@ -342,15 +343,37 @@ Synthese nicht vor. Dafür gibt es `src/data/catalysis.ts` mit Lehrbuchwerten
 (Tabellenwert oder Größenordnung; wo kein Einzelwert sinnvoll ist, die
 Starttemperatur).
 
-**Neu trainieren:** `npm run ki` (setzt die USPTO-Daten aus `npm run reaktionen`
-voraus). `scripts/ki/extract.ts` schneidet die Vorlagen in vier Prozessen
-heraus (etwa 7 Minuten), `scripts/ki/train.ts` wählt die Vorlagen mit
-mindestens 25 Fundstellen, ordnet die Hilfsstoffe ein, trainiert sechs Epochen
-mit Adam in vier Threads (`train-worker.mjs`, etwa 20 Minuten) und bewertet auf
-dem Testteil des Datensatzes. Ergebnis: `public/ki/netz.bin.gz` und
-`public/ki/vorlagen.json.gz` (Vorlagen mit Familie, Hilfsstoff-Anteilen,
-häufigsten Hilfsstoffen und einer Beispielreaktion). Stellschrauben über
-Umgebungsvariablen: `KI_MIN`, `KI_HIDDEN`, `KI_EPOCHS`.
+**Trainingsdaten aus mehreren Quellen.** Seit dem Training vom September 2026
+lernt die KI aus 1.030.272 verschiedenen, geprüften Reaktionen aus zehn
+Datensätzen (US-Patente, Enzym- und Stoffwechseldatenbanken,
+Hochdurchsatz-Experimente; Einzelheiten und Ergebnisse im
+[Trainingsbericht](KI-TRAININGSBERICHT.md)). Die Kette:
+
+1. `scripts/ki/quellen/download.sh` lädt die Quellen nach `.cache/quellen` und
+   legt eine Python-Umgebung mit RDKit und RXNMapper an (`.cache/mapper-env`).
+2. `prepare.py` liest alle Quellen, vereinheitlicht sie und entfernt Dubletten
+   (gleiche Stoffe links, gleiches Hauptprodukt). Bei Enzymreaktionen ist das
+   Hauptprodukt das größte Molekül, das kein Cofaktor ist (NAD(P)H, ATP, CoA,
+   FAD … erkennt es am Adenin- bzw. Flavingerüst).
+3. `map.py <Teil> <Teile>` ordnet Reaktionen ohne Atomzuordnung mit RXNMapper
+   zu (Konfidenz ≥ 0,1) und bestimmt die geänderten Bindungen im Format von
+   USPTO-MIT. Läuft in vier Prozessen etwa 2–3 Stunden und setzt nach einem
+   Abbruch fort.
+4. `npm run ki`: `extract.ts` schneidet und prüft die Vorlagen (Enzyme werden
+   als Hilfsstoff `EC:x.y.z` mitgeführt, Kategorie «Enzym»), `train.ts`
+   entfernt Dubletten über alle Quellen, teilt Training/Validierung/Test (der
+   USPTO-MIT-Testsatz bleibt unverändert, andere Quellen per Hash: Patente
+   1 %/1 %, kleinere Quellen 5 %/10 %), trainiert und bewertet je Quelle.
+   `bericht.json` und `testfaelle.jsonl` landen in `.cache/ki`.
+5. `vite-node scripts/ki/evaluate.ts vorher=<Ordner> nachher=public/ki`
+   vergleicht zwei Modelle auf denselben Testreaktionen,
+   `vite-node scripts/ki/bericht.ts` schreibt daraus die Tabellen.
+
+Ohne `.cache/quellen/zugeordnet-*.tsv` trainiert `npm run ki` wie früher nur
+mit USPTO-MIT. Stellschrauben über Umgebungsvariablen: `KI_MIN` (Mindestzahl
+Fundstellen je Vorlage, zuletzt 15), `KI_MIN_KLEIN` (für Vorlagen aus
+Nicht-Patent-Quellen, 8), `KI_HIDDEN`, `KI_EPOCHS` (zuletzt 5),
+`KI_TEST_JE_QUELLE`.
 
 ## Die Werkbank
 
