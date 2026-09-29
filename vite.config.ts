@@ -13,5 +13,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // Trainingsdaten und Python-Umgebung der Reaktions-KI nicht beobachten
+    watch: { ignored: ['**/.cache/**'] },
   },
 });

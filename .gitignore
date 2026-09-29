@@ -32,3 +32,6 @@ public/rdkit/
 
 # Rohdaten für scripts/build-reactions.ts
 .cache/
+
+# Python
+__pycache__/

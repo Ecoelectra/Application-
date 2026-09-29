@@ -138,7 +138,8 @@ def buchwald_rows():
     path = os.path.join(Q, 'rxn_yields/data/Buchwald-Hartwig/Dreher_and_Doyle_input_data.xlsx')
     frame = pd.read_excel(path, sheet_name='FullCV_01')
     methylaniline = 'Cc1ccc(N)cc1'
-    pd_catalyst = 'O=S(=O)(O[Pd]1c2ccccc2-c2ccccc2N~1)C(F)(F)F'
+    # Buchwald-Präkatalysator (Pd-Palladacyclus); als [Pd] notiert, weil RXNMapper «~»-Bindungen nicht liest
+    pd_catalyst = '[Pd]'
     for i, row in frame.iterrows():
         halide = row['Aryl halide']
         mol = Chem.MolFromSmiles(halide)
