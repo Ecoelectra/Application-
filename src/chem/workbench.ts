@@ -11,14 +11,17 @@
  *
  *  6. Belegte Reaktionen aus der Patentliteratur, deren Edukte vollständig im
  *     Gefäß sind.
+ *  7. Die Reaktions-KI (neuronales Netz) für jedes Stoffpaar – bewertet bei
+ *     der eingestellten Temperatur, dem Druck und dem Katalysator.
  *
  * Jede Reaktion kennt ihre Bedingungen. Sind sie nicht erfüllt, erscheint sie
  * trotzdem – mit der Angabe, was fehlt. So sieht man, dass eine Reaktion
  * grundsätzlich möglich ist und woran es noch hängt.
  *
  * Außerdem sagt jede Reaktion, woher das Ergebnis stammt: belegt (in der
- * Literatur beschrieben), Lehrbuchreaktion (fest hinterlegt) oder Vorhersage
- * (aus einer allgemeinen Regel oder Reaktionsvorlage berechnet).
+ * Literatur beschrieben), Lehrbuchreaktion (fest hinterlegt), KI-Vorhersage
+ * (neuronales Netz) oder Vorhersage (aus einer allgemeinen Regel oder
+ * Reaktionsvorlage berechnet).
  */
 import type { MainModule } from '@rdkit/rdkit';
 import { canonicalSmiles, matchSmarts, molecularFormula, runReaction } from './rdkit';
@@ -33,6 +36,10 @@ import { conditionNotes, pressureNote } from './conditionEffects';
 import type { ComplexAnalysis } from './complexes';
 import { reactionEnthalpy } from './reactionEnthalpy';
 import type { ReactionEnthalpy } from './thermo';
+import type { ReactionModel } from './ai/model';
+import type { AiProposal } from './ai/reactionAI';
+import type { StepEvaluation } from './ai/synthesisConditions';
+import { aiReactions } from './ai/workbenchAI';
 import { structureKey, substanceKeys } from './reactionKeys';
 import { ionStructures, saltFormula, structuresOf } from './substanceStructures';
 import type { Ion } from './ions';
@@ -123,19 +130,25 @@ export interface WorkbenchReaction {
   enthalpy?: ReactionEnthalpy | null;
   /** Stoffe ohne bekannte Bildungsenthalpie, falls ΔrH° nicht berechnet werden konnte */
   enthalpyMissing?: string[];
+  /** Vorschlag der Reaktions-KI: Grundlage (bei «ki») oder Bestätigung eines Ergebnisses */
+  ai?: AiProposal;
+  /** Bewertung im Reaktor bei eingestellter Temperatur, Druck und Katalysator (KI) */
+  reactor?: StepEvaluation;
 }
 
 /**
  * Woher weiß die Werkbank, dass es so abläuft?
  *  - belegt: genau diese Umsetzung ist in der Patentliteratur beschrieben
  *  - lehrbuch: fest hinterlegte Standardreaktion (Nachweise, Verfahren)
+ *  - ki: vom neuronalen Netz vorhergesagt, gelernt aus über einer Million Reaktionen
  *  - vorhersage: aus einer allgemeinen Regel oder Vorlage berechnet
  */
-export type Evidence = 'belegt' | 'lehrbuch' | 'vorhersage';
+export type Evidence = 'belegt' | 'lehrbuch' | 'ki' | 'vorhersage';
 
 export const EVIDENCE_LABELS: Record<Evidence, string> = {
   belegt: 'Belegt',
   lehrbuch: 'Lehrbuchreaktion',
+  ki: 'KI-Vorhersage',
   vorhersage: 'Vorhersage',
 };
 
@@ -616,6 +629,7 @@ export function mix(
   substances: Substance[],
   conditions: WorkbenchConditions = DEFAULT_CONDITIONS,
   documented: DocumentedReaction[] = [],
+  model: ReactionModel | null = null,
 ): MixResult {
   if (!substances.length) {
     return { outcome: 'keine-reaktion', reactions: [], hints: ['Wähle mindestens einen Stoff aus.'] };
@@ -736,11 +750,30 @@ export function mix(
     reaction.participants = participantsFromFormulas(reaction, reagentLike);
   }
 
-  // Für jedes Stoffpaar ohne vollständige Reaktion: Vorhersage, was passiert
   const temperature = conditions.temperatureC ?? { kalt: 0, raum: 20, heiss: 80 }[conditions.temperature];
   const pressure = conditions.pressureBar ?? 1.013;
-  const pairOutcomes: WorkbenchReaction[] = [];
   const predicted = new Set<string>();
+
+  // 7. Reaktions-KI: das neuronale Netz rechnet jedes Stoffpaar mit
+  if (rdkit && model) {
+    const learned = aiReactions(
+      rdkit,
+      model,
+      reagentLike,
+      substances,
+      { temperatureC: temperature, pressureBar: pressure, catalysis: conditions.catalysis },
+      positive,
+    );
+    for (const reaction of learned) {
+      if (seen.has(reaction.id)) continue;
+      seen.add(reaction.id);
+      predicted.add(reaction.id);
+      positive.push(reaction);
+    }
+  }
+
+  // Für jedes Stoffpaar ohne vollständige Reaktion: Vorhersage, was passiert
+  const pairOutcomes: WorkbenchReaction[] = [];
   for (let i = 0; i < reagentLike.length; i++) {
     for (let j = i + 1; j < reagentLike.length; j++) {
       const [a, b] = [reagentLike[i], reagentLike[j]];
@@ -786,6 +819,7 @@ export function mix(
 
   // Reaktionsenthalpie für jede gezeigte Reaktion und jedes Lösen
   for (const reaction of [...shown, ...pairOutcomes]) {
+    if (reaction.enthalpy) continue;
     const outcome = reactionEnthalpy(rdkit, reaction, substances, conditions.aqueous);
     reaction.enthalpy = outcome.enthalpy;
     if (outcome.missing?.length) reaction.enthalpyMissing = outcome.missing;
@@ -814,7 +848,7 @@ export function mix(
 // Belegte Reaktionen aus der Patentliteratur
 // ---------------------------------------------------------------------
 
-const EVIDENCE_RANK: Record<Evidence, number> = { belegt: 0, lehrbuch: 1, vorhersage: 2 };
+const EVIDENCE_RANK: Record<Evidence, number> = { belegt: 0, lehrbuch: 1, ki: 2, vorhersage: 3 };
 
 /** Höchstens so viele belegte Reaktionen je Mischung – die häufigsten zuerst. */
 const MAX_DOCUMENTED = 5;

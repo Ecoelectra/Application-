@@ -29,6 +29,7 @@ import { AiProposalCard } from '../components/AiProposalCard';
 import { SynthesisPlanner } from '../components/SynthesisPlanner';
 import { CatalysisControl, PRESSURE_LOG_MIN, PressureControl, TEMPERATURE_MAX, TEMPERATURE_MIN, TemperatureControl } from '../components/ReactorControls';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
+import type { StepEvaluation, StepVerdict } from '../chem/ai/synthesisConditions';
 import { useReactionModel } from '../hooks/useReactionModel';
 import type { MainModule } from '@rdkit/rdkit';
 import { EnthalpyPanel } from '../components/EnthalpyPanel';
@@ -229,7 +230,10 @@ export function WorkbenchPage() {
     [],
   );
 
-  // Ergebnis neu berechnen, sobald sich Auswahl oder Bedingungen ändern
+  // Reaktions-KI: rechnet in der Werkbank mit
+  const { model: aiModel, status: aiStatus } = useReactionModel();
+
+  // Ergebnis neu berechnen, sobald sich Auswahl, Bedingungen oder das KI-Modell ändern
   useEffect(() => {
     if (!selected.length) {
       setResult(null);
@@ -239,15 +243,14 @@ export function WorkbenchPage() {
     if (!documentedReady) return;
     // Kurze Verzögerung, damit die Animation sichtbar wird
     const timer = window.setTimeout(() => {
-      setResult(mix(rdkit, selected, conditions, documentedList));
+      setResult(mix(rdkit, selected, conditions, documentedList, aiModel));
       setRunning(false);
     }, 320);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rdkit, selected, conditions, documentedReady, documented]);
+  }, [rdkit, selected, conditions, documentedReady, documented, aiModel]);
 
-  // Reaktions-KI: für jedes Stoffpaar einen Vorschlag mit Katalysator
-  const { model: aiModel, status: aiStatus } = useReactionModel();
+  // Weitere Ideen der KI: Wissensbasis und Vorschläge, die nicht schon als Reaktion oben stehen
   const [aiResults, setAiResults] = useState<Array<{ key: string; substances: Substance[]; proposals: AiProposal[] }> | null>(null);
   const [aiRunning, setAiRunning] = useState(false);
   useEffect(() => {
@@ -386,7 +389,14 @@ export function WorkbenchPage() {
           Jedes Ergebnis ist gekennzeichnet: <EvidenceBadge evidence="belegt" /> in der Literatur beschrieben
           {database ? ` (Abgleich mit ${database.total.toLocaleString('de-DE')} Reaktionen aus US-Patenten)` : ''},{' '}
           <EvidenceBadge evidence="lehrbuch" /> fest hinterlegte Standardreaktion,{' '}
-          <EvidenceBadge evidence="vorhersage" /> aus Regeln oder Vorlagen berechnet und nicht einzeln belegt.
+          <EvidenceBadge evidence="ki" /> vom neuronalen Netz vorhergesagt und im Reaktor bei der eingestellten Temperatur,
+          dem Druck und dem Katalysator bewertet, <EvidenceBadge evidence="vorhersage" /> aus Regeln oder Vorlagen berechnet
+          und nicht einzeln belegt.{' '}
+          {aiStatus === 'bereit'
+            ? 'Die Reaktions-KI rechnet jede Mischung mit.'
+            : aiStatus === 'laden'
+              ? 'Die Reaktions-KI wird geladen …'
+              : 'Die Reaktions-KI ist nicht geladen; die Werkbank rechnet nur mit Regeln und Belegen.'}
         </p>
         )}
       </div>
@@ -634,6 +644,11 @@ export function WorkbenchPage() {
                 rdkit={rdkit}
                 rdkitReady={status === 'bereit'}
                 onUseProduct={useProduct}
+                temperatureC={temperatureC}
+                onAddSubstance={addSubstance}
+                onSetCatalysis={(catalysis) => setConditions((c) => ({ ...c, catalysis }))}
+                onSetTemperature={setTemperature}
+                onSetPressure={setPressure}
               />
             ))}
 
@@ -646,12 +661,18 @@ export function WorkbenchPage() {
                 rdkit={rdkit}
                 rdkitReady={status === 'bereit'}
                 onUseProduct={useProduct}
+                temperatureC={temperatureC}
+                onAddSubstance={addSubstance}
+                onSetCatalysis={(catalysis) => setConditions((c) => ({ ...c, catalysis }))}
+                onSetTemperature={setTemperature}
+                onSetPressure={setPressure}
               />
             ))}
 
           {!running && result?.outcome !== 'gesperrt' && selected.length > 0 && (
             <AiSection
               ruleReactions={result?.outcome === 'reaktion' ? result.reactions.filter((reaction) => !reaction.missing.length) : []}
+              shown={new Set((result?.reactions ?? []).flatMap((reaction) => (reaction.ai ? [reaction.ai.id] : [])))}
               results={aiResults}
               running={aiRunning}
               modelStatus={aiStatus}
@@ -696,6 +717,7 @@ export function WorkbenchPage() {
 /** KI-Vorschläge je Stoffpaar: immer eine Aussage, mit Katalysator, falls die Barriere zu hoch ist. */
 function AiSection({
   ruleReactions,
+  shown,
   results,
   running,
   modelStatus,
@@ -706,6 +728,8 @@ function AiSection({
   onSetTemperature,
 }: {
   ruleReactions: WorkbenchReaction[];
+  /** Vorschläge, die schon als Reaktion der Werkbank oben stehen */
+  shown: Set<string>;
   results: Array<{ key: string; substances: Substance[]; proposals: AiProposal[] }> | null;
   running: boolean;
   modelStatus: 'laden' | 'bereit' | 'fehlt';
@@ -715,18 +739,23 @@ function AiSection({
   onSetCatalysis: (catalysis: WorkbenchConditions['catalysis']) => void;
   onSetTemperature: (value: number) => void;
 }) {
+  const remaining = (results ?? [])
+    .map((entry) => ({ ...entry, all: entry.proposals, proposals: entry.proposals.filter((proposal) => !shown.has(proposal.id)) }))
+    // Paare, deren Vorschläge schon alle oben als Reaktion stehen, nicht wiederholen
+    .filter((entry) => entry.proposals.length || !entry.all.length);
+  if (!running && modelStatus !== 'laden' && results && !remaining.length) return null;
   return (
     <section className="stack">
       <div className="row-between">
-        <h2 style={{ margin: 0 }}>🤖 Vorschlag der Reaktions-KI</h2>
+        <h2 style={{ margin: 0 }}>🤖 Weitere Ideen der Reaktions-KI</h2>
         <Link className="small" to={`/ki?${new URLSearchParams({ stoffe: (results?.[0]?.substances ?? []).map((entry) => entry.id).join(',') }).toString()}`}>
           Im KI-Werkzeug öffnen
         </Link>
       </div>
       <p className="small subtle" style={{ margin: 0 }}>
-        Ein neuronales Netz, trainiert auf Reaktionen aus US-Patenten, schlägt für jedes Stoffpaar die wahrscheinlichste Reaktion
-        vor – mit dem nötigen Katalysator, falls die Aktivierungsenergie bei {Math.round(temperatureC)} °C zu hoch ist.
-        Alles hier ist Vorhersage.
+        Die sicheren Vorhersagen des neuronalen Netzes stehen oben als Reaktionen (<EvidenceBadge evidence="ki" />). Hier
+        folgen weitere Möglichkeiten und Verfahren aus der Katalyse-Wissensbasis – jeweils mit dem nötigen Katalysator, falls
+        die Aktivierungsenergie bei {Math.round(temperatureC)} °C zu hoch ist. Alles hier ist Vorhersage.
       </p>
       {(running || modelStatus === 'laden') && (
         <div className="row">
@@ -734,12 +763,12 @@ function AiSection({
         </div>
       )}
       {!running &&
-        results?.map(({ key, substances, proposals }) => {
+        remaining.map(({ key, substances, proposals }) => {
           const [best, ...rest] = proposals;
           const label = substances.map((entry) => entry.name).join(' + ');
           return (
             <div key={key} className="ai-pair">
-              {results.length > 1 && <h3 style={{ margin: '4px 0 8px' }}>{label}</h3>}
+              {remaining.length > 1 && <h3 style={{ margin: '4px 0 8px' }}>{label}</h3>}
               {!best && ruleMatch(ruleReactions, substances) ? (
                 <Callout variant="success" title={`${label}: ${ruleMatch(ruleReactions, substances)?.reactionType ?? 'Reaktion bekannt'}`}>
                   <p style={{ margin: 0 }}>
@@ -860,12 +889,23 @@ function ReactionResult({
   rdkit,
   rdkitReady,
   onUseProduct,
+  temperatureC,
+  onAddSubstance,
+  onSetCatalysis,
+  onSetTemperature,
+  onSetPressure,
 }: {
   reaction: WorkbenchReaction;
   rdkit: ReturnType<typeof useRDKit>['rdkit'];
   rdkitReady: boolean;
   onUseProduct: (product: WorkbenchProduct) => void;
+  temperatureC: number;
+  onAddSubstance: (substance: Substance) => void;
+  onSetCatalysis: (catalysis: WorkbenchConditions['catalysis']) => void;
+  onSetTemperature: (value: number) => void;
+  onSetPressure: (value: number) => void;
 }) {
+  const confirmed = reaction.evidence !== 'ki' && reaction.ai;
   return (
     <article className="card reaction-result">
       <div className="card-title">
@@ -875,6 +915,11 @@ function ReactionResult({
         </div>
         <div className="row" style={{ gap: 6 }}>
           <EvidenceBadge evidence={reaction.evidence} count={reaction.documented?.count} />
+          {confirmed && reaction.ai && (
+            <span className="badge badge-ai" title="Die Reaktions-KI sagt dasselbe Produkt voraus">
+              🤖 KI bestätigt · {Math.max(1, Math.round(reaction.ai.confidence * 100))} %
+            </span>
+          )}
           {reaction.catalysisMatched && <span className="badge badge-success">passende Katalyse</span>}
           {reaction.confidence && (
             <span className={`badge badge-${reaction.confidence === 'hoch' ? 'success' : reaction.confidence === 'mittel' ? 'warning' : 'danger'}`} title="Verlässlichkeit der Vorhersage">
@@ -935,12 +980,45 @@ function ReactionResult({
 
       {reaction.explanation !== reaction.evidenceNote && <p style={{ marginTop: 12 }}>{reaction.explanation}</p>}
 
+      {reaction.reactor && reaction.ai && (
+        <ReactorVerdict
+          reaction={reaction}
+          onSetCatalysis={onSetCatalysis}
+          onSetTemperature={onSetTemperature}
+          onSetPressure={onSetPressure}
+        />
+      )}
+
       <Callout
         variant={EVIDENCE_VARIANT[reaction.evidence]}
-        title={reaction.evidence === 'vorhersage' ? 'Nur eine Vorhersage' : EVIDENCE_LABELS[reaction.evidence]}
+        icon={reaction.evidence === 'ki' ? '🤖' : undefined}
+        title={reaction.evidence === 'vorhersage' ? 'Nur eine Vorhersage' : reaction.evidence === 'ki' ? 'Vorhersage der Reaktions-KI' : EVIDENCE_LABELS[reaction.evidence]}
       >
         <p style={{ margin: 0 }}>{reaction.evidenceNote}</p>
+        {confirmed && reaction.ai && (
+          <p style={{ margin: '6px 0 0' }}>
+            🤖 Die Reaktions-KI kommt zum selben Produkt ({reaction.ai.title}, Sicherheit{' '}
+            {Math.max(1, Math.round(reaction.ai.confidence * 100))} %).
+          </p>
+        )}
       </Callout>
+
+      {reaction.evidence === 'ki' && reaction.ai && (
+        <details className="ai-more" style={{ marginTop: 8 }}>
+          <summary>Katalysator, Energieprofil und Vorbild der KI</summary>
+          <div style={{ marginTop: 8 }}>
+            <AiProposalCard
+              proposal={reaction.ai}
+              rdkit={rdkit}
+              temperatureC={temperatureC}
+              onAddSubstance={onAddSubstance}
+              onSetCatalysis={onSetCatalysis}
+              onSetTemperature={onSetTemperature}
+              compact
+            />
+          </div>
+        </details>
+      )}
 
       {reaction.missing.length > 0 && (
         <Callout variant="warning" title="Dafür fehlt noch etwas">
@@ -1002,10 +1080,67 @@ function ReactionResult({
 const EVIDENCE_VARIANT: Record<Evidence, 'success' | 'info' | 'warning'> = {
   belegt: 'success',
   lehrbuch: 'info',
+  ki: 'info',
   vorhersage: 'warning',
 };
 
-const EVIDENCE_ICONS: Record<Evidence, string> = { belegt: '✓', lehrbuch: '📘', vorhersage: '≈' };
+const EVIDENCE_ICONS: Record<Evidence, string> = { belegt: '✓', lehrbuch: '📘', ki: '🤖', vorhersage: '≈' };
+
+const VERDICT_TEXT: Record<StepVerdict, { icon: string; title: string; variant: 'success' | 'warning' | 'danger' }> = {
+  läuft: { icon: '✅', title: 'Im Reaktor: läuft', variant: 'success' },
+  langsam: { icon: '🐢', title: 'Im Reaktor: zu langsam', variant: 'warning' },
+  blockiert: { icon: '⛔', title: 'Im Reaktor: blockiert', variant: 'danger' },
+  problem: { icon: '⚠️', title: 'Im Reaktor: Problem', variant: 'warning' },
+};
+
+/** Bewertung einer KI-Reaktion bei Temperatur, Druck und Katalysator – mit der Empfehlung der KI zum Übernehmen */
+function ReactorVerdict({
+  reaction,
+  onSetCatalysis,
+  onSetTemperature,
+  onSetPressure,
+}: {
+  reaction: WorkbenchReaction;
+  onSetCatalysis: (catalysis: WorkbenchConditions['catalysis']) => void;
+  onSetTemperature: (value: number) => void;
+  onSetPressure: (value: number) => void;
+}) {
+  const evaluation = reaction.reactor as StepEvaluation;
+  const proposal = reaction.ai as AiProposal;
+  const { recommended } = evaluation;
+  const helper = proposal.catalysts.find((entry) => entry.category === recommended.catalyst);
+  const text = VERDICT_TEXT[evaluation.verdict];
+  const apply = (): void => {
+    onSetTemperature(recommended.temperatureC);
+    onSetPressure(recommended.pressureBar);
+    if (helper?.catalysis) onSetCatalysis(helper.catalysis);
+  };
+  const needsCatalyst = helper && !helper.present && !helper.catalysis;
+  return (
+    <Callout variant={text.variant} icon={text.icon} title={text.title}>
+      <p style={{ margin: 0 }}>{evaluation.summary}</p>
+      {evaluation.notes.length > 0 && (
+        <ul className="small" style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+          {evaluation.notes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
+      {evaluation.verdict !== 'läuft' && (
+        <div className="row" style={{ marginTop: 8 }}>
+          <button type="button" className="button button-small" onClick={apply}>
+            Empfehlung einstellen: {Math.round(recommended.temperatureC)} °C,{' '}
+            {recommended.pressureBar.toLocaleString('de-DE', { maximumFractionDigits: 1 })} bar
+            {helper?.catalysis ? `, ${helper.label}` : ''}
+          </button>
+          {needsCatalyst && (
+            <span className="small muted">Dazu {helper.label} ins Gefäß geben (Details unten).</span>
+          )}
+        </div>
+      )}
+    </Callout>
+  );
+}
 
 function EvidenceBadge({ evidence, count }: { evidence: Evidence; count?: number }) {
   const title =
@@ -1013,9 +1148,12 @@ function EvidenceBadge({ evidence, count }: { evidence: Evidence; count?: number
       ? 'In der Patentliteratur beschrieben'
       : evidence === 'lehrbuch'
         ? 'Fest hinterlegte Standardreaktion'
-        : 'Berechnet – nicht einzeln belegt';
+        : evidence === 'ki'
+          ? 'Vom neuronalen Netz vorhergesagt – nicht einzeln belegt'
+          : 'Berechnet – nicht einzeln belegt';
+  const variant = evidence === 'ki' ? 'ai' : EVIDENCE_VARIANT[evidence] === 'info' ? 'analytik' : EVIDENCE_VARIANT[evidence];
   return (
-    <span className={`badge badge-${EVIDENCE_VARIANT[evidence] === 'info' ? 'analytik' : EVIDENCE_VARIANT[evidence]}`} title={title}>
+    <span className={`badge badge-${variant}`} title={title}>
       <span aria-hidden="true">{EVIDENCE_ICONS[evidence]}</span> {EVIDENCE_LABELS[evidence]}
       {count && count > 1 ? ` (${count}×)` : ''}
     </span>
@@ -1025,14 +1163,16 @@ function EvidenceBadge({ evidence, count }: { evidence: Evidence; count?: number
 function EvidenceSummary({ reactions }: { reactions: WorkbenchReaction[] }) {
   const complete = reactions.filter((reaction) => !reaction.missing.length);
   const count = (evidence: Evidence) => complete.filter((reaction) => reaction.evidence === evidence).length;
-  const predictedOnly = complete.length > 0 && complete.every((reaction) => reaction.evidence === 'vorhersage');
+  const predictedOnly = complete.length > 0 && complete.every((reaction) => reaction.evidence === 'vorhersage' || reaction.evidence === 'ki');
+  const confirmed = complete.filter((reaction) => reaction.evidence !== 'ki' && reaction.ai).length;
   if (!complete.length) return null;
   return (
     <Callout variant={predictedOnly ? 'warning' : 'neutral'} title={predictedOnly ? 'Hinweis: nur Vorhersagen' : 'Herkunft der Ergebnisse'}>
       <p style={{ margin: 0 }}>
         {predictedOnly
-          ? 'Für diese Mischung ist keine Reaktion belegt. Die Ergebnisse unten sind aus Regeln und Reaktionsvorlagen berechnet – chemisch plausibel, aber nicht experimentell für genau diese Stoffe nachgewiesen.'
-          : `${count('belegt')} belegt, ${count('lehrbuch')} Lehrbuchreaktion${count('lehrbuch') === 1 ? '' : 'en'}, ${count('vorhersage')} Vorhersage${count('vorhersage') === 1 ? '' : 'n'}.`}
+          ? 'Für diese Mischung ist keine Reaktion belegt. Die Ergebnisse unten sind von der Reaktions-KI, aus Regeln und Reaktionsvorlagen berechnet – chemisch plausibel, aber nicht experimentell für genau diese Stoffe nachgewiesen.'
+          : `${count('belegt')} belegt, ${count('lehrbuch')} Lehrbuchreaktion${count('lehrbuch') === 1 ? '' : 'en'}, ${count('ki')} KI-Vorhersage${count('ki') === 1 ? '' : 'n'}, ${count('vorhersage')} Vorhersage${count('vorhersage') === 1 ? '' : 'n'}.`}
+        {confirmed > 0 && ` Bei ${confirmed === 1 ? 'einer Reaktion' : `${confirmed} Reaktionen`} kommt die Reaktions-KI zum selben Produkt.`}
       </p>
     </Callout>
   );

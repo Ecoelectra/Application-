@@ -17,7 +17,7 @@
  */
 import type { MainModule } from '@rdkit/rdkit';
 import { formatDuration, kinetics, requiredTemperature, type Kinetics } from './activation';
-import type { CatalystSuggestion } from './reactionAI';
+import type { AiProposal, CatalystSuggestion } from './reactionAI';
 import type { RetroStep } from './retrosynthesis';
 import { NORMAL_PRESSURE, physicalProperties, stateAt, vaporPressureAt } from '../phase';
 import { substanceById } from '../../data/substances';
@@ -55,34 +55,49 @@ const DRIVING_ROLES = new Set(['Katalysator', 'Säure', 'Base', 'Aktivierungsrea
 /** Katalysatoren, mit denen Wasserstoff als gasförmiges Reagenz hydriert */
 const HYDROGENATION_CATALYSTS = new Set(['pd', 'pt', 'ni', 'edelmetall']);
 
+/** Wählbare Hilfsstoffe eines KI-Vorschlags in der Reihenfolge der KI */
+export function proposalHelpers(proposal: AiProposal): CatalystSuggestion[] {
+  return proposal.catalysts.filter((entry) => DRIVING_ROLES.has(entry.role));
+}
+
 /** Wählbare Hilfsstoffe einer Stufe in der Reihenfolge der KI */
 export function stepHelpers(step: RetroStep): CatalystSuggestion[] {
-  return step.proposal.catalysts.filter((entry) => DRIVING_ROLES.has(entry.role));
+  return proposalHelpers(step.proposal);
 }
 
 /** Empfohlener Hilfsstoff: der klassische Katalysator der Familie, sonst der erste der KI */
-export function recommendedCatalyst(step: RetroStep): string | null {
-  const helpers = stepHelpers(step);
-  const family = step.proposal.family;
+export function recommendedFor(proposal: AiProposal): string | null {
+  const helpers = proposalHelpers(proposal);
+  const family = proposal.family;
   const classic = family ? helpers.find((entry) => family.catalysts.includes(entry.category) && entry.category !== 'wasserstoff') : undefined;
   return (classic ?? helpers.find((entry) => entry.category !== 'wasserstoff') ?? helpers[0])?.category ?? null;
 }
 
+/** Empfohlener Hilfsstoff einer Stufe */
+export function recommendedCatalyst(step: RetroStep): string | null {
+  return recommendedFor(step.proposal);
+}
+
+/** Metalle, die Kupplungen katalysieren – eine Base allein reicht dort nicht */
+const COUPLING_METALS = new Set(['pd', 'ni', 'pt', 'edelmetall', 'cu']);
+
 /** Senkt dieser Hilfsstoff die Barriere der Familie? */
-function lowers(step: RetroStep, category: string | null): boolean {
+export function lowersBarrier(proposal: AiProposal, category: string | null): boolean {
   if (!category || category === 'wasserstoff') return false;
-  const family = step.proposal.family;
+  const family = proposal.family;
   if (!family || family.eaCatalyzed >= family.eaUncatalyzed) return false;
+  // Palladiumkupplungen (Suzuki, Heck, Buchwald …): ohne Metall kein Weg, die Base hilft nur mit
+  if (family.requiresCatalyst && family.catalysts[0] === 'pd') return COUPLING_METALS.has(category);
   if (family.catalysts.includes(category)) return true;
-  const suggestion = step.proposal.catalysts.find((entry) => entry.category === category);
+  const suggestion = proposal.catalysts.find((entry) => entry.category === category);
   return Boolean(suggestion && suggestion.score >= 0.4 && DRIVING_ROLES.has(suggestion.role));
 }
 
-function formatBar(value: number): string {
+export function formatBar(value: number): string {
   return `${value.toLocaleString('de-DE', { maximumFractionDigits: value < 10 ? 1 : 0 })} bar`;
 }
 
-function formatC(value: number): string {
+export function formatC(value: number): string {
   return `${Math.round(value).toLocaleString('de-DE')} °C`;
 }
 
@@ -98,14 +113,28 @@ function participants(step: RetroStep, catalyst: string | null): Substance[] {
 
 /** Bewertung einer Stufe unter den gewählten Bedingungen. */
 export function evaluateStep(rdkit: MainModule | null, step: RetroStep, conditions: StepConditions): StepEvaluation {
+  return evaluateProposal(rdkit, step.proposal, (catalyst) => participants(step, catalyst), conditions);
+}
+
+/**
+ * Bewertung eines KI-Vorschlags unter den gewählten Bedingungen.
+ * `substancesFor` liefert die Stoffe im Gefäß – abhängig vom Katalysator,
+ * weil etwa Wasserstoff erst mit einem Hydrierkatalysator mitreagiert.
+ */
+export function evaluateProposal(
+  rdkit: MainModule | null,
+  proposal: AiProposal,
+  substancesFor: (catalyst: string | null) => Substance[],
+  conditions: StepConditions,
+): StepEvaluation {
   const { temperatureC: T, pressureBar: P, catalyst } = conditions;
-  const family = step.proposal.family;
-  const energy = step.proposal.energy;
+  const family = proposal.family;
+  const energy = proposal.energy;
   const bimolecular = family?.bimolecular ?? energy?.bimolecular ?? true;
   const eaUncatalyzed = family?.eaUncatalyzed ?? energy?.eaUncatalyzed ?? 110;
   const eaCatalyzed = family?.eaCatalyzed ?? energy?.eaCatalyzed ?? eaUncatalyzed;
   const requiresCatalyst = family?.requiresCatalyst ?? energy?.requiresCatalyst ?? false;
-  const catalyzed = lowers(step, catalyst);
+  const catalyzed = lowersBarrier(proposal, catalyst);
   const ea = catalyzed ? eaCatalyzed : eaUncatalyzed;
   const rate = kinetics(ea, T, bimolecular, energy?.preExponential);
 
@@ -115,7 +144,7 @@ export function evaluateStep(rdkit: MainModule | null, step: RetroStep, conditio
   // Aggregatzustände der Beteiligten bei T und P
   let pressureFactor = 1;
   let minimumPressure = 0;
-  const substances = participants(step, catalyst);
+  const substances = substancesFor(catalyst);
   for (const substance of substances) {
     const properties = physicalProperties(rdkit, substance);
     const state = stateAt(properties, T, P);
@@ -143,7 +172,7 @@ export function evaluateStep(rdkit: MainModule | null, step: RetroStep, conditio
   if (T < -40) notes.push('Bei so tiefer Temperatur erstarren viele Lösungsmittel; die Stoffe mischen sich schlecht.');
 
   // Gleichgewicht nach Le Chatelier
-  const enthalpy = step.proposal.enthalpy;
+  const enthalpy = proposal.enthalpy;
   if (enthalpy) {
     const gas = enthalpy.terms.reduce((sum, term) => sum + (term.phase === 'g' ? (term.side === 'produkt' ? 1 : -1) * term.coefficient : 0), 0);
     if (enthalpy.deltaH < -20 && T > 150) {
@@ -159,11 +188,11 @@ export function evaluateStep(rdkit: MainModule | null, step: RetroStep, conditio
   const speed = halfLife < 60 ? 'schnell' : halfLife <= 3600 ? 'praktikabel' : halfLife <= 86_400 * 7 ? 'langsam' : 'blockiert';
 
   // Empfehlung mit dem besten Hilfsstoff
-  const best = recommendedCatalyst(step);
-  const bestEa = lowers(step, best) ? eaCatalyzed : eaUncatalyzed;
+  const best = recommendedFor(proposal);
+  const bestEa = lowersBarrier(proposal, best) ? eaCatalyzed : eaUncatalyzed;
   const recommendedT = Math.min(300, Math.max(20, Math.ceil(requiredTemperature(bestEa, bimolecular, energy?.preExponential) / 10) * 10));
   let recommendedP = NORMAL_PRESSURE;
-  for (const substance of participants(step, best)) {
+  for (const substance of substancesFor(best)) {
     const properties = physicalProperties(rdkit, substance);
     const atRoom = stateAt(properties, 20, NORMAL_PRESSURE);
     if (atRoom.state === 'gasförmig') recommendedP = Math.max(recommendedP, 5);

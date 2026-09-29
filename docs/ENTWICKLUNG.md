@@ -230,6 +230,7 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 | `komplexe.test.ts` | 5505 | jedes Zentralion mit jedem Liganden (1–6fach) und 1000 gemischte Komplexe: KZ, Ladung, Geometrie, Besetzung, Magnetismus, LFSE, Name |
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
 | `ki-synthese.test.ts` | 1001 | 1000 Zielstoffe (alle 928 organischen Stoffe der Datenbank und 72 Katalogprodukte) rückwärts geplant: jeder Weg vorwärts bestätigt, Ausgangsstoffe neutral, zulässig und nicht der Zielstoff; gesperrte Stoffe ohne Synthese; im Reaktor machen Wärme, Katalysator und Druck eine Stufe nie langsamer, und bei der Empfehlung läuft sie |
+| `werkbank-ki.test.ts` | 1001 | 1000 Zufallsmischungen aus zwei oder drei Stoffen mit der Reaktions-KI bei Zufallstemperatur, -druck und -katalyse: keine doppelten Reaktionen, vollständige zuerst, KI-Produkte zulässig, Beteiligte aus dem Gefäß, was nicht läuft nennt, was fehlt, mehr Wärme macht keine KI-Reaktion langsamer |
 | `ki.test.ts` | 1005 | 1000 zufällige Stoffpaare durch die Reaktions-KI: gültige und zulässige Produkte, stimmige Energieangaben, Reihenfolge egal; dazu Amidkupplung, Suzuki-Kupplung, Nitroreduktion und Katalysator im Gefäß |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
 
@@ -378,6 +379,28 @@ empfohlenen Hilfsstoff binnen einer Stunde umsetzt (höchstens 300 °C), und der
 Druck, bei dem gasförmige Partner genug gelöst sind (5 bar) bzw. flüssige nicht
 sieden. «Stufe ansetzen» überträgt Ausgangsstoffe, Hilfsstoff (bei Hydrierung
 mit Wasserstoff), Katalyse, Temperatur und Druck ins Gefäß.
+
+**Werkbank mit dem neuronalen Netz.** `mix()` in `src/chem/workbench.ts` nimmt
+das geladene Modell als fünften Parameter. Nach Regeln, Sonderreaktionen,
+organischen Vorlagen und Patentbelegen ruft `aiReactions()`
+(`src/chem/ai/workbenchAI.ts`) für jedes Stoffpaar mit mindestens einem
+organischen Stoff (bzw. den einzelnen Stoff) `predictWithModel` auf – mit
+Temperatur, Katalyse und den übrigen Stoffen im Gefäß. Jeder Vorschlag wird mit
+`evaluateProposal` aus `synthesisConditions.ts` im Reaktor bewertet (Katalysator:
+der passende Hilfsstoff, der im Gefäß ist oder über die Katalyse eingestellt
+wurde; Druck vom Regler) und als `WorkbenchReaction` mit `evidence: 'ki'`,
+`ai` (Vorschlag) und `reactor` (Bewertung) angelegt. `missing` kommt aus dem
+Urteil: blockiert → Katalysator, langsam → Temperatur, Problem → Zersetzung;
+ein einzelner Stoff ohne Partner braucht das Reagenz der Vorlage. Aufgenommen
+wird der beste Vorschlag je Paar ab 4 % Sicherheit, weitere ab 25 %, und hat
+das Paar schon eine vollständige Reaktion, nur Alternativen ab 40 %. Liefert
+eine bekannte Reaktion dasselbe Produkt, bekommt sie nur `ai` («KI bestätigt»);
+eine eigene KI-Reaktion gibt es dann nur, wenn der Weg der KI jetzt läuft und
+der bekannte nicht – etwa Hydrierung mit Pd statt kathodischer Reduktion oder
+Acetylierung von Anilin ohne zusätzliche Base. Bei Palladiumkupplungen
+(Suzuki, Heck, Buchwald) senkt nur ein Metall die Barriere, eine Base allein
+nicht. Rangfolge der Herkunft: belegt, Lehrbuch, KI, Vorhersage.
+Ohne Modell (Tests, Laden fehlgeschlagen) rechnet die Werkbank wie zuvor.
 
 **Trainingsdaten aus mehreren Quellen.** Seit dem Training vom September 2026
 lernt die KI aus 1.030.272 verschiedenen, geprüften Reaktionen aus zehn

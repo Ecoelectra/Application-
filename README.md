@@ -148,10 +148,22 @@ Hilfsstoffen, übernimmt die Bedingungen und lässt die Werkbank die Reaktion
 nachrechnen. Auch von jeder Stoffseite aus erreichbar («Mit KI herstellen»).
 Für gesperrte Stoffe plant die App keine Synthese.
 
-Die KI steht als eigenes Werkzeug unter **KI-Vorhersage** bereit und läuft in der
-**Werkbank** für jedes Stoffpaar mit: Dort schlägt sie immer eine Reaktion vor
-und sagt, mit welchem Katalysator sie gelingt, wenn die Aktivierungsenergie zu
-hoch ist. Das Modell (rund 2,4 MB) arbeitet offline im Gerät.
+**Die Werkbank rechnet mit dem neuronalen Netz.** Beim Mischen sagt die KI für
+jedes Stoffpaar im Gefäß die wahrscheinlichsten Produkte voraus, und diese
+erscheinen als vollwertige Reaktionen im Ergebnis (🤖 «KI-Vorhersage») – mit
+Gleichung, Struktur, Reaktionsenthalpie und Sicherheit der KI. Jede davon wird
+wie eine Stufe der KI-Synthese im Reaktor bewertet: bei der eingestellten
+Temperatur, dem Druck und dem Katalysator, der im Gefäß ist oder als Katalyse
+eingestellt wurde. Läuft sie nicht, steht dabei, was fehlt (zu kalt, Katalysator
+fehlt, Reaktionspartner fehlt, Pyrolyse …), und «Empfehlung einstellen» übernimmt
+Temperatur, Druck und Katalyse der KI. Dreht man am Temperatur- oder Druckregler
+oder wechselt die Katalyse, rechnet die KI sofort neu. Findet schon eine Regel
+oder ein Patentbeleg dasselbe Produkt, erscheint die Reaktion nicht doppelt,
+sondern mit dem Vermerk «🤖 KI bestätigt». Weitere, weniger sichere Ideen der KI
+und Verfahren aus der Katalyse-Wissensbasis stehen darunter.
+
+Die KI steht außerdem als eigenes Werkzeug unter **KI-Vorhersage** bereit. Das
+Modell (rund 2,4 MB) arbeitet offline im Gerät.
 
 **Reaktionsenthalpie für jede Reaktion.** Zu jeder Reaktion in der Werkbank,
 zu jedem KI-Vorschlag und auf den Reaktionsseiten berechnet die App ΔrH° nach

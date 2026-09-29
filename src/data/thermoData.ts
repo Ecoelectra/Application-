@@ -338,6 +338,7 @@ Nc1ccccc1 l 31.3
 c1ccncc1 l 100.2
 CC#N l 40.6
 CC(N)=O s -317.0
+CC(=O)Nc1ccccc1 s -209.4
 NC(N)=O s -333.1
 NCC(=O)O s -528.1
 CCl g -81.9

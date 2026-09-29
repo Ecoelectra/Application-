@@ -58,6 +58,8 @@ describe('Stufe im Reaktor', () => {
   it('Suzuki-Kupplung: ohne Palladium blockiert, mit Palladium bei 90 °C', () => {
     const step = stepFor('biphenyl', (entry) => entry.proposal.family?.id === 'suzuki');
     expect(evaluateStep(rdkit, step, { temperatureC: 90, pressureBar: 1.013, catalyst: null }).verdict).toBe('blockiert');
+    // Die Base gehört zur Suzuki-Kupplung, ersetzt aber das Palladium nicht
+    expect(evaluateStep(rdkit, step, { temperatureC: 90, pressureBar: 1.013, catalyst: 'anorganische-base' }).verdict).toBe('blockiert');
     const pd = evaluateStep(rdkit, step, { temperatureC: 90, pressureBar: 1.013, catalyst: 'pd' });
     expect(pd.verdict).toBe('läuft');
     expect(pd.catalyzed).toBe(true);
