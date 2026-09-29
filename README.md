@@ -162,8 +162,10 @@ oder ein Patentbeleg dasselbe Produkt, erscheint die Reaktion nicht doppelt,
 sondern mit dem Vermerk «🤖 KI bestätigt». Weitere, weniger sichere Ideen der KI
 und Verfahren aus der Katalyse-Wissensbasis stehen darunter.
 
-Die KI steht außerdem als eigenes Werkzeug unter **KI-Vorhersage** bereit. Das
-Modell (rund 2,4 MB) arbeitet offline im Gerät.
+Eine eigene KI-Seite gibt es nicht mehr – alles läuft in der Werkbank. Dort
+stehen im Chemikalienschrank Beispielmischungen («Mit der KI ausprobieren»), und
+«So rechnet die Reaktions-KI mit» erklärt Arbeitsweise, Datenquellen, Güte und
+Grenzen des Netzes. Das Modell (rund 2,4 MB) arbeitet offline im Gerät.
 
 **Reaktionsenthalpie für jede Reaktion.** Zu jeder Reaktion in der Werkbank,
 zu jedem KI-Vorschlag und auf den Reaktionsseiten berechnet die App ΔrH° nach

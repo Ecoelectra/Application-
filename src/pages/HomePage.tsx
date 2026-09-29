@@ -108,13 +108,13 @@ export function HomePage() {
         </div>
 
         <div className="card">
-          <h3>Reaktions-KI</h3>
+          <h3>Reaktions-KI in der Werkbank</h3>
           <p className="muted small">
-            Ein neuronales Netz, trainiert auf Reaktionen aus US-Patenten, sagt vorher, was aus zwei Stoffen entsteht,
-            welcher Katalysator nötig ist und ob die Aktivierungsenergie bei deiner Temperatur überwunden wird.
+            Ein neuronales Netz, trainiert auf über einer Million Reaktionen, rechnet in der Werkbank jede Mischung mit: was
+            entsteht, welcher Katalysator nötig ist und ob die Reaktion bei deiner Temperatur und deinem Druck abläuft.
           </p>
-          <a className="button button-secondary button-small" href="#/ki">
-            KI fragen
+          <a className="button button-secondary button-small" href="#/werkbank">
+            Mit KI mischen
           </a>
         </div>
 

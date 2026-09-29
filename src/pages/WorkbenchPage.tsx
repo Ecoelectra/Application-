@@ -26,6 +26,7 @@ import { substanceFromCompound, substanceFromSmiles } from '../chem/externalSubs
 import { compoundByCid } from '../services/pubchem';
 import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
 import { AiProposalCard } from '../components/AiProposalCard';
+import { AiInfoPanel } from '../components/AiInfoPanel';
 import { SynthesisPlanner } from '../components/SynthesisPlanner';
 import { CatalysisControl, PRESSURE_LOG_MIN, PressureControl, TEMPERATURE_MAX, TEMPERATURE_MIN, TemperatureControl } from '../components/ReactorControls';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
@@ -89,6 +90,18 @@ const SHELVES: Array<{ id: string; label: string; categories: string[]; ids?: st
 ];
 
 /** Häufig gebrauchte Stoffe als Schnellzugriff. */
+/** Mischungen, bei denen die Reaktions-KI zeigt, was sie kann (Katalysator, Temperatur, Druck) */
+const AI_EXAMPLES: string[][] = [
+  ['anilin', 'acetylchlorid'],
+  ['brombenzol', 'phenylboronsaeure'],
+  ['benzylbromid', 'morpholin'],
+  ['nitrobenzol', 'wasserstoff'],
+  ['phenol', 'brom'],
+  ['benzoesaeure', 'benzylamin'],
+  ['benzaldehyd', 'anilin'],
+  ['cyclohexen', 'wasserstoff'],
+];
+
 const FAVOURITES = [
   'salzsaeure', 'schwefelsaeure', 'natriumhydroxid', 'essigsaeure', 'ethanol',
   'zink', 'magnesium', 'kupfer', 'eisen', 'silbernitrat', 'kupfersulfat',
@@ -494,6 +507,27 @@ export function WorkbenchPage() {
               <BottleButton key={substance.id} substance={substance} onAdd={addSubstance} />
             ))}
           </div>
+
+          <h3 style={{ marginTop: 18 }}>🤖 Mit der KI ausprobieren</h3>
+          <div className="row" style={{ gap: 6 }}>
+            {AI_EXAMPLES.map((ids) => {
+              const substances = ids.map((id) => substanceById(id)).filter((entry): entry is Substance => Boolean(entry));
+              if (substances.length !== ids.length) return null;
+              return (
+                <button
+                  key={ids.join('+')}
+                  type="button"
+                  className="chip chip-small"
+                  onClick={() => {
+                    setSelected(substances);
+                    window.setTimeout(() => document.getElementById('reaktionsgefaess')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+                  }}
+                >
+                  {substances.map((entry) => entry.name).join(' + ')}
+                </button>
+              );
+            })}
+          </div>
         </section>
 
         {/* ---------- Reaktionsgefäß ---------- */}
@@ -694,6 +728,8 @@ export function WorkbenchPage() {
             />
           )}
 
+          <AiInfoPanel model={aiModel} status={aiStatus} />
+
           {journal.length > 0 && (
             <div className="card">
               <h3>Laborjournal</h3>
@@ -746,12 +782,7 @@ function AiSection({
   if (!running && modelStatus !== 'laden' && results && !remaining.length) return null;
   return (
     <section className="stack">
-      <div className="row-between">
-        <h2 style={{ margin: 0 }}>🤖 Weitere Ideen der Reaktions-KI</h2>
-        <Link className="small" to={`/ki?${new URLSearchParams({ stoffe: (results?.[0]?.substances ?? []).map((entry) => entry.id).join(',') }).toString()}`}>
-          Im KI-Werkzeug öffnen
-        </Link>
-      </div>
+      <h2 style={{ margin: 0 }}>🤖 Weitere Ideen der Reaktions-KI</h2>
       <p className="small subtle" style={{ margin: 0 }}>
         Die sicheren Vorhersagen des neuronalen Netzes stehen oben als Reaktionen (<EvidenceBadge evidence="ki" />). Hier
         folgen weitere Möglichkeiten und Verfahren aus der Katalyse-Wissensbasis – jeweils mit dem nötigen Katalysator, falls

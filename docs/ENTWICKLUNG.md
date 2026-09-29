@@ -401,6 +401,9 @@ Acetylierung von Anilin ohne zusätzliche Base. Bei Palladiumkupplungen
 (Suzuki, Heck, Buchwald) senkt nur ein Metall die Barriere, eine Base allein
 nicht. Rangfolge der Herkunft: belegt, Lehrbuch, KI, Vorhersage.
 Ohne Modell (Tests, Laden fehlgeschlagen) rechnet die Werkbank wie zuvor.
+Eine eigene KI-Seite gibt es nicht mehr: `#/ki` (auch mit `?stoffe=`) leitet zur
+Werkbank weiter (`AiRedirect` in `App.tsx`); Arbeitsweise, Datenquellen und Güte
+des Netzes zeigt dort `AiInfoPanel.tsx`.
 
 **Trainingsdaten aus mehreren Quellen.** Seit dem Training vom September 2026
 lernt die KI aus 1.030.272 verschiedenen, geprüften Reaktionen aus zehn

@@ -1237,3 +1237,8 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
 .route-plus, .route-arrow { font-size: 1.2rem; color: var(--text-subtle); padding: 0 2px; }
 .route-details { flex: 1 1 100%; }
 .route-details > summary { cursor: pointer; margin: 4px 0; }
+
+/* Erklärung der Reaktions-KI in der Werkbank */
+.ai-info > summary { cursor: pointer; line-height: 1.5; }
+.ai-info[open] > summary { margin-bottom: 4px; }
+.ai-info h3 { margin-top: 16px; }

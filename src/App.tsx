@@ -9,12 +9,10 @@ import { ToolsPage } from './pages/ToolsPage';
 import { WorkbenchPage } from './pages/WorkbenchPage';
 import { CatalogPage } from './pages/CatalogPage';
 import { InfoPage } from './pages/InfoPage';
-import { AiPage } from './pages/AiPage';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Start', end: true },
   { to: '/werkbank', label: 'Werkbank' },
-  { to: '/ki', label: 'KI-Vorhersage' },
   { to: '/synthesen', label: 'Synthesen' },
   { to: '/suche', label: 'Reaktionen' },
   { to: '/elektrochemie', label: 'Elektrochemie' },
@@ -28,6 +26,13 @@ function ComplexRedirect() {
   const params = new URLSearchParams(search);
   params.set('modus', 'komplexe');
   return <Navigate to={`/werkbank?${params.toString()}`} replace />;
+}
+
+/** Die KI-Vorhersage ist jetzt Teil der Werkbank – alte Adressen leiten weiter. */
+function AiRedirect() {
+  const { search } = useLocation();
+  const stoffe = new URLSearchParams(search).get('stoffe');
+  return <Navigate to={stoffe ? `/werkbank?${new URLSearchParams({ stoffe }).toString()}` : '/werkbank'} replace />;
 }
 
 export function App() {
@@ -73,7 +78,7 @@ export function App() {
           <Route path="/suche" element={<SearchPage />} />
           <Route path="/elektrochemie" element={<ElectrochemistryPage />} />
           <Route path="/werkbank" element={<WorkbenchPage />} />
-          <Route path="/ki" element={<AiPage />} />
+          <Route path="/ki" element={<AiRedirect />} />
           <Route path="/synthesen" element={<CatalogPage />} />
           <Route path="/komplexe" element={<ComplexRedirect />} />
           <Route path="/werkzeuge" element={<ToolsPage />} />
