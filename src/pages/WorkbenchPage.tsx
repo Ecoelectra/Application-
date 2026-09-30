@@ -29,6 +29,10 @@ import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
 import { AiProposalCard } from '../components/AiProposalCard';
 import { AiInfoPanel } from '../components/AiInfoPanel';
 import { PdfIdeas } from '../components/PdfIdeas';
+import { MetalCatalystPanel } from '../components/MetalCatalystPanel';
+import { CatalystDialog } from '../components/CatalystDialog';
+import { predictMetalCatalyst } from '../chem/metalCatalystPrediction';
+import type { MetalCatalyst } from '../data/metalCatalysts';
 import { SynthesisPlanner } from '../components/SynthesisPlanner';
 import { CatalysisControl, PRESSURE_LOG_MIN, PressureControl, TEMPERATURE_MAX, TEMPERATURE_MIN, TemperatureControl } from '../components/ReactorControls';
 import { predictFromKnowledge, predictWithModel, type AiProposal } from '../chem/ai/reactionAI';
@@ -252,6 +256,8 @@ export function WorkbenchPage() {
 
   // Reaktions-KI: rechnet in der Werkbank mit
   const { model: aiModel, status: aiStatus } = useReactionModel();
+  // Anleitung zu einem Metallkatalysator (Fenster über der Werkbank)
+  const [guide, setGuide] = useState<MetalCatalyst | null>(null);
 
   // Ergebnis neu berechnen, sobald sich Auswahl, Bedingungen oder das KI-Modell ändern
   useEffect(() => {
@@ -443,6 +449,19 @@ export function WorkbenchPage() {
         </p>
         )}
       </div>
+
+      {guide && (
+        <CatalystDialog
+          catalyst={guide}
+          onClose={() => setGuide(null)}
+          onAddToVessel={(catalyst) => {
+            const substance = catalyst.substanceIds.map((id) => substanceById(id)).find((entry): entry is Substance => Boolean(entry));
+            if (substance) addSubstance(substance);
+            setConditions((c) => ({ ...c, catalysis: catalyst.catalysis }));
+            if (mode !== 'mischen') switchMode('mischen');
+          }}
+        />
+      )}
 
       {mode === 'komplexe' && <ComplexBuilder />}
 
@@ -670,7 +689,15 @@ export function WorkbenchPage() {
           )}
 
           {!running && result && result.outcome !== 'gesperrt' && selected.length > 0 && (
-            <AiForecast result={result} substances={selected} modelStatus={aiStatus} temperatureC={temperatureC} pressureBar={pressureBar} />
+            <AiForecast
+              result={result}
+              substances={selected}
+              modelStatus={aiStatus}
+              temperatureC={temperatureC}
+              pressureBar={pressureBar}
+              metalCatalysis={conditions.catalysis === 'metall'}
+              onOpenCatalyst={setGuide}
+            />
           )}
 
           {!running && result?.notes && result.notes.length > 0 && (
@@ -726,6 +753,9 @@ export function WorkbenchPage() {
                 onSetCatalysis={(catalysis) => setConditions((c) => ({ ...c, catalysis }))}
                 onSetTemperature={setTemperature}
                 onSetPressure={setPressure}
+                catalysis={conditions.catalysis}
+                vessel={selected}
+                onOpenCatalyst={setGuide}
               />
             ))}
 
@@ -743,6 +773,9 @@ export function WorkbenchPage() {
                 onSetCatalysis={(catalysis) => setConditions((c) => ({ ...c, catalysis }))}
                 onSetTemperature={setTemperature}
                 onSetPressure={setPressure}
+                catalysis={conditions.catalysis}
+                vessel={selected}
+                onOpenCatalyst={setGuide}
               />
             ))}
 
@@ -879,12 +912,17 @@ function AiForecast({
   modelStatus,
   temperatureC,
   pressureBar,
+  metalCatalysis,
+  onOpenCatalyst,
 }: {
   result: MixResult;
   substances: Substance[];
   modelStatus: 'laden' | 'bereit' | 'fehlt';
   temperatureC: number;
   pressureBar: number;
+  /** «Metallkatalysator» ist eingestellt: für jede Kombination einen vorhersagen */
+  metalCatalysis: boolean;
+  onOpenCatalyst: (catalyst: MetalCatalyst) => void;
 }) {
   const partners = substances.filter((substance) => substance.category !== 'Nachweisreagenz');
   const groups: Substance[][] = [];
@@ -911,6 +949,29 @@ function AiForecast({
               {lines.length > 1 && <strong>{line.label}: </strong>}
               {line.text}
               {line.detail && <div className="small subtle">{line.detail}</div>}
+              {metalCatalysis && (() => {
+                const reaction = [...result.reactions, ...(result.pairOutcomes ?? [])].find((entry) => entry.id === line.target);
+                if (!reaction || reaction.kind === 'physikalisch') {
+                  return <div className="small">⚙ Metallkatalysator: keiner – hier findet keine chemische Reaktion statt.</div>;
+                }
+                const metal = predictMetalCatalyst(reaction, substances);
+                return metal.needed ? (
+                  <div className="small">
+                    ⚙ Metallkatalysator:{' '}
+                    {metal.picks.map((entry, index) => (
+                      <span key={entry.catalyst.id}>
+                        {index > 0 ? ' · ' : ''}
+                        <button type="button" className="link-button" onClick={() => onOpenCatalyst(entry.catalyst)}>
+                          {entry.catalyst.short}
+                        </button>
+                        {entry.role === 'Cokatalysator' ? ' (Cokatalysator)' : ''}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="small">⚙ Metallkatalysator: keiner nötig – {metal.summary.replace(/^Kein Metallkatalysator nötig: |^Für diese Reaktionsart ist kein Metallkatalysator üblich – /, '')}</div>
+                );
+              })()}
               {line.target && (
                 <button
                   type="button"
@@ -1110,6 +1171,9 @@ function ReactionResult({
   onSetCatalysis,
   onSetTemperature,
   onSetPressure,
+  catalysis,
+  vessel,
+  onOpenCatalyst,
 }: {
   reaction: WorkbenchReaction;
   rdkit: ReturnType<typeof useRDKit>['rdkit'];
@@ -1120,8 +1184,15 @@ function ReactionResult({
   onSetCatalysis: (catalysis: WorkbenchConditions['catalysis']) => void;
   onSetTemperature: (value: number) => void;
   onSetPressure: (value: number) => void;
+  catalysis: WorkbenchConditions['catalysis'];
+  vessel: Substance[];
+  onOpenCatalyst: (catalyst: MetalCatalyst) => void;
 }) {
   const confirmed = reaction.evidence !== 'ki' && reaction.ai;
+  // Metallkatalysator: bei eingestellter Metallkatalyse für jede Reaktion, sonst wenn die Reaktion ein Metall verlangt
+  const metal = useMemo(() => (reaction.kind === 'physikalisch' ? null : predictMetalCatalyst(reaction, vessel)), [reaction, vessel]);
+  const showMetal =
+    metal && (catalysis === 'metall' || (metal.needed && reaction.missing.some((entry) => /metall|palladium|platin|nickel/i.test(entry))));
   return (
     <article className="card reaction-result" id={`reaktion-${reaction.id}`}>
       <div className="card-title">
@@ -1195,6 +1266,8 @@ function ReactionResult({
       )}
 
       {reaction.explanation !== reaction.evidenceNote && <p style={{ marginTop: 12 }}>{reaction.explanation}</p>}
+
+      {showMetal && metal && <MetalCatalystPanel prediction={metal} onOpen={onOpenCatalyst} />}
 
       {reaction.reactor && reaction.ai && (
         <ReactorVerdict

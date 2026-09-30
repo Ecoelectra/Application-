@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { balanceEquation } from '../chem/balance';
 import { balanceRedox, formatOxidationState, oxidationStates, type Medium } from '../chem/redox';
@@ -46,6 +47,10 @@ export function ToolsPage() {
           </button>
         ))}
       </div>
+
+      <p className="small" style={{ marginTop: 0 }}>
+        <Link to="/katalysatoren">⚙ Metallkatalysatoren: Anleitungen zur Herstellung</Link>
+      </p>
 
       {tab === 'ausgleichen' && <EquationBalancer />}
       {tab === 'redox' && <RedoxBalancer />}

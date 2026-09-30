@@ -231,6 +231,7 @@ jeder Lauf ist reproduzierbar. Geprüft werden Invarianten, nicht Einzelwerte:
 | `katalog.test.ts` | 1502 | 1500 Katalogeinträge: Strukturen, Summenformeln, Gleichungen, Suche; anorganische Einträge findet auch die Werkbank |
 | `ki-synthese.test.ts` | 1001 | 1000 Zielstoffe (alle 928 organischen Stoffe der Datenbank und 72 Katalogprodukte) rückwärts geplant: jeder Weg vorwärts bestätigt, Ausgangsstoffe neutral, zulässig und nicht der Zielstoff; gesperrte Stoffe ohne Synthese; im Reaktor machen Wärme, Katalysator und Druck eine Stufe nie langsamer, und bei der Empfehlung läuft sie |
 | `werkbank-ki.test.ts` | 1001 | 1000 Zufallsmischungen aus zwei oder drei Stoffen mit der Reaktions-KI bei Zufallstemperatur, -druck und -katalyse: keine doppelten Reaktionen, vollständige zuerst, KI-Produkte zulässig, Beteiligte aus dem Gefäß, was nicht läuft nennt, was fehlt, mehr Wärme macht keine KI-Reaktion langsamer |
+| `metallkatalysator.test.ts` | 1001 | 1000 Zufallsmischungen mit eingestellter Metallkatalyse (mit Reaktions-KI): jede chemische Reaktion bekommt eine Aussage, Katalysatoren aus dem Katalog ohne Dubletten, Hauptkatalysator zuerst, Kupplungen immer mit Palladium, Kupplungen und Hydrierungen immer mit Katalysator |
 | `pdf-ideen.test.ts` | 1060 | 1000 Stoffnamen der Datenbank in Sätzen versteckt: die Erkennung findet sie (allgemeine Wörter ausgenommen), CAS-Nummern eindeutig; 60 Zufallslisten durch die Ideensuche: nur Paare der Liste, keine gesperrten Mischungen, sortiert |
 | `ki.test.ts` | 1005 | 1000 zufällige Stoffpaare durch die Reaktions-KI: gültige und zulässige Produkte, stimmige Energieangaben, Reihenfolge egal; dazu Amidkupplung, Suzuki-Kupplung, Nitroreduktion und Katalysator im Gefäß |
 | `stoffanalyse.test.ts` | 1097 | 1000 Moleküle durch die Stoffanalyse: gültige und zulässige Produkte, Sortierung; jede Reaktion über ihren Namen auffindbar |
@@ -413,6 +414,25 @@ neue Version aktiv wird – so kommen Updates auf dem iPad sofort an.
 Eine eigene KI-Seite gibt es nicht mehr: `#/ki` (auch mit `?stoffe=`) leitet zur
 Werkbank weiter (`AiRedirect` in `App.tsx`); Arbeitsweise, Datenquellen und Güte
 des Netzes zeigt dort `AiInfoPanel.tsx`.
+
+**Metallkatalysatoren.** `src/data/metalCatalysts.ts` enthält 20 Katalysatoren
+mit Anleitung (`guide`: Überblick, Zutaten mit Verweis auf die Stoffdatenbank,
+Geräte, Schritte, Gleichung, Prüfung, Lagerung, Gefahren, Kaufempfehlung,
+Quelle; `purchaseOnly` beim Grubbs-Katalysator). `src/chem/metalCatalystPrediction.ts`
+geht Regeln in fester Reihenfolge durch – eindeutig benannte Verfahren (Lindlar,
+Metathese) zuerst, dann Kreuzkupplungen, Click, Hydrierungen und Reduktionen,
+Oxidationen, elektrophile Substitution, Metall-Lewis-Säuren, technische
+Verfahren – über KI-Familie, Regel-ID, Titel, Reaktionstyp, Gleichung und
+SMILES-Merkmale von Edukten und Produkten. Der Familienname der KI fließt
+absichtlich nicht in den Text ein («Heck, Sonogashira, Negishi» im Namen würde
+jede Kupplung zur Sonogashira machen). Katalysator-Beispiele der KI-Vorlage
+(`CatalystSuggestion.examples`) werden per Muster den Anleitungen zugeordnet und
+als Beleg angehängt. Elektrochemische Umsetzungen und Ionenreaktionen bekommen
+«keiner nötig» mit Begründung. `MetalCatalystPanel` zeigt die Vorhersage auf
+jeder chemischen Reaktionskarte, wenn die Katalyse «metall» eingestellt ist oder
+der Reaktion ein Metallkatalysator fehlt; `CatalystDialog` öffnet die Anleitung
+über der Werkbank (das Gefäß bleibt erhalten), `CatalystPage` bedient
+`#/katalysatoren` und `#/katalysator/:id`.
 
 **Weitere Stoffquellen.** `src/services/substanceSources.ts` bündelt PubChem
 (über `pubchem.ts`), Wikidata (`wbsearchentities` mit `language=de`,

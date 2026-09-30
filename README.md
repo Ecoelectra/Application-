@@ -126,6 +126,24 @@ Kontaktverfahren, Ostwald-Verfahren, Wasserstoffperoxid-Zerfall mit Braunstein,
 Abgaskatalysator, Enzyme wie Katalase und Urease …) gibt es eine eigene
 Wissensbasis mit Lehrbuchwerten.
 
+**Welcher Metallkatalysator – und wie stelle ich ihn her?** Ist in der Werkbank
+«Metallkatalysator» eingestellt, sagt jede Reaktion, welcher Katalysator passt:
+Pd(PPh₃)₄ für die Suzuki-Kupplung, PdCl₂(PPh₃)₂ mit Kupfer(I)-iodid als
+Cokatalysator für die Sonogashira-Kupplung, der Lindlar-Katalysator für die
+Teilhydrierung eines Alkins, Raney-Nickel für Nitrile, Braunstein für
+Wasserstoffperoxid, Eisen für Haber-Bosch … – mit Begründung, Menge im Ansatz und
+Alternativen. Die Vorhersage nutzt Reaktionsart, Strukturmerkmale (Alkin,
+Arylhalogenid, Nitro-, Nitrilgruppe …) und die Katalysatoren, die in den Patenten
+der KI-Vorlage tatsächlich verwendet wurden. Wo kein Metall hilft
+(Neutralisation, Fällung, Elektrolyse), sagt sie das mit Begründung. Ein Tipp auf
+einen Katalysator öffnet eine ausführliche Anleitung zur Herstellung: Chemikalien
+mit Mengen, Geräte, Schritte, Reaktionsgleichung, woran man den Erfolg erkennt,
+Aufbewahrung, Sicherheit und Quelle (Organic Syntheses, Inorganic Syntheses,
+Schulversuche). 20 Katalysatoren von der Kupferspirale (Schulversuch) bis zum
+Raney-Nickel (nur Fachlabor); alle auch unter «Werkzeuge → Metallkatalysatoren»
+(`#/katalysatoren`). Beim Grubbs-Katalysator steht bewusst nur, wie man den
+gekauften einsetzt – seine Herstellung braucht ein explosives Diazoalkan.
+
 **Stoffe aus mehreren Online-Datenbanken.** Was nicht in der mitgelieferten
 Datenbank steht, sucht die App gleichzeitig in fünf freien Datenbanken:
 **PubChem** (US National Institutes of Health, über 100 Millionen Stoffe),

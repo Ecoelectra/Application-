@@ -9,6 +9,7 @@ import { ToolsPage } from './pages/ToolsPage';
 import { WorkbenchPage } from './pages/WorkbenchPage';
 import { CatalogPage } from './pages/CatalogPage';
 import { InfoPage } from './pages/InfoPage';
+import { CatalystPage } from './pages/CatalystPage';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Start', end: true },
@@ -83,6 +84,8 @@ export function App() {
           <Route path="/komplexe" element={<ComplexRedirect />} />
           <Route path="/werkzeuge" element={<ToolsPage />} />
           <Route path="/info" element={<InfoPage />} />
+          <Route path="/katalysatoren" element={<CatalystPage />} />
+          <Route path="/katalysator/:id" element={<CatalystPage />} />
           <Route
             path="*"
             element={

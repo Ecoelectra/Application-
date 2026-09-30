@@ -1263,3 +1263,20 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
 .source-table td, .source-table th { vertical-align: top; }
 .source-ok { color: var(--success, #1a7f37); font-weight: 600; }
 .source-diff { color: var(--warning, #9a6700); font-weight: 600; }
+
+/* Metallkatalysator-Vorhersage und Anleitung */
+.metal-panel { margin-top: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); }
+.metal-panel-none { border-color: var(--border); background: transparent; }
+.metal-panel-title { display: flex; gap: 6px; align-items: center; }
+.metal-reasons { margin: 6px 0; padding-left: 18px; }
+.metal-reasons li + li { margin-top: 4px; }
+.guide-steps li + li { margin-top: 6px; }
+.catalyst-guide h3, .catalyst-guide h4 { margin: 16px 0 6px; }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(10, 14, 22, 0.55); display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
+.dialog { width: min(760px, 100%); margin: auto 0; max-height: none; }
+.dialog-bar { margin-bottom: 4px; }
+.catalyst-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.catalyst-card { display: block; color: inherit; text-decoration: none; }
+.catalyst-card:hover { border-color: var(--accent); }
+table.data.guide-table td { white-space: normal; }
+.catalyst-guide { min-width: 0; overflow-wrap: anywhere; }
