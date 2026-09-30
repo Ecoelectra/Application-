@@ -4,6 +4,7 @@ import { SUBSTANCES } from '../data/substances';
 import { STANDARD_POTENTIALS } from '../data/potentials';
 import { FUNCTIONAL_GROUPS } from '../data/functionalGroups';
 import { clearCache } from '../services/pubchem';
+import { SOURCES, clearSourceCache } from '../services/substanceSources';
 import { useCatalog } from '../hooks/useCatalog';
 import { catalogStats } from '../data/catalog';
 import { formatNumber } from '../chem/format';
@@ -76,7 +77,8 @@ export function InfoPage() {
             </li>
           </ol>
           <p className="subtle" style={{ marginBottom: 0 }}>
-            Nur die PubChem-Suche braucht eine Internetverbindung. Alles andere liegt auf dem Gerät.
+            Nur die Suche in den Online-Datenbanken (PubChem, Wikidata, ChEMBL, NCI, OPSIN) braucht eine
+            Internetverbindung. Alles andere liegt auf dem Gerät.
           </p>
         </div>
 
@@ -135,7 +137,17 @@ export function InfoPage() {
                 PubChem
               </a>{' '}
               (National Library of Medicine) über die PUG-REST-Schnittstelle, ergänzt um eine
-              mitgelieferte Offline-Datenbank.
+              mitgelieferte Offline-Datenbank. Dazu weitere freie Datenbanken, die gleichzeitig abgefragt
+              und miteinander abgeglichen werden:{' '}
+              {(['wikidata', 'chembl', 'cactus', 'opsin'] as const).map((id, index) => (
+                <span key={id}>
+                  {index > 0 ? ', ' : ''}
+                  <a href={SOURCES[id].homepage} target="_blank" rel="noreferrer" title={SOURCES[id].description}>
+                    {SOURCES[id].label}
+                  </a>
+                </span>
+              ))}
+              .
             </li>
             <li>
               <strong>Strukturberechnung:</strong>{' '}
@@ -167,16 +179,18 @@ export function InfoPage() {
           <h2>Datenschutz</h2>
           <p>
             Die App speichert nur lokal auf deinem Gerät: zuletzt angesehene Stoffe, die Einstellung
-            für helles oder dunkles Design und einen Zwischenspeicher der PubChem-Antworten. Es gibt
-            keine Konten, keine Analyse und keinen eigenen Server. Beim Nachschlagen eines Stoffs
-            wird eine Anfrage an PubChem gestellt.
+            für helles oder dunkles Design und einen Zwischenspeicher der Antworten der
+            Online-Datenbanken. Es gibt keine Konten, keine Analyse und keinen eigenen Server. Beim
+            Nachschlagen eines Stoffs werden Anfragen an PubChem, Wikidata, ChEMBL, das NCI und OPSIN
+            gestellt – nur mit dem gesuchten Namen oder der Struktur.
           </p>
           <button
             type="button"
             className="button button-secondary button-small"
             onClick={() => {
               clearCache();
-              window.alert('Der PubChem-Zwischenspeicher wurde geleert.');
+              clearSourceCache();
+              window.alert('Der Zwischenspeicher der Online-Datenbanken wurde geleert.');
             }}
           >
             Zwischenspeicher leeren

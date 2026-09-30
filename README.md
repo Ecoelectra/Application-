@@ -126,6 +126,23 @@ Kontaktverfahren, Ostwald-Verfahren, Wasserstoffperoxid-Zerfall mit Braunstein,
 Abgaskatalysator, Enzyme wie Katalase und Urease …) gibt es eine eigene
 Wissensbasis mit Lehrbuchwerten.
 
+**Stoffe aus mehreren Online-Datenbanken.** Was nicht in der mitgelieferten
+Datenbank steht, sucht die App gleichzeitig in fünf freien Datenbanken:
+**PubChem** (US National Institutes of Health, über 100 Millionen Stoffe),
+**Wikidata** (deutsche Stoffnamen, CAS-Nummern, Strukturen), **ChEMBL**
+(Europäisches Bioinformatik-Institut, Arzneistoffe und Wirkstoffe),
+**NCI CACTUS** (US National Cancer Institute, wandelt Namen, CAS-Nummern und
+InChIKeys in Strukturen um) und **OPSIN** (Universität Cambridge, liest
+systematische IUPAC-Namen). Beim Tippen kommen deutsche Namen aus Wikidata und
+Namen aus PubChem. Beim Laden werden alle Treffer nach Struktur verglichen: Es
+gilt die Struktur, die die meisten Quellen bestätigen, und die App sagt, welche
+Quellen übereinstimmen und welche etwas anderes liefern. Auf jeder Stoffseite
+zeigt «Quellen im Vergleich» denselben Stoff (über den InChIKey) in PubChem,
+Wikidata, ChEMBL und beim NCI – mit Link und ob die Struktur übereinstimmt.
+Kennt PubChem einen deutschen Namen nicht, löst die Stoffseite ihn über die
+anderen Quellen auf. Fällt eine Quelle aus, arbeiten die übrigen weiter;
+gesperrte Stoffe übernimmt die App aus keiner Quelle.
+
 **PDF-Ideen: Was kann ich mit diesen Stoffen machen?** Im Werkbank-Reiter
 «📄 PDF-Ideen» lädst du ein PDF hoch – etwa die Chemikalienliste der Schule, eine
 Versuchsanleitung oder ein Skript. Die App liest den Text im Gerät (pdf.js, nichts

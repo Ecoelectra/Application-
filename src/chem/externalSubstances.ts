@@ -24,6 +24,7 @@ import { assessSubstance, RESTRICTION_NOTICE } from './safety';
 import { SUBSTANCES, formulaKey, substanceByCid } from '../data/substances';
 import type { Substance } from '../data/types';
 import type { PubChemCompound } from '../services/pubchem';
+import { SOURCES, SOURCE_ORDER, type SourceHit } from '../services/substanceSources';
 
 /** Reihenfolge der Nichtmetalle in anorganischen Formeln nach IUPAC (Metalle stehen vorn). */
 const NONMETAL_ORDER = ['B', 'Si', 'C', 'Sb', 'As', 'P', 'N', 'H', 'Te', 'Se', 'S', 'I', 'Br', 'Cl', 'O', 'F'];
@@ -190,7 +191,16 @@ function capitalize(text: string): string {
 function build(
   rdkit: MainModule,
   smiles: string,
-  details: { id: string; name: string; synonyms: string[]; cid?: number; description: string },
+  details: {
+    id: string;
+    name: string;
+    synonyms: string[];
+    cid?: number;
+    description: string;
+    origin?: Substance['origin'];
+    cas?: string;
+    confirmedBy?: string[];
+  },
 ): ExternalResult {
   const canonical = canonicalSmiles(rdkit, smiles);
   if (!canonical) return { ok: false, reason: 'Die Struktur ist ungültig.' };
@@ -224,9 +234,11 @@ function build(
       smiles: symbol && !parts.counts.H ? undefined : keepSmiles ? canonical : undefined,
       molarMass: Math.round(mass * 100) / 100,
       pubchemCid: details.cid,
+      cas: details.cas,
       category: normalized.category,
       description: details.description,
-      origin: details.cid ? 'pubchem' : 'eingabe',
+      origin: details.origin ?? (details.cid ? 'pubchem' : 'eingabe'),
+      confirmedBy: details.confirmedBy,
     },
   };
 }
@@ -271,4 +283,82 @@ export function looksLikeSmiles(rdkit: MainModule | null, text: string): boolean
   // Reine Wörter wie «Brom» oder Formeln wie «NaCl» sind keine Strukturen
   if (/^[A-Z][a-z]+$/.test(term) && !['Br', 'Cl'].includes(term)) return false;
   return canonicalSmiles(rdkit, term) !== null;
+}
+
+export interface SourceConsensus {
+  result: ExternalResult;
+  /** Treffer, dessen Struktur verwendet wurde */
+  best: SourceHit;
+  /** Quellen mit derselben Struktur (einschließlich der besten) */
+  agree: SourceHit[];
+  /** Quellen, die unter diesem Namen eine andere Struktur liefern */
+  disagree: SourceHit[];
+}
+
+/**
+ * Wertet die Treffer mehrerer Datenbanken aus: Treffer mit derselben Struktur
+ * bilden eine Gruppe; die Gruppe mit den meisten Quellen gewinnt (bei
+ * Gleichstand die zuverlässigere Quelle). Der Name ist der eingegebene, sonst
+ * der deutsche aus Wikidata, sonst der der besten Quelle.
+ */
+export function consensus(rdkit: MainModule, hits: SourceHit[], label?: string): SourceConsensus | null {
+  const groups = new Map<string, SourceHit[]>();
+  for (const hit of hits) {
+    if (!hit.smiles) continue;
+    const key = structureKey(rdkit, hit.smiles);
+    if (!key) continue;
+    groups.set(key, [...(groups.get(key) ?? []), hit]);
+  }
+  const rank = (hit: SourceHit) => SOURCE_ORDER.indexOf(hit.source);
+  const ranked = [...groups.values()]
+    .map((group) => [...group].sort((a, b) => rank(a) - rank(b)))
+    .sort((a, b) => new Set(b.map((hit) => hit.source)).size - new Set(a.map((hit) => hit.source)).size || rank(a[0]) - rank(b[0]));
+  const agree = ranked[0];
+  if (!agree?.length) return null;
+  const best = agree[0];
+  const disagree = ranked.slice(1).flat();
+
+  const german = agree.find((hit) => hit.source === 'wikidata');
+  const name = capitalize(label?.trim() || german?.name || best.name);
+  const cid = agree.find((hit) => hit.cid)?.cid;
+  const cas = agree.find((hit) => hit.cas)?.cas;
+  const synonyms = [...new Set(agree.flatMap((hit) => [hit.name, ...hit.synonyms]))].filter((entry) => entry && entry !== name).slice(0, 12);
+  const confirmedBy = [...new Set(agree.map((hit) => SOURCES[hit.source].label))];
+  // Nur PubChem- und Wikidata-/ChEMBL-Kennungen lassen sich später wieder laden
+  const id =
+    best.source === 'pubchem' || best.source === 'wikidata' || best.source === 'chembl'
+      ? `${best.source}-${best.ref}`
+      : `smiles-${hash(canonicalSmiles(rdkit, best.smiles as string) ?? best.smiles ?? name)}`;
+  const result = build(rdkit, best.smiles as string, {
+    id,
+    name,
+    synonyms,
+    cid,
+    cas,
+    origin: best.source,
+    confirmedBy,
+    description: `Aus ${confirmedBy.join(', ')} geladen`,
+  });
+  return { result, best, agree, disagree };
+}
+
+/** Stoff aus einem einzelnen Treffer */
+export function substanceFromHit(rdkit: MainModule, hit: SourceHit, label?: string): ExternalResult {
+  return consensus(rdkit, [hit], label)?.result ?? { ok: false, reason: `${SOURCES[hit.source].label} liefert für diesen Eintrag keine Struktur.` };
+}
+
+/** InChIKey einer Struktur (RDKit), für den Abgleich zwischen Datenbanken */
+export function inchiKeyOf(rdkit: MainModule, smiles: string): string | null {
+  const mol = rdkit.get_mol(smiles);
+  try {
+    if (!mol || !mol.is_valid()) return null;
+    const inchi = mol.get_inchi();
+    if (!inchi) return null;
+    const key = rdkit.get_inchikey_for_inchi(inchi);
+    return /^[A-Z]{14}-[A-Z]{10}-[A-Z]$/.test(key) ? key : null;
+  } catch {
+    return null;
+  } finally {
+    mol?.delete();
+  }
 }

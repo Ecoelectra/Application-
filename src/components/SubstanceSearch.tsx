@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { searchSubstances } from '../data/substances';
-import { autocomplete } from '../services/pubchem';
+import { SOURCES, suggestNames, type SourceHit } from '../services/substanceSources';
 import type { Substance } from '../data/types';
 
 export interface SelectedSubstance {
@@ -8,8 +8,8 @@ export interface SelectedSubstance {
   smiles?: string;
   formula?: string;
   cid?: number;
-  /** Stammt der Treffer aus der lokalen Datenbank oder aus PubChem? */
-  source: 'lokal' | 'pubchem' | 'eingabe';
+  /** Stammt der Treffer aus der lokalen Datenbank, einer Online-Datenbank oder der Eingabe? */
+  source: 'lokal' | 'pubchem' | 'wikidata' | 'eingabe';
 }
 
 interface Props {
@@ -23,12 +23,14 @@ interface Option {
   label: string;
   detail?: string;
   substance?: Substance;
+  hit?: SourceHit;
   source: SelectedSubstance['source'];
 }
 
 /**
- * Eingabefeld für Stoffe mit Vorschlägen aus der lokalen Datenbank und aus
- * PubChem. Name, Summenformel, CAS-Nummer und SMILES werden erkannt.
+ * Eingabefeld für Stoffe mit Vorschlägen aus der lokalen Datenbank, aus
+ * Wikidata (deutsche Namen) und PubChem. Name, Summenformel, CAS-Nummer und
+ * SMILES werden erkannt.
  */
 export function SubstanceSearch({ onSelect, placeholder, autoFocus, initialValue = '' }: Props) {
   const [query, setQuery] = useState(initialValue);
@@ -65,16 +67,21 @@ export function SubstanceSearch({ onSelect, placeholder, autoFocus, initialValue
 
     const timer = setTimeout(async () => {
       setLoading(true);
-      const remote = await autocomplete(term, 8);
+      const remote = await suggestNames(term, 8);
       setLoading(false);
       if (!remote.length) return;
 
       const known = new Set(local.map((option) => option.label.toLowerCase()));
-      const merged = [
+      const merged: Option[] = [
         ...local,
         ...remote
-          .filter((name) => !known.has(name.toLowerCase()))
-          .map((name) => ({ label: name, detail: 'PubChem', source: 'pubchem' as const })),
+          .filter((entry) => !known.has(entry.label.toLowerCase()))
+          .map((entry) => ({
+            label: entry.label,
+            detail: [SOURCES[entry.source].label, entry.source === 'wikidata' ? entry.detail : undefined].filter(Boolean).join(' · '),
+            hit: entry.hit,
+            source: entry.source === 'wikidata' ? ('wikidata' as const) : ('pubchem' as const),
+          })),
       ];
       setOptions(merged.slice(0, 12));
     }, 280);
@@ -93,6 +100,9 @@ export function SubstanceSearch({ onSelect, placeholder, autoFocus, initialValue
         cid: option.substance.pubchemCid,
         source: 'lokal',
       });
+    } else if (option.hit) {
+      // Wikidata liefert Struktur, Formel und PubChem-CID gleich mit
+      onSelect({ label: option.label, smiles: option.hit.smiles, formula: option.hit.formula, cid: option.hit.cid, source: option.source });
     } else {
       onSelect({ label: option.label, source: option.source });
     }

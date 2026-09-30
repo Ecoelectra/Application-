@@ -213,10 +213,13 @@ export interface Substance {
   solubility?: string;
   /**
    * Herkunft, falls der Stoff nicht aus der geprüften Grundtabelle stammt:
-   * automatisch erzeugt (Elemente, Salze, homologe Reihen), aus PubChem geladen
+   * automatisch erzeugt (Elemente, Salze, homologe Reihen), aus einer
+   * Online-Datenbank geladen (PubChem, Wikidata, ChEMBL, NCI CACTUS, OPSIN)
    * oder als SMILES eingegeben.
    */
-  origin?: 'generiert' | 'pubchem' | 'eingabe';
+  origin?: 'generiert' | 'pubchem' | 'wikidata' | 'chembl' | 'cactus' | 'opsin' | 'eingabe';
+  /** Online-Datenbanken, die dieselbe Struktur liefern */
+  confirmedBy?: string[];
 }
 
 export interface StandardPotential {

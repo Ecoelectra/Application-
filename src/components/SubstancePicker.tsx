@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { MainModule } from '@rdkit/rdkit';
-import { looksLikeSmiles, substanceFromCompound, substanceFromSmiles } from '../chem/externalSubstances';
+import { consensus, looksLikeSmiles, substanceFromSmiles } from '../chem/externalSubstances';
 import { searchSubstances } from '../data/substances';
 import type { Substance } from '../data/types';
-import { findCompound } from '../services/pubchem';
+import { lookupEverywhere } from '../services/substanceSources';
 
 interface Props {
   label: string;
@@ -14,7 +14,8 @@ interface Props {
 }
 
 /**
- * Stoffauswahl mit Offline-Datenbank, SMILES-Eingabe und PubChem-Suche –
+ * Stoffauswahl mit Offline-Datenbank, SMILES-Eingabe und Online-Suche
+ * (PubChem, Wikidata, ChEMBL, NCI CACTUS, OPSIN) –
  * dieselben Wege wie auf der Startseite und in der Werkbank.
  */
 export function SubstancePicker({ label, value, onChange, rdkit, placeholder }: Props) {
@@ -37,15 +38,15 @@ export function SubstancePicker({ label, value, onChange, rdkit, placeholder }: 
     if (!rdkit || !term) return;
     setBusy(true);
     setMessage(null);
-    const compound = await findCompound(term);
+    const { hits } = await lookupEverywhere(term);
     setBusy(false);
-    if (!compound) {
-      setMessage('Nicht gefunden – PubChem kennt den Namen nicht oder ist offline.');
+    const outcome = hits.length ? consensus(rdkit, hits, term) : null;
+    if (!outcome) {
+      setMessage('Nicht gefunden – keine der Online-Datenbanken kennt den Namen, oder das Gerät ist offline.');
       return;
     }
-    const result = substanceFromCompound(rdkit, compound, term);
-    if (result.ok) choose(result.substance);
-    else setMessage(result.reason);
+    if (outcome.result.ok) choose(outcome.result.substance);
+    else setMessage(outcome.result.reason);
   };
 
   if (value) {
@@ -105,8 +106,8 @@ export function SubstancePicker({ label, value, onChange, rdkit, placeholder }: 
             </button>
           )}
           <button type="button" className="suggestion-item" onClick={() => void online()} disabled={busy}>
-            <div>{busy ? 'Suche in PubChem …' : `«${term}» in PubChem suchen`}</div>
-            <div className="meta">über 100 Millionen Stoffe, braucht Internet</div>
+            <div>{busy ? 'Suche in den Datenbanken …' : `«${term}» online suchen`}</div>
+            <div className="meta">PubChem, Wikidata, ChEMBL, NCI, OPSIN – braucht Internet</div>
           </button>
         </div>
       )}

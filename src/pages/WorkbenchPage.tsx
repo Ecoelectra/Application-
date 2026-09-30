@@ -22,7 +22,8 @@ import { MoleculeStructure } from '../components/MoleculeStructure';
 import { ComplexBuilder } from '../components/ComplexBuilder';
 import { ComplexDetails } from '../components/ComplexDetails';
 import { physicalProperties, stateAt } from '../chem/phase';
-import { substanceFromCompound, substanceFromSmiles } from '../chem/externalSubstances';
+import { substanceFromCompound, substanceFromHit, substanceFromSmiles } from '../chem/externalSubstances';
+import { chemblById, wikidataById } from '../services/substanceSources';
 import { compoundByCid } from '../services/pubchem';
 import { OnlineSubstanceSearch } from '../components/OnlineSubstanceSearch';
 import { AiProposalCard } from '../components/AiProposalCard';
@@ -116,6 +117,10 @@ const MAX_SLOTS = 4;
 
 const ORIGIN_LABELS: Record<NonNullable<Substance['origin']>, { label: string; hint: string } | undefined> = {
   pubchem: { label: 'PubChem', hint: 'Aus PubChem geladen; Name und Daten stammen von dort' },
+  wikidata: { label: 'Wikidata', hint: 'Aus Wikidata geladen; Name und Struktur stammen von dort' },
+  chembl: { label: 'ChEMBL', hint: 'Aus ChEMBL (EMBL-EBI) geladen' },
+  cactus: { label: 'NCI', hint: 'Struktur vom NCI Chemical Identifier Resolver' },
+  opsin: { label: 'OPSIN', hint: 'Struktur aus dem systematischen Namen (OPSIN)' },
   eingabe: { label: 'SMILES', hint: 'Als Struktur eingegeben' },
   generiert: undefined,
 };
@@ -590,8 +595,12 @@ export function WorkbenchPage() {
                           {(() => {
                             const origin = substance.origin ? ORIGIN_LABELS[substance.origin] : undefined;
                             return origin ? (
-                              <span className="badge tag-origin" title={origin.hint}>
+                              <span
+                                className="badge tag-origin"
+                                title={substance.confirmedBy?.length ? `${origin.hint}. Dieselbe Struktur liefern: ${substance.confirmedBy.join(', ')}` : origin.hint}
+                              >
                                 {origin.label}
+                                {substance.confirmedBy && substance.confirmedBy.length > 1 ? ` +${substance.confirmedBy.length - 1}` : ''}
                               </span>
                             ) : null;
                           })()}
@@ -1041,6 +1050,13 @@ async function resolveSubstanceId(rdkit: MainModule | null, id: string): Promise
   if (cid) {
     const compound = await compoundByCid(Number(cid));
     const result = compound ? substanceFromCompound(rdkit, compound) : null;
+    return result?.ok ? result.substance : null;
+  }
+  // Stoffe aus Wikidata (wikidata-Q60235) und ChEMBL (chembl-CHEMBL113)
+  const other = id.match(/^(wikidata|chembl)-([A-Z0-9]+)$/);
+  if (other) {
+    const hit = other[1] === 'wikidata' ? await wikidataById(other[2]) : await chemblById(other[2]);
+    const result = hit ? substanceFromHit(rdkit, hit) : null;
     return result?.ok ? result.substance : null;
   }
   return null;

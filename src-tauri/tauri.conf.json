@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://pubchem.ncbi.nlm.nih.gov; connect-src 'self' https://pubchem.ncbi.nlm.nih.gov"
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://pubchem.ncbi.nlm.nih.gov; connect-src 'self' https://pubchem.ncbi.nlm.nih.gov https://www.wikidata.org https://www.ebi.ac.uk https://cactus.nci.nih.gov https://opsin.ch.cam.ac.uk"
     }
   },
   "bundle": {

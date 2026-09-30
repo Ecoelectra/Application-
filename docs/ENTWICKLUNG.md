@@ -414,6 +414,25 @@ Eine eigene KI-Seite gibt es nicht mehr: `#/ki` (auch mit `?stoffe=`) leitet zur
 Werkbank weiter (`AiRedirect` in `App.tsx`); Arbeitsweise, Datenquellen und Güte
 des Netzes zeigt dort `AiInfoPanel.tsx`.
 
+**Weitere Stoffquellen.** `src/services/substanceSources.ts` bündelt PubChem
+(über `pubchem.ts`), Wikidata (`wbsearchentities` mit `language=de`,
+`wbgetentities`; SMILES aus P2017/P233, Formel P274, CAS P231, InChIKey P235,
+PubChem-CID P662; CAS und InChIKey über `haswbstatement`), ChEMBL
+(`molecule/search.json`, InChIKey über `molecule_structures__standard_inchi_key`),
+NCI CACTUS (`/chemical/structure/{id}/smiles`, Text) und OPSIN
+(`/opsin/{name}.json`). Alle Dienste sind frei, ohne Schlüssel und per CORS
+erreichbar; Wikidata braucht `origin=*`. Jede Anfrage hat 10 s Zeitlimit;
+Antworten (auch 404) liegen 30 Tage in `localStorage` (Präfix `quelle:`),
+Netzfehler nicht. `lookupEverywhere` fragt alle Quellen parallel,
+`consensus` (externalSubstances.ts) gruppiert die Treffer nach
+`structureKey`: Die Gruppe mit den meisten Quellen gewinnt, bei Gleichstand die
+Reihenfolge PubChem, Wikidata, ChEMBL, CACTUS, OPSIN. Name: Eingabe, sonst
+deutsches Wikidata-Label; `confirmedBy` nennt die übereinstimmenden Quellen.
+Kennungen `pubchem-…`, `wikidata-Q…` und `chembl-CHEMBL…` lassen sich über die
+Adresse (`?stoffe=`) wieder laden. `SourceComparison.tsx` berechnet den
+InChIKey mit RDKit und vergleicht die Strukturen der Quellen. Die Windows-App
+(Tauri) erlaubt die Hosts in `connect-src`.
+
 **PDF-Ideen.** `src/services/pdfText.ts` liest den Text eines PDFs mit pdf.js
 (`pdfjs-dist`, erst beim ersten PDF nachgeladen, eigener Worker; höchstens 300
 Seiten, 50 MB). `extractText` nimmt die Bibliothek als Parameter, damit die Tests

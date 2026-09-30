@@ -1256,3 +1256,10 @@ table.data td.wrap { white-space: normal; min-width: 240px; }
 .pdf-drop input[type='file'] { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .pdf-drop-icon { font-size: 2rem; }
 .idea-card h3 { margin-top: 0; }
+
+.success-text { color: var(--success, #1a7f37); }
+
+/* Quellenvergleich auf der Stoffseite */
+.source-table td, .source-table th { vertical-align: top; }
+.source-ok { color: var(--success, #1a7f37); font-weight: 600; }
+.source-diff { color: var(--warning, #9a6700); font-weight: 600; }

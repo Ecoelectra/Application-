@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRDKit } from '../hooks/useRDKit';
 import { useRecentSubstances } from '../hooks/useRecentSubstances';
@@ -12,6 +12,9 @@ import { Callout } from '../components/Callout';
 import { GhsPictograms } from '../components/GhsPictograms';
 import { SubstanceSearch } from '../components/SubstanceSearch';
 import { SynthesisCard } from '../components/SynthesisCard';
+import { SourceComparison } from '../components/SourceComparison';
+import { consensus } from '../chem/externalSubstances';
+import { lookupEverywhere } from '../services/substanceSources';
 import { DocumentedRoutes } from '../components/DocumentedRoutes';
 import { structureOf } from '../chem/substanceStructures';
 import { useCatalog } from '../hooks/useCatalog';
@@ -50,6 +53,9 @@ const CATEGORY_FILTERS = [
 export function SubstancePage() {
   const [params, setParams] = useSearchParams();
   const { rdkit, status } = useRDKit();
+  // Für die Auflösung über weitere Quellen, ohne den Effekt bei jedem RDKit-Wechsel neu zu starten
+  const rdkitRef = useRef(rdkit);
+  rdkitRef.current = rdkit;
   const { remember } = useRecentSubstances();
   const { catalog } = useCatalog();
 
@@ -101,10 +107,19 @@ export function SubstancePage() {
       if (!active) return;
 
       if (!compound) {
+        // PubChem kennt den Namen nicht (oft bei deutschen Namen): die übrigen Quellen fragen
+        const others = needsRemote ? await lookupEverywhere(name, ['wikidata', 'chembl', 'cactus', 'opsin']) : null;
+        if (!active) return;
+        const smiles = others?.hits.find((hit) => hit.smiles)?.smiles;
+        const outcome = others?.hits.length && rdkitRef.current ? consensus(rdkitRef.current, others.hits, name) : null;
+        const found = outcome?.result.ok ? outcome.result.substance : null;
         setResolution((current) => ({
           ...current,
+          smiles: current.smiles ?? found?.smiles ?? smiles,
+          formula: current.formula ?? found?.formula ?? others?.hits.find((hit) => hit.formula)?.formula,
+          cid: current.cid ?? found?.pubchemCid,
           loading: false,
-          notFound: needsRemote,
+          notFound: needsRemote && !found && !smiles,
         }));
         return;
       }
@@ -462,6 +477,8 @@ export function SubstancePage() {
                   </p>
                 </div>
               )}
+
+              {resolution.smiles && <SourceComparison rdkit={rdkit} smiles={resolution.smiles} />}
             </div>
           </section>
 

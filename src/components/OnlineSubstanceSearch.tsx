@@ -1,33 +1,43 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { MainModule } from '@rdkit/rdkit';
-import { looksLikeSmiles, substanceFromCompound, substanceFromSmiles } from '../chem/externalSubstances';
-import { autocomplete, findCompound } from '../services/pubchem';
+import { consensus, looksLikeSmiles, substanceFromSmiles, type SourceConsensus } from '../chem/externalSubstances';
+import { SOURCES, lookupEverywhere, suggestNames, type NameSuggestion, type SourceHit } from '../services/substanceSources';
 import type { Substance } from '../data/types';
 
 interface Props {
   query: string;
   rdkit: MainModule | null;
-  /** Namen der lokalen Treffer, damit PubChem sie nicht doppelt vorschlägt */
+  /** Namen der lokalen Treffer, damit die Online-Quellen sie nicht doppelt vorschlagen */
   localNames: string[];
   onAdd: (substance: Substance) => void;
 }
 
 type Status = 'idle' | 'loading' | 'done' | 'offline';
 
+/** Kurzer Bericht, welche Quellen den geladenen Stoff bestätigen */
+export function consensusText(outcome: SourceConsensus): string {
+  const agree = [...new Set(outcome.agree.map((hit) => SOURCES[hit.source].label))];
+  const disagree = [...new Set(outcome.disagree.map((hit) => SOURCES[hit.source].label))].filter((label) => !agree.includes(label));
+  const confirmed = agree.length > 1 ? `Dieselbe Struktur in ${agree.join(', ')}.` : `Gefunden in ${agree[0]}.`;
+  return disagree.length ? `${confirmed} Abweichende Struktur unter diesem Namen: ${disagree.join(', ')}.` : confirmed;
+}
+
 /**
- * Ergänzt die Suche im Chemikalienschrank um alle Stoffe aus PubChem und um
- * die Eingabe als SMILES – wie die Stoffsuche auf der Startseite.
+ * Ergänzt die Suche im Chemikalienschrank um Online-Datenbanken (PubChem,
+ * Wikidata, ChEMBL, NCI CACTUS, OPSIN) und um die Eingabe als SMILES.
  */
 export function OnlineSubstanceSearch({ query, rdkit, localNames, onAdd }: Props) {
   const term = query.trim();
-  const [names, setNames] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<NameSuggestion[]>([]);
   const [status, setStatus] = useState<Status>('idle');
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [report, setReport] = useState<string | null>(null);
 
   useEffect(() => {
     setMessage(null);
-    setNames([]);
+    setReport(null);
+    setSuggestions([]);
     if (term.length < 2) {
       setStatus('idle');
       return;
@@ -35,9 +45,9 @@ export function OnlineSubstanceSearch({ query, rdkit, localNames, onAdd }: Props
     setStatus('loading');
     let cancelled = false;
     const timer = window.setTimeout(async () => {
-      const result = await autocomplete(term, 10);
+      const result = await suggestNames(term, 12);
       if (cancelled) return;
-      setNames(result);
+      setSuggestions(result);
       setStatus(result.length || navigator.onLine !== false ? 'done' : 'offline');
     }, 350);
     return () => {
@@ -49,31 +59,35 @@ export function OnlineSubstanceSearch({ query, rdkit, localNames, onAdd }: Props
   const smiles = useMemo(() => (looksLikeSmiles(rdkit, term) ? substanceFromSmiles(rdkit as MainModule, term) : null), [rdkit, term]);
 
   const known = new Set(localNames.map((name) => name.toLowerCase()));
-  const remote = names.filter((name) => !known.has(name.toLowerCase()));
+  const remote = suggestions.filter((entry) => !known.has(entry.label.toLowerCase()));
 
-  const load = async (name: string): Promise<void> => {
+  /** Alle Quellen befragen und die Struktur nehmen, die die meisten bestätigen */
+  const load = async (name: string, known?: SourceHit): Promise<void> => {
     if (!rdkit) {
       setMessage('Das Strukturprogramm lädt noch – bitte einen Moment warten.');
       return;
     }
     setBusy(name);
     setMessage(null);
-    const compound = await findCompound(name);
+    setReport(null);
+    const { hits } = await lookupEverywhere(name);
     setBusy(null);
-    if (!compound) {
+    const all = known && !hits.some((hit) => hit.source === known.source && hit.ref === known.ref) ? [known, ...hits] : hits;
+    const outcome = all.length ? consensus(rdkit, all, name) : null;
+    if (!outcome) {
       setMessage(
         navigator.onLine === false
-          ? 'Keine Internetverbindung: PubChem ist nicht erreichbar. Offline stehen die Stoffe der App-Datenbank zur Verfügung.'
-          : `PubChem kennt «${name}» nicht oder ist gerade nicht erreichbar.`,
+          ? 'Keine Internetverbindung: Die Online-Datenbanken sind nicht erreichbar. Offline stehen die Stoffe der App-Datenbank zur Verfügung.'
+          : `Keine der Datenbanken (PubChem, Wikidata, ChEMBL, NCI, OPSIN) kennt «${name}» – oder sie sind gerade nicht erreichbar.`,
       );
       return;
     }
-    const result = substanceFromCompound(rdkit, compound, name);
-    if (!result.ok) {
-      setMessage(result.reason);
+    if (!outcome.result.ok) {
+      setMessage(outcome.result.reason);
       return;
     }
-    onAdd(result.substance);
+    setReport(`✓ ${outcome.result.substance.name}: ${consensusText(outcome)}`);
+    onAdd(outcome.result.substance);
   };
 
   if (term.length < 2) return null;
@@ -99,29 +113,33 @@ export function OnlineSubstanceSearch({ query, rdkit, localNames, onAdd }: Props
       )}
 
       <h3 className="online-search-title">
-        Aus PubChem <span className="subtle small">(über 100 Millionen Stoffe, braucht Internet)</span>
+        Online-Datenbanken{' '}
+        <span className="subtle small">(PubChem, Wikidata, ChEMBL, NCI, OPSIN – braucht Internet)</span>
       </h3>
       {status === 'loading' && (
         <p className="small muted">
-          <span className="spinner" /> Suche in PubChem …
+          <span className="spinner" /> Suche in den Datenbanken …
         </p>
       )}
       {status === 'offline' && (
-        <p className="small muted">Offline – PubChem ist nicht erreichbar. Die Stoffe der App-Datenbank stehen oben.</p>
+        <p className="small muted">Offline – die Online-Datenbanken sind nicht erreichbar. Die Stoffe der App-Datenbank stehen oben.</p>
       )}
       {status === 'done' && (
         <div className="bottle-grid">
-          {remote.map((name) => (
+          {remote.map((entry) => (
             <button
-              key={name}
+              key={`${entry.source}:${entry.label}`}
               type="button"
               className="bottle bottle-online"
               disabled={busy !== null}
-              onClick={() => void load(name)}
-              title="Aus PubChem laden und ins Gefäß geben"
+              onClick={() => void load(entry.label, entry.hit)}
+              title={`Aus ${SOURCES[entry.source].label} vorgeschlagen; beim Laden werden alle Datenbanken abgeglichen`}
             >
-              <span className="bottle-name">{busy === name ? <span className="spinner" /> : name}</span>
-              <span className="bottle-formula">PubChem</span>
+              <span className="bottle-name">{busy === entry.label ? <span className="spinner" /> : entry.label}</span>
+              <span className="bottle-formula">
+                {SOURCES[entry.source].label}
+                {entry.detail && entry.source === 'wikidata' ? ` · ${entry.detail}` : ''}
+              </span>
             </button>
           ))}
           <button
@@ -129,13 +147,14 @@ export function OnlineSubstanceSearch({ query, rdkit, localNames, onAdd }: Props
             className="bottle bottle-online"
             disabled={busy !== null}
             onClick={() => void load(term)}
-            title="Name, CAS-Nummer, Summenformel oder SMILES direkt in PubChem suchen"
+            title="Name, CAS-Nummer, InChIKey, Summenformel oder IUPAC-Name in allen Datenbanken suchen"
           >
-            <span className="bottle-name">{busy === term ? <span className="spinner" /> : `«${term}» suchen`}</span>
-            <span className="bottle-formula">Name, CAS, Formel</span>
+            <span className="bottle-name">{busy === term ? <span className="spinner" /> : `«${term}» überall suchen`}</span>
+            <span className="bottle-formula">Name, CAS, IUPAC</span>
           </button>
         </div>
       )}
+      {report && <p className="small success-text">{report}</p>}
       {message && <p className="small warning-text">{message}</p>}
     </div>
   );

@@ -216,6 +216,15 @@ export async function cidsByFormula(formula: string, limit = 10): Promise<number
   return data?.IdentifierList?.CID ?? [];
 }
 
+/** Sucht CIDs zu einem InChIKey. */
+export async function cidsByInchiKey(inchiKey: string): Promise<number[]> {
+  const data = await fetchJson<{ IdentifierList?: { CID?: number[] } }>(
+    `${BASE_URL}/compound/inchikey/${encodeURIComponent(inchiKey.trim())}/cids/JSON`,
+    `cid:inchikey:${inchiKey.trim()}`,
+  );
+  return data?.IdentifierList?.CID ?? [];
+}
+
 /** Sucht CIDs zu einer SMILES-Struktur. */
 export async function cidsBySmiles(smiles: string): Promise<number[]> {
   const data = await fetchJson<{ IdentifierList?: { CID?: number[] } }>(
