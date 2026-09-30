@@ -348,7 +348,7 @@ Synthese nicht vor. Dafür gibt es `src/data/catalysis.ts` mit Lehrbuchwerten
 Starttemperatur).
 
 **KI-Synthese (Rückwärtsplanung).** `src/chem/ai/retrosynthesis.ts` dreht die
-gelernten Vorlagen um (Produktseite → Eduktseite) und wendet alle 5.953 auf den
+gelernten Vorlagen um (Produktseite → Eduktseite) und wendet alle 5.971 auf den
 Zielstoff an; die RDKit-Reaktionsobjekte werden beim ersten Aufruf einmal gebaut
 (knapp 1 s) und je Modell zwischengespeichert. Ausgangsstoffe mit «nackten»
 Abgangsgruppen (B, Si, Sn, Mg, Zn mit Wasserstoff – die Vorlagen kennen nur den
@@ -415,6 +415,32 @@ Eine eigene KI-Seite gibt es nicht mehr: `#/ki` (auch mit `?stoffe=`) leitet zur
 Werkbank weiter (`AiRedirect` in `App.tsx`); Arbeitsweise, Datenquellen und Güte
 des Netzes zeigt dort `AiInfoPanel.tsx`.
 
+**Nachtraining «Technische Katalyse».** `scripts/ki/quellen/technik.tsv` enthält
+kuratierte Gas- und Industriereaktionen (Kennung, Familie, Edukte, Katalysator,
+Hauptprodukt zuerst, Name, Literatur). Ablauf ohne Neuberechnung der übrigen
+Quellen:
+
+```sh
+.cache/mapper-env/bin/python scripts/ki/quellen/technik.py
+cd scripts/ki/quellen && MAP_EINGABE=alle-technik.tsv MAP_AUSGABE=zugeordnet-technik.tsv \
+  ../../../.cache/mapper-env/bin/python map.py 0 1 && cd -
+KI_NUR_DATEI=zugeordnet-technik.tsv KI_AUSGABE=technik npx vite-node scripts/ki/extract.ts 0 1
+KI_MIN=15 KI_EPOCHS=5 npx vite-node scripts/ki/train.ts   # etwa 85 Minuten
+```
+
+`train.ts` liest `vorlagen-technik.jsonl` mit, gibt der Quelle bei Dubletten
+Vorrang, nimmt alle ihre Reaktionen ins Training, behält ihre Vorlagen unabhängig
+von der Fundstellenzahl, übernimmt die Familie aus der Tabelle (statt
+`classifyFamily`) und zählt jedes ihrer Beispiele `KI_TECHNIK_GEWICHT`-mal
+(Standard 200). Danach misst es, wie gut das Netz die Reaktionen wiedererkennt
+(`.cache/ki/technik-metriken.json`). Neue Familien in `families.ts`
+(gaskatalyse-hydrierung, reformierung, hydroformylierung, gaskatalyse-oxidation,
+dehydrierung, gaskatalyse-hydratisierung, co2-fixierung) mit Aktivierungsenergien,
+die über `requiredTemperature` die technische Arbeitstemperatur treffen (145 kJ/mol
+≙ etwa 250 °C). Neue Hilfsstoff-Kategorie `technisch` (Silber, Cobalt, Vanadium,
+Molybdän); sie zählt zur Katalyse «metall». Die Pyrolyse-Warnung in
+`synthesisConditions.ts` gilt nur für Stoffe mit C–H-Gerüst (nicht CO₂, CO, CH₄).
+
 **Metallkatalysatoren.** `src/data/metalCatalysts.ts` enthält 20 Katalysatoren
 mit Anleitung (`guide`: Überblick, Zutaten mit Verweis auf die Stoffdatenbank,
 Geräte, Schritte, Gleichung, Prüfung, Lagerung, Gefahren, Kaufempfehlung,
@@ -471,7 +497,7 @@ höchstens einem fehlenden Edukt, vollständige zuerst. `PdfIdeas.tsx` ist der
 Werkbank-Modus `?modus=pdf`; die Ergebnisse bleiben beim Umschalten erhalten.
 
 **Trainingsdaten aus mehreren Quellen.** Seit dem Training vom September 2026
-lernt die KI aus 1.030.272 verschiedenen, geprüften Reaktionen aus zehn
+lernt die KI aus 1.030.294 verschiedenen, geprüften Reaktionen aus elf
 Datensätzen (US-Patente, Enzym- und Stoffwechseldatenbanken,
 Hochdurchsatz-Experimente; Einzelheiten und Ergebnisse im
 [Trainingsbericht](KI-TRAININGSBERICHT.md)). Die Kette:

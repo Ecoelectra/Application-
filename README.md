@@ -103,12 +103,12 @@ Im Modus **«Komplexe bauen»** der Werkbank lassen sich Komplexe außerdem frei
 zusammenstellen: 24 Zentralionen, 31 Liganden, 16 bekannte Vorlagen.
 
 **Reaktions-KI: Was entsteht – und mit welchem Katalysator?**
-Ein neuronales Netz, trainiert auf **1.030.272 verschiedenen Reaktionen aus
-zehn Datensätzen** – US-Patente 1976–2016, Enzymreaktionen aus BRENDA,
+Ein neuronales Netz, trainiert auf **1.030.294 verschiedenen Reaktionen aus
+elf Datensätzen** – US-Patente 1976–2016, Enzymreaktionen aus BRENDA,
 biochemische Reaktionen aus Rhea, PathBank und MetaNetX sowie
 Hochdurchsatz-Experimente –, sagt vorher, was aus zwei Stoffen entsteht und
 welcher Katalysator, welche Base, welches Reagenz oder welches Enzym dafür
-nötig ist. Es kennt 5.953 Reaktionsvorlagen, die es selbst aus den Daten
+nötig ist. Es kennt 5.971 Reaktionsvorlagen, die es selbst aus den Daten
 herausgeschnitten hat, und prüft jedes Produkt mit RDKit. An zurückgehaltenen
 Patentreaktionen (USPTO-MIT-Testsatz) liegt das richtige Produkt in 72 % der
 Fälle auf Platz 1 und in 81 % unter den ersten drei, bei Enzymreaktionen aus
@@ -125,6 +125,22 @@ direkt ins Gefäß. Für anorganische und technische Katalyse (Haber-Bosch,
 Kontaktverfahren, Ostwald-Verfahren, Wasserstoffperoxid-Zerfall mit Braunstein,
 Abgaskatalysator, Enzyme wie Katalase und Urease …) gibt es eine eigene
 Wissensbasis mit Lehrbuchwerten.
+
+**Nachtraining: Technische Katalyse.** Patente beschreiben vor allem
+Laborsynthesen; Gasreaktionen der Großindustrie fehlten dem Netz. Mit einer
+elften, kuratierten Quelle («Technische Katalyse», 31 Reaktionen mit Katalysator
+und Literaturquelle) wurde es nachtrainiert: Hydrierung von CO₂ zu Methan
+(Sabatier, Nickel) und Methanol (Kupfer/Zinkoxid), Reformierung und
+Wassergas-Shift, Hydroformylierung (Rhodium), Monsanto-Essigsäure, Ethylenoxid
+und Formaldehyd an Silber, Dehydrierung von Alkoholen und Cycloalkanen,
+Hydratisierung von Alkenen und der Einbau von CO₂ in Epoxide. Dafür gibt es
+sieben neue Reaktionsfamilien mit technischen Arbeitstemperaturen. Beispiel:
+Kohlenstoffdioxid + Wasserstoff ohne Katalysator – blockiert; mit
+Metallkatalysator bei 20 °C – zu langsam, «zügig ab etwa 250 °C»; bei 300 °C und
+30 bar – läuft, zu Methan (Nickel) bzw. Methanol (Kupfer/Zinkoxid). Bei den
+bisherigen Reaktionen bleibt die Produktvorhersage gleich gut (US-Patente: 72,5 %
+statt 72,4 % richtiges Produkt auf Platz 1); die Katalysatorart der Patente
+1976–2016 trifft sie etwas seltener (67,4 % statt 69,6 %). Einzelheiten im [Trainingsbericht](docs/KI-TRAININGSBERICHT.md#8-nachtraining-technische-katalyse).
 
 **Welcher Metallkatalysator – und wie stelle ich ihn her?** Ist in der Werkbank
 «Metallkatalysator» eingestellt, sagt jede Reaktion, welcher Katalysator passt:
@@ -290,7 +306,7 @@ nach Hess.
 | verschiedene Zielstoffe | 2584 |
 | Reaktionstypen mit Mechanismus | 96 |
 | davon elektrochemisch | 15 |
-| Reaktions-KI: verschiedene Reaktionen / Quellen / Vorlagen | 1.030.272 / 10 / 5.953 |
+| Reaktions-KI: verschiedene Reaktionen / Quellen / Vorlagen | 1.030.294 / 11 / 5.971 |
 | Reaktions-KI: richtiges Produkt auf Platz 1 / unter den ersten 3 (Patente) | 72 % / 81 % |
 | Katalysierte Prozesse in der Wissensbasis | 27 |
 | Standardbildungsenthalpien (anorganisch inkl. Ionen / organisch) | 252 / 85 |

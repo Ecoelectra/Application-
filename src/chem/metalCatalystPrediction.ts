@@ -66,6 +66,27 @@ const RULES: Rule[] = [
   // ---------- eindeutig benannte Verfahren zuerst ----------
   (c) => (/lindlar/.test(c.text) ? [pick('lindlar', 'Teilhydrierung eines Alkins: Der vergiftete Lindlar-Katalysator bleibt beim (Z)-Alken stehen.')] : null),
   (c) => (/metathese/.test(c.text) ? [pick('grubbs', 'Ruthenium-Carbenkomplex für Ringschluss- und Kreuzmetathese; das entstehende Ethen entweicht.')] : null),
+  // ---------- Technische Katalyse (Gasphase) ----------
+  (c) =>
+    c.family === 'gaskatalyse-hydrierung' || /sabatier|methanisierung/.test(c.text)
+      ? c.products.some((smiles) => /^C?O$|^OC$|CO$/.test(smiles) && smiles.length <= 2)
+        ? [pick('cu-zno', 'Methanol aus CO₂ bzw. CO: Kupfer auf Zinkoxid bei 220–280 °C und 50–100 bar.'), pick('ni-al2o3', 'Nickel würde stattdessen Methan liefern.')]
+        : [pick('ni-al2o3', 'Sabatier-Reaktion: Nickel auf Aluminiumoxid bei 250–400 °C setzt CO₂ und H₂ zu Methan um; Druck verschiebt das Gleichgewicht zum Methan.'), pick('cu-zno', 'Mit Kupfer/Zinkoxid entstünde vor allem Methanol.')]
+      : null,
+  (c) =>
+    c.family === 'reformierung' || /reformierung|wassergas/.test(c.text)
+      ? c.reactants.some((smiles) => smiles === 'C') || /reformierung/.test(c.text)
+        ? [pick('ni-al2o3', 'Reformierung von Methan an Nickel bei 700–900 °C.')]
+        : [pick('cu-zno', 'Wassergas-Shift und ihre Umkehrung an Kupfer/Zinkoxid (200–300 °C) bzw. Eisenoxid (350–450 °C).'), pick('platin', 'Platin katalysiert die umgekehrte Shift-Reaktion bei hoher Temperatur.')]
+      : null,
+  (c) => (c.family === 'hydroformylierung' || /hydroformylierung|oxo-synthese|carbonylierung/.test(c.text) ? [pick('hrh-co', 'Rhodium-Phosphin-Komplex: Alken, CO und H₂ werden bei 80–120 °C und 10–50 bar zum Aldehyd verknüpft.')] : null),
+  (c) => (c.family === 'gaskatalyse-oxidation' || /ethylenoxid/.test(c.text) ? [pick('silber', 'Silber überträgt ein Sauerstoffatom auf die Doppelbindung bzw. dehydriert Methanol zu Formaldehyd.')] : null),
+  (c) =>
+    c.family === 'dehydrierung'
+      ? has(c.reactants, /O/)
+        ? [pick('kupfer', 'Alkohole werden an Kupfer bei 250–300 °C zu Aldehyden und Ketonen dehydriert (Wasserstoff entweicht).'), pick('platin', 'Platin wirkt ähnlich, ist aber teurer.')]
+        : [pick('platin', 'Cycloalkane werden an Platin bei 450–500 °C zu Aromaten dehydriert (Reformieren).')]
+      : null,
   // ---------- Kreuzkupplungen ----------
   (c) =>
     c.family === 'suzuki' || /suzuki/.test(c.text) || (has(c.reactants, BORON) && has(c.reactants, ARYL_HALIDE))
@@ -200,7 +221,7 @@ const EXAMPLE_PATTERNS: Array<[RegExp, string]> = [
   [/ruthenium|grubbs/i, 'grubbs'],
 ];
 
-const METAL_CATEGORIES = new Set(['pd', 'pt', 'ni', 'cu', 'edelmetall']);
+const METAL_CATEGORIES = new Set(['pd', 'pt', 'ni', 'cu', 'edelmetall', 'technisch']);
 
 function context(reaction: WorkbenchReaction, vessel: Substance[]): Context {
   const involved = vessel.filter((substance) => reaction.participants?.includes(substance.id));
@@ -267,7 +288,7 @@ export function predictMetalCatalyst(reaction: WorkbenchReaction, vessel: Substa
   }
   // Die KI verlangt ein Metall, keine Regel greift: nach Metallart wählen
   if (!picks.length && learned.length) {
-    const byCategory: Record<string, string> = { pd: 'pd-pph3-4', pt: 'platin', ni: 'raney-ni', cu: 'cui', edelmetall: 'wilkinson' };
+    const byCategory: Record<string, string> = { pd: 'pd-pph3-4', pt: 'platin', ni: 'raney-ni', cu: 'cui', edelmetall: 'wilkinson', technisch: 'silber' };
     const top = learned[0];
     picks.push(pick(byCategory[top.category], `Die Reaktions-KI erwartet hier einen ${top.label} (${top.purpose.split('.')[0]}).`));
   }

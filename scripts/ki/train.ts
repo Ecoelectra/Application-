@@ -37,6 +37,25 @@ const EPOCHS = Number(process.env.KI_EPOCHS ?? 6);
 const BATCH = 512;
 const CATEGORY_WEIGHT = 0.3;
 const THREADS = Math.max(1, Math.min(4, cpus().length));
+/**
+ * Quelle «Technische Katalyse» (scripts/ki/quellen/technik.tsv): wenige, dafür
+ * kuratierte Gas- und Industriereaktionen. Ihre Vorlagen werden immer
+ * übernommen, ihre Reaktionsfamilie steht in der Tabelle, und ihre Beispiele
+ * zählen im Training so oft, dass das Netz sie neben einer Million
+ * Patentreaktionen lernt.
+ */
+const TECHNIK = 'technik';
+const TECHNIK_WEIGHT = Number(process.env.KI_TECHNIK_GEWICHT ?? 200);
+const technikFamily = new Map<string, string>();
+{
+  const table = resolve(ROOT, 'scripts/ki/quellen/technik.tsv');
+  if (existsSync(table)) {
+    for (const line of readFileSync(table, 'utf8').split('\n').slice(1)) {
+      const [id, family] = line.split('\t');
+      if (id && family) technikFamily.set(`${TECHNIK}:${id}`, family);
+    }
+  }
+}
 
 type Row = [split: string, smarts: string, reactants: string[], agents: string[], product: string, changes: BondChange[], id: string, source?: string];
 
@@ -49,7 +68,7 @@ const log = (...args: unknown[]) => console.log(`[${Math.round((Date.now() - sta
 // ---------------------------------------------------------------------
 
 const records: Row[] = [];
-for (const file of readdirSync(CACHE).filter((name) => /^vorlagen-\d+\.jsonl$/.test(name))) {
+for (const file of readdirSync(CACHE).filter((name) => /^vorlagen-(\d+|technik)\.jsonl$/.test(name))) {
   for (const line of readFileSync(resolve(CACHE, file), 'utf8').split('\n')) {
     if (line) records.push(JSON.parse(line) as Row);
   }
@@ -63,7 +82,7 @@ log(`${records.length} geprüfte Reaktionen eingelesen`);
 
 const sourceOf = (record: Row) => record[7] ?? 'uspto-mit';
 const PATENTS = new Set(['uspto-mit', 'uspto-full', 'uspto-stereo']);
-const PRIORITY = ['uspto-mit', 'enzymemap', 'uspto-full', 'uspto-stereo', 'ecreact-brenda', 'ecreact-rhea', 'ecreact-pathbank', 'ecreact-metanetx', 'hte-suzuki', 'hte-buchwald'];
+const PRIORITY = [TECHNIK, 'uspto-mit', 'enzymemap', 'uspto-full', 'uspto-stereo', 'ecreact-brenda', 'ecreact-rhea', 'ecreact-pathbank', 'ecreact-metanetx', 'hte-suzuki', 'hte-buchwald'];
 const priority = (source: string) => (PRIORITY.indexOf(source) + PRIORITY.length + 1) % (PRIORITY.length + 1);
 records.sort((a, b) => priority(sourceOf(a)) - priority(sourceOf(b)) || (a[0] === 'train' ? 0 : 1) - (b[0] === 'train' ? 0 : 1));
 
@@ -93,7 +112,10 @@ for (const record of records) {
   }
   seenKeys.set(key, source);
   stat.unique++;
-  if (source !== 'uspto-mit') {
+  if (source === TECHNIK) {
+    // Kuratierte Reaktionen: alle ins Training (geprüft wird das Wiedererkennen, siehe unten)
+    record[0] = 'train';
+  } else if (source !== 'uspto-mit') {
     // Patente: 1 % Validierung, 1 % Test; kleinere Quellen: 5 % und 10 %
     const x = hash(key);
     const [valid, test] = PATENTS.has(source) ? [0.01, 0.01] : [0.05, 0.1];
@@ -126,13 +148,17 @@ for (const threshold of [3, 5, 10, 25, 50, 100]) {
 // Gesperrte Produkte (Sprengstoffe, Kampfstoffe …) filtert die App bei jeder
 // Vorhersage; hier werden nur die Beispielreaktionen geprüft (siehe unten).
 const smallSource = new Set<string>();
-for (const record of records) if (record[0] === 'train' && !PATENTS.has(sourceOf(record))) smallSource.add(record[1]);
+const curated = new Set<string>();
+for (const record of records) {
+  if (record[0] === 'train' && !PATENTS.has(sourceOf(record))) smallSource.add(record[1]);
+  if (sourceOf(record) === TECHNIK) curated.add(record[1]);
+}
 const templates = [...trainCounts.entries()]
-  .filter(([smarts, count]) => count >= MIN_COUNT || (count >= MIN_COUNT_SMALL && smallSource.has(smarts)))
+  .filter(([smarts, count]) => count >= MIN_COUNT || (count >= MIN_COUNT_SMALL && smallSource.has(smarts)) || curated.has(smarts))
   .sort((a, b) => b[1] - a[1])
   .map(([smarts]) => smarts);
 const templateIndex = new Map(templates.map((smarts, index) => [smarts, index]));
-log(`${templates.length} Vorlagen ausgewählt (≥ ${MIN_COUNT} Fundstellen, aus kleinen Quellen ≥ ${MIN_COUNT_SMALL})`);
+log(`${templates.length} Vorlagen ausgewählt (≥ ${MIN_COUNT} Fundstellen, aus kleinen Quellen ≥ ${MIN_COUNT_SMALL}, dazu ${curated.size} aus «Technische Katalyse»)`);
 
 // ---------------------------------------------------------------------
 // 3. Hilfsstoffe einordnen
@@ -181,8 +207,10 @@ interface TemplateStats {
   example: string;
   source: string;
   changes: BondChange[];
+  /** Familien laut Tabelle «Technische Katalyse» */
+  curatedFamilies: Map<string, number>;
 }
-const stats: TemplateStats[] = templates.map(() => ({ count: 0, categoryCounts: categories.map(() => 0), agents: new Map(), example: '', source: '', changes: [] }));
+const stats: TemplateStats[] = templates.map(() => ({ count: 0, categoryCounts: categories.map(() => 0), agents: new Map(), example: '', source: '', changes: [], curatedFamilies: new Map() }));
 for (const record of records) {
   if (record[0] !== 'train') continue;
   const index = templateIndex.get(record[1]);
@@ -194,6 +222,8 @@ for (const record of records) {
     if ((mask >>> c) & 1) entry.categoryCounts[c]++;
   });
   for (const agent of record[3]) entry.agents.set(agent, (entry.agents.get(agent) ?? 0) + 1);
+  const curatedFamily = technikFamily.get(record[6]);
+  if (curatedFamily) entry.curatedFamilies.set(curatedFamily, (entry.curatedFamilies.get(curatedFamily) ?? 0) + 1);
   if ((!entry.example || record[2].join('.').length < entry.example.length / 1.5) && !restricted(record[4])) {
     entry.example = `${record[2].join('.')}>>${record[4]}`;
     entry.source = record[6];
@@ -225,6 +255,10 @@ for (const [index, record] of records.entries()) {
   samples[record[0] as 'train' | 'valid' | 'test'].push({ bits, label: label ?? -1, mask: categoryMask(record[3]), record });
 }
 log(`Trainingsbeispiele: ${samples.train.length}, Validierung: ${samples.valid.length}, Test: ${samples.test.length} (${skippedBits} ohne Fingerabdruck)`);
+// «Technische Katalyse» stärker gewichten: jedes Beispiel zählt mehrfach
+const technikSamples = samples.train.filter((sample) => sourceOf(sample.record) === TECHNIK);
+for (let copy = 1; copy < TECHNIK_WEIGHT; copy++) samples.train.push(...technikSamples);
+log(`«Technische Katalyse»: ${technikSamples.length} Reaktionen, je ${TECHNIK_WEIGHT}-fach gewichtet`);
 
 // ---------------------------------------------------------------------
 // 6. Training (Adam, mehrere Threads)
@@ -435,8 +469,22 @@ for (const [source, cases] of bySource) {
   log(`Test ${source}: ${formatMetrics(perSource[source])}`);
 }
 const mit = perSource['uspto-mit'];
+// «Technische Katalyse»: Erkennt das Netz die kuratierten Reaktionen wieder?
+const technikCases: TestCase[] = technikSamples.map((sample) => ({
+  source: TECHNIK,
+  reactants: sample.record[2],
+  product: sample.record[4],
+  categories: categoryIdsOf(sample.mask),
+  bits: sample.bits,
+  template: sample.record[1],
+}));
+const technikMetrics = technikCases.length ? evaluateCases(rdkit, model, technikCases) : null;
+if (technikMetrics) {
+  log(`«Technische Katalyse» (Wiedererkennen): ${formatMetrics(technikMetrics)}`);
+  writeFileSync(resolve(CACHE, 'technik-metriken.json'), JSON.stringify(technikMetrics, null, 1));
+}
 const metrics = {
-  trainingReactions: samples.train.length,
+  trainingReactions: samples.train.length - technikSamples.length * (TECHNIK_WEIGHT - 1),
   templates: T,
   testReactions: samples.test.length,
   templateTop1: templateTest.top1,
@@ -457,7 +505,7 @@ writeFileSync(
   testCases.map((entry) => JSON.stringify({ source: entry.source, reactants: entry.reactants, product: entry.product, categories: entry.categories, template: entry.template })).join('\n'),
 );
 const extraction = readdirSync(CACHE)
-  .filter((name) => /^extraktion-\d+\.json$/.test(name))
+  .filter((name) => /^extraktion-(\d+|technik)\.json$/.test(name))
   .map((name) => JSON.parse(readFileSync(resolve(CACHE, name), 'utf8')) as { total: number; kept: number; reasons: Record<string, number>; perSource: Record<string, { read: number; kept: number }> });
 const extractionSummary = { total: 0, kept: 0, reasons: {} as Record<string, number>, perSource: {} as Record<string, { read: number; kept: number }> };
 for (const entry of extraction) {
@@ -503,7 +551,9 @@ const templateData = templates.map((smarts, index) => {
   const share = Object.fromEntries(
     categories.map((id, c) => [id, entry.count ? entry.categoryCounts[c] / entry.count : 0]).filter(([, value]) => (value as number) >= 0.02),
   ) as { [id: string]: number };
-  const family = classifyFamily(entry.changes, share);
+  // Vorlagen aus «Technische Katalyse»: Familie laut Tabelle
+  const curatedFamily = [...entry.curatedFamilies.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const family = curatedFamily ?? classifyFamily(entry.changes, share);
   const topAgents = [...entry.agents.entries()]
     .filter(([agent]) => agentInfo.get(agent)?.category && agentInfo.get(agent)?.category !== 'loesungsmittel')
     .sort((a, b) => b[1] - a[1])

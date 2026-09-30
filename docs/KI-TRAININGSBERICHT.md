@@ -228,3 +228,81 @@ npx vite-node scripts/ki/bericht.ts               # Tabellen dieses Berichts
 
 Rechenzeit auf vier Kernen: Aufbereitung etwa 30 Minuten, Atomzuordnung etwa
 2,5 Stunden, Extraktion 15 Minuten, Training 71 Minuten, Vergleich 5 Minuten.
+
+## 8. Nachtraining: Technische Katalyse
+
+*30. September 2026.* Anlass: Die Werkbank fand für **Kohlenstoffdioxid +
+Wasserstoff** keine Reaktion – auch nicht mit Metallkatalysator, hoher
+Temperatur und hohem Druck. Solche Gasreaktionen der Großindustrie stehen kaum
+in Patenten der organischen Synthese; das Netz kannte sie nicht.
+
+**Neue Quelle «Technische Katalyse».** 33 kuratierte Reaktionen mit
+Katalysator und Literaturangabe (`scripts/ki/quellen/technik.tsv`), davon nach
+der Dublettenprüfung 31 verschieden:
+
+| Bereich | Reaktionen |
+|---|---|
+| Hydrierung von CO₂ und CO | Sabatier (CO₂ → Methan, Ni), CO₂ → Methanol (Cu/ZnO), CO → Methan, CO → Methanol |
+| Reformierung und Shift | Dampf- und Trockenreformierung von Methan (Ni), Wassergas-Shift und Umkehrung (Cu/ZnO) |
+| Oxo-Synthese | Hydroformylierung von Ethen, Propen, 1-Buten, 1-Hexen, 1-Octen, Styrol (Rh, Co); Monsanto-Essigsäure (Rh/Iodid) |
+| Gasphasen-Oxidation | Ethylenoxid (Ag), Formaldehyd aus Methanol (Ag) |
+| Dehydrierung | Ethanol, 1-/2-Propanol, 1-/2-Butanol, Cyclohexanol (Cu); Cyclohexan, Methylcyclohexan (Pt) |
+| Hydratisierung | Ethen, Propen, 1-Buten (Phosphorsäure) |
+| CO₂-Fixierung | CO₂ + Ethylen-, Propylen-, Butylen-, Styroloxid → cyclische Carbonate (Bromid) |
+
+Die Atomzuordnung machte RXNMapper; eine falsch zugeordnete Reaktion
+(Isobuten-Hydratisierung: Sauerstoff aus der Phosphorsäure statt aus Wasser)
+wurde entfernt, eine zweite (Harnstoff) braucht drei Edukte und passt nicht ins
+Netz. Die Vorlagen verallgemeinern: Die Hydroformylierung ergibt eine Vorlage für
+alle endständigen Alkene, die CO₂-Fixierung eine für alle Epoxide.
+
+**Wie die kleine Quelle gegen eine Million Reaktionen ankommt.** Ihre Vorlagen
+werden immer übernommen (18 neue, zusammen 5.971), ihre Familie steht in der
+Tabelle, und jede ihrer Reaktionen zählt im Training 200-fach (6.200 von 684.000
+Lernbeispielen je Epoche, unter 1 %). Neu sind sieben Reaktionsfamilien mit
+Aktivierungsenergien, die die technische Arbeitstemperatur treffen (etwa
+145 kJ/mol ≙ Beginn bei 250 °C für die CO₂-Hydrierung), und die
+Hilfsstoff-Kategorie «Technischer Metallkatalysator» (Silber, Cobalt, Vanadium,
+Molybdän). Ansonsten gleiche Einstellungen wie in Abschnitt 3 (5 Epochen,
+gleicher Startwert, 85 Minuten).
+
+| Epoche | Verlust | Treffer Training | Validierung: Vorlage auf Platz 1 | unter ersten 5 |
+|---:|---:|---:|---:|---:|
+| 1 | 3,94 | 42,4 % | 45,7 % | 74,1 % |
+| 2 | 2,15 | 62,9 % | 49,1 % | 76,6 % |
+| 3 | 1,88 | 68,4 % | 51,5 % | 77,7 % |
+| 4 | 1,64 | 75,1 % | 53,2 % | 78,5 % |
+| 5 | 1,59 | 76,2 % | 51,5 % | 78,5 % |
+
+**Ergebnis.** Beide Modelle auf *denselben* zurückgehaltenen Testreaktionen
+(`scripts/ki/evaluate.ts`). Die Katalysatorwerte weichen von Abschnitt 4 ab, weil
+jetzt mehr Hilfsstoffe eingeordnet werden (etwa Phosphorsäure, Bromid) und damit
+mehr Fälle zählen (USPTO-MIT 222 statt 203).
+
+| Test | vorher | nachher |
+|---|---:|---:|
+| USPTO-MIT: richtiges Produkt auf Platz 1 / unter den ersten 3 | 72,4 % / 81,1 % | 72,5 % / 81,5 % |
+| USPTO-MIT: richtige Katalysatorart (222 Fälle) | 64,9 % | 65,3 % |
+| USPTO 1976–2016: Produkt Platz 1 / erste 3 | 50,7 % / 58,0 % | 51,0 % / 57,6 % |
+| USPTO 1976–2016: richtige Katalysatorart (283 bzw. 285 Fälle) | 69,6 % | 67,4 % |
+| Enzymreaktionen (EnzymeMap): Platz 1 / erste 3 | 50,0 % / 69,5 % | 49,1 % / 69,6 % |
+| Technische Katalyse (Wiedererkennen): Platz 1 / erste 3 | – | 90,3 % / 100 % |
+| Technische Katalyse: richtige Katalysatorart (28 Fälle) | – | 92,9 % |
+
+Das Netz hat die neuen Reaktionen gelernt. Bei den bisherigen Produkten bleibt
+es gleich gut (Unterschiede unter einem Prozentpunkt, im Rahmen des Zufalls);
+bei der Katalysatorart der Patente 1976–2016 verliert es 2,2 Punkte – vermutlich,
+weil die neue Kategorie «Technischer Metallkatalysator» und die jetzt
+eingeordneten Säuren und Halogenide mit den bisherigen Klassen konkurrieren. In der Werkbank: CO₂ + H₂ ohne Katalysator – blockiert; mit
+Metallkatalysator bei 20 °C – zu langsam («zügig ab etwa 247 °C»); bei 300 °C
+und 30 bar – läuft, zu Methanol (Kupfer/Zinkoxid) und Methan (Nickel).
+
+**Grenzen.** Die technischen Reaktionen sind *Trainingsdaten*; «Wiedererkennen»
+heißt, das Netz gibt sie für genau diese Edukte zurück – es ist kein Test an
+unbekannten Reaktionen. Verallgemeinern kann es nur innerhalb einer Vorlage
+(andere Alkene bei der Hydroformylierung, andere Epoxide bei der CO₂-Fixierung,
+andere Alkohole bei der Dehydrierung). Welches der möglichen Produkte bei CO₂ + H₂
+entsteht (Methan, Methanol, CO), entscheidet in Wirklichkeit der Katalysator;
+das Netz nennt alle, die Metallkatalysator-Vorhersage ordnet jedem den passenden
+zu. Gleichgewichte (etwa die Rückreaktion der Sabatier-Reaktion über 500 °C)
+werden nur als Hinweis angegeben, nicht berechnet.

@@ -189,6 +189,51 @@ export const FAMILIES: ReactionFamily[] = [
     eaUncatalyzed: 125, eaCatalyzed: 55, requiresCatalyst: false, catalysts: ['enzym'],
     effect: 'Das Enzym bindet das Substrat in seiner aktiven Tasche, richtet es passend aus und stabilisiert den Übergangszustand – die Barriere sinkt um 50 bis 80 kJ/mol.', bimolecular: true,
   },
+  // ---------- Technische Katalyse (Quelle «Technische Katalyse») ----------
+  // Richtwerte so gewählt, dass die Arrhenius-Abschätzung die technische
+  // Arbeitstemperatur bei 1 bar trifft; Druck beschleunigt gasförmige Partner.
+  {
+    id: 'gaskatalyse-hydrierung', name: 'Hydrierung von CO₂ und CO (Methanisierung, Methanolsynthese)', description: 'Kohlenstoffdioxid oder Kohlenmonoxid reagiert an einer Metalloberfläche mit Wasserstoff zu Methan oder Methanol.',
+    eaUncatalyzed: 300, eaCatalyzed: 145, requiresCatalyst: true, catalysts: ['ni', 'cu', 'edelmetall', 'technisch'],
+    effect: 'Nickel oder Ruthenium spalten Wasserstoff und CO₂ an ihrer Oberfläche und bauen Methan auf (Sabatier-Reaktion); Kupfer auf Zinkoxid lenkt zu Methanol. Ohne Katalysator reagieren die Gase praktisch nicht. Hoher Druck begünstigt das Gleichgewicht, weil aus vielen Gasteilchen wenige werden; zu hohe Temperatur schiebt es zurück.',
+    bimolecular: true,
+  },
+  {
+    id: 'reformierung', name: 'Reformierung und Wassergas-Shift', description: 'Methan, Kohlenmonoxid, Kohlenstoffdioxid, Wasser und Wasserstoff werden an Nickel oder Kupfer ineinander umgewandelt.',
+    eaUncatalyzed: 320, eaCatalyzed: 170, requiresCatalyst: true, catalysts: ['ni', 'cu', 'technisch'],
+    effect: 'Nickel spaltet C–H- und O–H-Bindungen an seiner Oberfläche; die Gleichgewichte hängen stark von Temperatur und Druck ab (Reformierung endotherm, Shift-Reaktion leicht exotherm).',
+    bimolecular: true,
+  },
+  {
+    id: 'hydroformylierung', name: 'Hydroformylierung und Carbonylierung (Oxo-Synthese)', description: 'Kohlenmonoxid wird mit Wasserstoff an ein Alken oder an Methanol angelagert – es entsteht ein Aldehyd bzw. Essigsäure.',
+    eaUncatalyzed: 250, eaCatalyzed: 105, requiresCatalyst: true, catalysts: ['edelmetall', 'technisch'],
+    effect: 'Ein Rhodium- oder Cobaltkomplex bindet Alken, CO und Wasserstoff nacheinander und fügt sie zusammen; 20–300 bar Synthesegas halten den Katalysator aktiv.',
+    bimolecular: true,
+  },
+  {
+    id: 'gaskatalyse-oxidation', name: 'Katalytische Oxidation in der Gasphase', description: 'Ein Kohlenwasserstoff oder Alkohol wird an einer Metalloberfläche mit Sauerstoff gezielt oxidiert (Ethylenoxid, Formaldehyd).',
+    eaUncatalyzed: 250, eaCatalyzed: 140, requiresCatalyst: true, catalysts: ['technisch', 'pt', 'cu', 'edelmetall'],
+    effect: 'Silber bindet Sauerstoff so, dass er ein Sauerstoffatom auf die Doppelbindung überträgt, statt sie ganz zu verbrennen.',
+    bimolecular: true,
+  },
+  {
+    id: 'dehydrierung', name: 'Katalytische Dehydrierung', description: 'Einem Alkohol oder Cycloalkan wird Wasserstoff entzogen – es entsteht ein Aldehyd, Keton oder Aromat.',
+    eaUncatalyzed: 300, eaCatalyzed: 150, requiresCatalyst: true, catalysts: ['cu', 'pt', 'ni', 'technisch'],
+    effect: 'Kupfer oder Platin lösen Wasserstoff an ihrer Oberfläche ab; niedriger Druck und hohe Temperatur begünstigen das Gleichgewicht, weil Wasserstoffgas entsteht.',
+    bimolecular: false,
+  },
+  {
+    id: 'gaskatalyse-hydratisierung', name: 'Hydratisierung von Alkenen (Gasphase)', description: 'Wasserdampf lagert sich an ein Alken an – es entsteht ein Alkohol.',
+    eaUncatalyzed: 250, eaCatalyzed: 150, requiresCatalyst: true, catalysts: ['saeure'],
+    effect: 'Phosphorsäure auf Kieselgel protoniert die Doppelbindung; technisch bei 250–300 °C und etwa 70 bar.',
+    bimolecular: true,
+  },
+  {
+    id: 'co2-fixierung', name: 'CO₂-Einbau in Epoxide (cyclische Carbonate)', description: 'Kohlenstoffdioxid wird in den Ring eines Epoxids eingebaut.',
+    eaUncatalyzed: 180, eaCatalyzed: 115, requiresCatalyst: true, catalysts: ['phasentransfer', 'lewis', 'technisch'],
+    effect: 'Ein Halogenid-Ion öffnet den Epoxidring, CO₂ lagert sich an, und der Ring schließt sich zum Carbonat; Lewis-Säuren (Zink, Aluminium) beschleunigen das.',
+    bimolecular: true,
+  },
   {
     id: 'sonstige', name: 'Sonstige Umsetzung', description: 'Eine seltenere Reaktionsart ohne eigene Familie.',
     eaUncatalyzed: 110, eaCatalyzed: 90, requiresCatalyst: false, catalysts: [],

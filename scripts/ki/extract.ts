@@ -44,7 +44,11 @@ interface Input {
 }
 
 function* inputs(): Generator<Input> {
-  const mapped = existsSync(SOURCES) ? readdirSync(SOURCES).filter((name) => /^zugeordnet-\d+\.tsv$/.test(name)).sort() : [];
+  // KI_NUR_DATEI: nur eine Datei bearbeiten (etwa die neue Quelle «Technische Katalyse»)
+  const only = process.env.KI_NUR_DATEI;
+  const mapped = existsSync(SOURCES)
+    ? readdirSync(SOURCES).filter((name) => (only ? name === only : /^zugeordnet-\d+\.tsv$/.test(name))).sort()
+    : [];
   if (mapped.length) {
     let index = 0;
     for (const file of mapped) {
@@ -104,6 +108,7 @@ for (const input of inputs()) {
   stat.kept++;
 }
 
-writeFileSync(resolve(OUT, `vorlagen-${part}.jsonl`), lines.join('\n'));
-writeFileSync(resolve(OUT, `extraktion-${part}.json`), JSON.stringify({ total, kept, reasons, perSource }));
+const name = process.env.KI_AUSGABE ?? String(part);
+writeFileSync(resolve(OUT, `vorlagen-${name}.jsonl`), lines.join('\n'));
+writeFileSync(resolve(OUT, `extraktion-${name}.json`), JSON.stringify({ total, kept, reasons, perSource }));
 console.log(`Teil ${part} fertig: ${total} gelesen, ${kept} behalten, verworfen:`, reasons, `${Math.round((Date.now() - started) / 1000)} s`);

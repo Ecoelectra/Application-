@@ -123,7 +123,7 @@ export interface PredictionOptions {
 export const CATALYSIS_CATEGORIES: Record<Catalysis, string[]> = {
   sauer: ['saeure', 'schwache-saeure'],
   basisch: ['aminbase', 'anorganische-base', 'starke-base', 'dmap'],
-  metall: ['pd', 'pt', 'ni', 'edelmetall', 'cu'],
+  metall: ['pd', 'pt', 'ni', 'edelmetall', 'cu', 'technisch'],
   lewis: ['lewis'],
 };
 

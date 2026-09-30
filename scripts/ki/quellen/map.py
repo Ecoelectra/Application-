@@ -8,6 +8,8 @@ Vorlagenextraktion (scripts/ki/extract.ts) sie gleich behandeln kann.
 
 Aufruf: python map.py <Teil> <Teile>
 Liest .cache/quellen/alle.tsv, schreibt .cache/quellen/zugeordnet-<Teil>.tsv.
+Mit MAP_EINGABE und MAP_AUSGABE lassen sich andere Dateien wählen (etwa für
+die Quelle «Technische Katalyse»: technik.py).
 Bereits geschriebene Zeilen werden beim erneuten Start übersprungen.
 """
 import os
@@ -94,7 +96,7 @@ def bond_changes(mapped):
 def main():
     part = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     parts = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-    out_path = os.path.join(Q, f'zugeordnet-{part}.tsv')
+    out_path = os.path.join(Q, os.environ.get('MAP_AUSGABE', f'zugeordnet-{part}.tsv'))
     done = set()
     if os.path.exists(out_path):
         with open(out_path) as handle:
@@ -103,7 +105,7 @@ def main():
                 done.add((fields[0], fields[1]))
 
     rows = []
-    with open(os.path.join(Q, 'alle.tsv')) as handle:
+    with open(os.path.join(Q, os.environ.get('MAP_EINGABE', 'alle.tsv'))) as handle:
         for i, line in enumerate(handle):
             if i % parts != part:
                 continue

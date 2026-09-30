@@ -1,0 +1,34 @@
+id	familie	edukte	hilfsstoffe	produkte	name	quelle
+sabatier-ni	gaskatalyse-hydrierung	O=C=O.[H][H]	[Ni]	C.O	Sabatier-Reaktion (Methanisierung von CO2) an Nickel	P. Sabatier, J.-B. Senderens, C. R. Acad. Sci. 134, 514 (1902)
+sabatier-ru	gaskatalyse-hydrierung	O=C=O.[H][H]	[Ru]	C.O	Methanisierung von CO2 an Ruthenium	W. Wang et al., Chem. Soc. Rev. 40, 3703 (2011)
+co2-methanol	gaskatalyse-hydrierung	O=C=O.[H][H]	[Cu].O=[Zn]	CO.O	Methanol aus CO2 an Cu/ZnO	M. Behrens et al., Science 336, 893 (2012)
+rwgs	reformierung	O=C=O.[H][H]	[Cu].O=[Zn]	[C-]#[O+].O	Umgekehrte Wassergas-Shift-Reaktion	M. D. Porosoff et al., Energy Environ. Sci. 9, 62 (2016)
+co-methanisierung	gaskatalyse-hydrierung	[C-]#[O+].[H][H]	[Ni]	C.O	Methanisierung von CO an Nickel	Ullmann's Encyclopedia, Methanation
+co-methanol	gaskatalyse-hydrierung	[C-]#[O+].[H][H]	[Cu].O=[Zn]	CO	Methanolsynthese aus Synthesegas	Ullmann's Encyclopedia, Methanol
+dampfreformierung	reformierung	C.O	[Ni]	[C-]#[O+].[H][H]	Dampfreformierung von Methan	Ullmann's Encyclopedia, Hydrogen
+trockenreformierung	reformierung	C.O=C=O	[Ni]	[C-]#[O+].[H][H]	Trockenreformierung von Methan mit CO2	M. C. J. Bradford, M. A. Vannice, Catal. Rev. 41, 1 (1999)
+wassergas-shift	reformierung	[C-]#[O+].O	[Cu].O=[Zn]	O=C=O.[H][H]	Wassergas-Shift-Reaktion	Ullmann's Encyclopedia, Hydrogen
+monsanto	hydroformylierung	CO.[C-]#[O+]	[Rh].I	CC(=O)O	Methanol-Carbonylierung zu Essigsäure (Monsanto)	F. E. Paulik, J. F. Roth, Chem. Commun. 1968, 1578
+oxo-ethen	hydroformylierung	C=C.[C-]#[O+].[H][H]	[Rh]	CCC=O	Hydroformylierung von Ethen	Ullmann's Encyclopedia, Oxo Synthesis
+oxo-propen	hydroformylierung	C=CC.[C-]#[O+].[H][H]	[Rh]	CCCC=O	Hydroformylierung von Propen	Ullmann's Encyclopedia, Oxo Synthesis
+oxo-buten	hydroformylierung	C=CCC.[C-]#[O+].[H][H]	[Rh]	CCCCC=O	Hydroformylierung von 1-Buten	Ullmann's Encyclopedia, Oxo Synthesis
+oxo-hexen	hydroformylierung	C=CCCCC.[C-]#[O+].[H][H]	[Rh]	CCCCCCC=O	Hydroformylierung von 1-Hexen	Ullmann's Encyclopedia, Oxo Synthesis
+oxo-octen	hydroformylierung	C=CCCCCCC.[C-]#[O+].[H][H]	[Co]	CCCCCCCCC=O	Hydroformylierung von 1-Octen	Ullmann's Encyclopedia, Oxo Synthesis
+oxo-styrol	hydroformylierung	C=Cc1ccccc1.[C-]#[O+].[H][H]	[Rh]	CC(C=O)c1ccccc1	Hydroformylierung von Styrol	Ullmann's Encyclopedia, Oxo Synthesis
+ethylenoxid	gaskatalyse-oxidation	C=C.O=O	[Ag]	C1CO1	Ethylenoxid aus Ethen an Silber	Ullmann's Encyclopedia, Ethylene Oxide
+formaldehyd-silber	gaskatalyse-oxidation	CO.O=O	[Ag]	C=O.O	Formaldehyd aus Methanol an Silber	Ullmann's Encyclopedia, Formaldehyde
+ethanol-dehydrierung	dehydrierung	CCO	[Cu]	CC=O.[H][H]	Dehydrierung von Ethanol an Kupfer	Ullmann's Encyclopedia, Acetaldehyde
+propanol-dehydrierung	dehydrierung	CCCO	[Cu]	CCC=O.[H][H]	Dehydrierung von 1-Propanol an Kupfer	Ullmann's Encyclopedia, Propanal
+isopropanol-dehydrierung	dehydrierung	CC(C)O	[Cu]	CC(C)=O.[H][H]	Aceton aus 2-Propanol an Kupfer	Ullmann's Encyclopedia, Acetone
+butanol-dehydrierung	dehydrierung	CCCCO	[Cu]	CCCC=O.[H][H]	Dehydrierung von 1-Butanol an Kupfer	Ullmann's Encyclopedia, Butanals
+butanol2-dehydrierung	dehydrierung	CCC(C)O	[Cu]	CCC(C)=O.[H][H]	Butanon aus 2-Butanol an Kupfer	Ullmann's Encyclopedia, Methyl Ethyl Ketone
+cyclohexanol-dehydrierung	dehydrierung	OC1CCCCC1	[Cu]	O=C1CCCCC1.[H][H]	Cyclohexanon aus Cyclohexanol an Kupfer	Ullmann's Encyclopedia, Cyclohexanone
+cyclohexan-dehydrierung	dehydrierung	C1CCCCC1	[Pt]	c1ccccc1.[H][H]	Dehydrierung von Cyclohexan zu Benzol an Platin	Ullmann's Encyclopedia, Benzene (Reforming)
+methylcyclohexan-dehydrierung	dehydrierung	CC1CCCCC1	[Pt]	Cc1ccccc1.[H][H]	Toluol aus Methylcyclohexan an Platin	Ullmann's Encyclopedia, Toluene (Reforming)
+ethen-hydratisierung	gaskatalyse-hydratisierung	C=C.O	OP(O)(O)=O	CCO	Ethanol aus Ethen (Direkthydratisierung)	Ullmann's Encyclopedia, Ethanol
+propen-hydratisierung	gaskatalyse-hydratisierung	C=CC.O	OP(O)(O)=O	CC(C)O	2-Propanol aus Propen	Ullmann's Encyclopedia, Propanols
+buten-hydratisierung	gaskatalyse-hydratisierung	C=CCC.O	OP(O)(O)=O	CCC(C)O	2-Butanol aus 1-Buten	Ullmann's Encyclopedia, Butanols
+co2-ethylenoxid	co2-fixierung	O=C=O.C1CO1	[Br-].[K+]	O=C1OCCO1	Ethylencarbonat aus CO2 und Ethylenoxid	M. North et al., Green Chem. 12, 1514 (2010)
+co2-propylenoxid	co2-fixierung	O=C=O.CC1CO1	[Br-].[K+]	CC1COC(=O)O1	Propylencarbonat aus CO2 und Propylenoxid	M. North et al., Green Chem. 12, 1514 (2010)
+co2-styroloxid	co2-fixierung	O=C=O.C1OC1c1ccccc1	[Br-].[K+]	O=C1OCC(c2ccccc2)O1	Styrolcarbonat aus CO2 und Styroloxid	M. North et al., Green Chem. 12, 1514 (2010)
+co2-butylenoxid	co2-fixierung	O=C=O.CCC1CO1	[Br-].[K+]	CCC1COC(=O)O1	1,2-Butylencarbonat aus CO2	M. North et al., Green Chem. 12, 1514 (2010)

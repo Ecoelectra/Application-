@@ -58,6 +58,7 @@ export const AGENT_CATEGORIES: AgentCategory[] = [
   { id: 'phasentransfer', label: 'Phasentransferkatalysator', role: 'Katalysator', purpose: 'Schleust Anionen aus der Wasser- in die organische Phase.', substanceIds: [] },
   { id: 'loesungsmittel', label: 'Lösungsmittel', role: 'Lösungsmittel', purpose: 'Löst die Edukte und bestimmt Polarität und Temperatur.', substanceIds: [] },
   { id: 'enzym', label: 'Enzym (Biokatalysator)', role: 'Katalysator', purpose: 'Ein Enzym bindet die Edukte in seiner Tasche und senkt die Aktivierungsenergie so weit, dass die Reaktion bei Raum- oder Körpertemperatur in Wasser abläuft – oft nur für ein Enantiomer.', substanceIds: [] },
+  { id: 'technisch', label: 'Technischer Metallkatalysator (Silber, Cobalt, Vanadium, Molybdän)', role: 'Katalysator', purpose: 'Feste Katalysatoren der Großindustrie: An ihrer Oberfläche werden Gase wie Sauerstoff, Wasserstoff oder Kohlenmonoxid gebunden und aktiviert – meist bei 200–500 °C und erhöhtem Druck.', substanceIds: ['silber', 'cobalt', 'vanadium-v-oxid'] },
 ];
 
 /** Hauptklassen der Enzyme nach EC-Nummer */
@@ -81,6 +82,11 @@ export const AGENT_CATEGORY_BY_ID: ReadonlyMap<string, AgentCategory> = new Map(
 
 /** Häufige Hilfsstoffe der Patentliteratur mit Namen (SMILES → Name, Kategorie). */
 const KNOWN_AGENTS: Array<[string, string, string]> = [
+  // Technische Katalysatoren (Quelle «Technische Katalyse»)
+  ['[Cu].O=[Zn]', 'Kupfer/Zinkoxid', 'cu'], ['[Ru]', 'Ruthenium', 'edelmetall'], ['[Rh].I', 'Rhodium mit Iodid', 'edelmetall'],
+  ['[Ag]', 'Silber', 'technisch'], ['[Co]', 'Cobalt', 'technisch'], ['OP(O)(O)=O', 'Phosphorsäure', 'saeure'],
+  ['[Br-].[K+]', 'Kaliumbromid (Halogenid-Katalysator)', 'phasentransfer'],
+  ['[Br-]', 'Bromid (Halogenid-Katalysator)', 'phasentransfer'],
   // Palladiumkatalysatoren
   ['c1ccc([P](c2ccccc2)(c2ccccc2)[Pd]([P](c2ccccc2)(c2ccccc2)c2ccccc2)([P](c2ccccc2)(c2ccccc2)c2ccccc2)[P](c2ccccc2)(c2ccccc2)c2ccccc2)cc1', 'Pd(PPh₃)₄', 'pd'],
   ['[Pd]', 'Palladium (Pd/C)', 'pd'], ['CC(=O)O[Pd]OC(C)=O', 'Palladium(II)-acetat', 'pd'], ['CC(=O)[O-].CC(=O)[O-].[Pd+2]', 'Palladium(II)-acetat', 'pd'],
@@ -228,6 +234,7 @@ function classifyFragment(rdkit: MainModule, smiles: string): AgentInfo | null {
   if (/\[Ni|Ni\]|^Ni/.test(canonical)) return { category: 'ni' };
   if (/Rh|Ru|Ir/.test(canonical)) return { category: 'edelmetall' };
   if (/Cu/.test(canonical)) return { category: 'cu' };
+  if (/^\[(Ag|Co|Mo|V|Cr|Bi)\]$|O=\[V\]|\[V\]=O/.test(canonical)) return { category: 'technisch' };
   if (/\[(Al|Ti|Zn|Sn|Sc|Yb|In|Bi)\]|Cl\[(Al|Ti|Zn|Sn|Fe)\]|\[Mg\+2\]|B\(F\)F/.test(canonical) && !/[CN]\[(Zn|Mg)\]/.test(canonical)) return { category: 'lewis' };
   if (/P\(c|P\(C/.test(canonical) && !/=O/.test(canonical)) return { category: 'ligand' };
   if (/\[(BH4|AlH4|BH3|BH)-?\]|\[AlH\]/.test(canonical)) return { category: 'hydrid' };

@@ -206,6 +206,52 @@ export const CATALYZED_PROCESSES: CatalyzedProcess[] = [
     bimolecular: true,
   },
   {
+    id: 'sabatier',
+    name: 'Methanisierung von CO₂ (Sabatier-Reaktion)',
+    reactants: [['kohlenstoffdioxid'], ['wasserstoff']],
+    equation: 'CO2 + 4 H2 ⇌ CH4 + 2 H2O',
+    startUncatalyzed: null,
+    reliability: 'Größenordnung',
+    catalysts: [
+      { name: 'Nickel auf Aluminiumoxid', substanceIds: ['nickel'], catalysis: 'metall', startC: 250, reliability: 'Größenordnung' },
+      { name: 'Ruthenium auf Aluminiumoxid', substanceIds: ['ruthenium'], catalysis: 'metall', startC: 200, reliability: 'Größenordnung', note: 'Aktiver, aber teurer als Nickel.' },
+    ],
+    explanation:
+      'Ohne Katalysator reagieren Kohlenstoffdioxid und Wasserstoff praktisch nicht. An Nickel oder Ruthenium werden beide an der Oberfläche gebunden und schrittweise zu Methan und Wasser umgesetzt. Die Reaktion ist stark exotherm (ΔrH° ≈ −165 kJ/mol): Über etwa 500 °C verschiebt sich das Gleichgewicht zurück; höherer Druck begünstigt Methan, weil aus fünf Gasteilchen drei werden. So wird überschüssiger Ökostrom als Methan gespeichert (Power-to-Gas), und die Raumstation ISS gewinnt damit Wasser zurück.',
+    conditions: '250–400 °C, 1–30 bar',
+    bimolecular: true,
+  },
+  {
+    id: 'co2-methanol',
+    name: 'Methanol aus CO₂',
+    reactants: [['kohlenstoffdioxid'], ['wasserstoff']],
+    equation: 'CO2 + 3 H2 ⇌ CH3OH + H2O',
+    startUncatalyzed: null,
+    reliability: 'Größenordnung',
+    catalysts: [{ name: 'Kupfer-Zinkoxid-Aluminiumoxid', substanceIds: ['kupfer', 'zinkoxid'], catalysis: 'metall', startC: 220, reliability: 'Größenordnung' }],
+    explanation:
+      'Derselbe Kupfer-Zinkoxid-Katalysator wie bei der Methanolsynthese aus Synthesegas setzt auch CO₂ direkt um. Weil aus vier Gasteilchen zwei werden, braucht es hohen Druck; zu hohe Temperatur liefert stattdessen Kohlenmonoxid (umgekehrte Wassergas-Shift).',
+    conditions: '220–280 °C, 50–100 bar',
+    bimolecular: true,
+  },
+  {
+    id: 'rwgs',
+    name: 'Umgekehrte Wassergas-Shift-Reaktion',
+    reactants: [['kohlenstoffdioxid'], ['wasserstoff']],
+    equation: 'CO2 + H2 ⇌ CO + H2O',
+    startUncatalyzed: null,
+    reliability: 'Größenordnung',
+    catalysts: [
+      { name: 'Kupfer-Zinkoxid', substanceIds: ['kupfer', 'zinkoxid'], catalysis: 'metall', startC: 300, reliability: 'Größenordnung' },
+      { name: 'Platin', substanceIds: ['platin'], catalysis: 'metall', startC: 350, reliability: 'Größenordnung' },
+    ],
+    explanation:
+      'Die Umkehrung der Wassergas-Shift-Reaktion ist endotherm (ΔrH° ≈ +41 kJ/mol) und wird erst bei hoher Temperatur günstig. Das entstehende Kohlenmonoxid ist ein Baustein für Kraftstoffe (Fischer-Tropsch).',
+    conditions: '300–600 °C, Normal- oder leichter Überdruck',
+    bimolecular: true,
+    hazards: ['Kohlenmonoxid ist ein farb- und geruchloses, sehr giftiges Gas.'],
+  },
+  {
     id: 'fischer-tropsch',
     name: 'Fischer-Tropsch-Synthese',
     reactants: [['kohlenstoffmonoxid'], ['wasserstoff']],

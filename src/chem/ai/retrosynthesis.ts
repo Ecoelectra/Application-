@@ -1,7 +1,7 @@
 /**
  * KI-Synthese: Wie stelle ich einen Zielstoff her?
  *
- * Die Reaktions-KI kennt 5.953 Reaktionsvorlagen, die sie aus rund einer
+ * Die Reaktions-KI kennt 5.971 Reaktionsvorlagen, die sie aus rund einer
  * Million Literaturreaktionen gelernt hat. Rückwärts angewendet – vom Produkt
  * zu den Edukten – liefern sie mögliche Ausgangsstoffe (Retrosynthese nach
  * Corey, hier mit gelernten statt von Hand geschriebenen Vorlagen).

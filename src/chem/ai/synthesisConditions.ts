@@ -167,7 +167,10 @@ export function evaluateProposal(
       );
     }
   }
-  const organic = substances.some((substance) => substance.smiles && /C/.test(substance.formula));
+  // Pyrolyse betrifft Stoffe mit C–H-Gerüst – nicht CO₂, CO oder das sehr stabile Methan
+  const organic = substances.some(
+    (substance) => substance.smiles && /C(?![a-z])/.test(substance.formula) && /H/.test(substance.formula) && substance.formula !== 'CH4',
+  );
   if (organic && T > 350) problems.push('Oberhalb von etwa 350 °C zersetzen sich die meisten organischen Stoffe (Pyrolyse).');
   if (T < -40) notes.push('Bei so tiefer Temperatur erstarren viele Lösungsmittel; die Stoffe mischen sich schlecht.');
 

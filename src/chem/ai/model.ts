@@ -63,6 +63,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   'ecreact-metanetx': 'Stoffwechselnetze aus MetaNetX',
   'hte-suzuki': 'Suzuki-Hochdurchsatzversuche (Pfizer)',
   'hte-buchwald': 'Buchwald-Hartwig-Hochdurchsatzversuche (Merck)',
+  technik: 'Technische Katalyse (kuratiert: CO₂-Hydrierung, Reformierung, Oxo-Synthese …)',
 };
 
 export type ModelFileLoader = (file: string) => Promise<Uint8Array | null>;

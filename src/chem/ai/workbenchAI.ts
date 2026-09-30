@@ -221,7 +221,8 @@ export function aiReactions(
       // Umsetzung eines Stoffes, bei der der Partner keine Rolle spielt, ist keine Reaktion des Paares
       if (group.length > 1 && proposal.reactants.length === 1 && proposal.reagent) {
         const role = substanceCategory(rdkit, proposal.reagent);
-        if (!role || !proposal.catalysts.some((entry) => entry.category === role)) return;
+        const plays = proposal.catalysts.some((entry) => entry.category === role) || Boolean(role && proposal.family?.catalysts.includes(role));
+        if (!role || !plays) return;
       }
       const product = proposal.products[0]?.smiles;
       const key = product ? structureKey(rdkit, product) : null;
